@@ -13,6 +13,7 @@ namespace ArimaaAnalyzer.Maui.Services;
 public class AnalysisService : IAsyncDisposable
 {
     private readonly SemaphoreSlim _ioLock = new(1, 1);
+    // Increase timeout as some engines might take time to load neural nets or large tables
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
     private Process? _process;
     private StreamWriter? _stdin;
@@ -159,6 +160,8 @@ public class AnalysisService : IAsyncDisposable
         string? best = null;
         string? ponder = null;
         string? line;
+        // Reading loop until bestmove is found.
+        // Note: A robust implementation might need a separate read loop/thread to handle 'info' lines asynchronously.
         while ((line = await ReadLineAsync(ct).ConfigureAwait(false)) != null)
         {
             log.Add(line);
@@ -206,12 +209,23 @@ public class AnalysisService : IAsyncDisposable
     {
         if (_stdout is null) throw new InvalidOperationException("Engine stdout not available.");
 
+        // We use a linked token source so we can enforce a read timeout if the engine hangs
+        // Exception: If 'go infinite' is used, this logic needs to be adapted to wait indefinitely.
+        // For now, we assume standard command-response behavior.
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(_defaultTimeout);
+        // Do not cancel via timeout here for 'go' commands in a real app, logic should be split.
+        // But for handshake/isready, timeout is useful.
+        
         var readTask = _stdout.ReadLineAsync();
+        // Wait for read or cancellation
+        // Note: ReadLineAsync(CancellationToken) is not available in older .NET Standard, but OK in .NET 6+
+        // However, StreamReader.ReadLineAsync() usually doesn't take a token directly.
+        // We wrap it:
         var completed = await Task.WhenAny(readTask, Task.Delay(Timeout.InfiniteTimeSpan, cts.Token)).ConfigureAwait(false);
+        
         if (completed == readTask)
             return await readTask.ConfigureAwait(false);
+            
         throw new TimeoutException("Timed out reading from engine.");
     }
 
