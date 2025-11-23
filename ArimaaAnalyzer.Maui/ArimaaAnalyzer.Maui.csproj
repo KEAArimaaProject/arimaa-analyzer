@@ -3,8 +3,8 @@
     <Sdk Name="Microsoft.NET.Sdk.Razor" />
 
     <PropertyGroup>
-        <!-- Add a pure .NET target for testability (no MAUI) -->
-        <TargetFrameworks>net8.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <!-- Add a pure .NET target for testability (no MAUI) and MAUI platform TFMs -->
+        <TargetFrameworks>net8.0;net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
         <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
         <AndroidSdkDirectory>C:\Users\hjlyk\AppData\Local\Android\Sdk</AndroidSdkDirectory>
 
@@ -18,8 +18,8 @@
         <!-- Default output type for MAUI TFMs -->
         <OutputType>Exe</OutputType>
         <RootNamespace>ArimaaAnalyzer.Maui</RootNamespace>
-        <!-- Enable MAUI only for MAUI/platform TFMs -->
-        <UseMaui Condition=" '$(TargetFramework)' != 'net8.0' ">true</UseMaui>
+        <!-- Enable MAUI only for MAUI/platform TFMs (android/ios/maccatalyst/windows) -->
+        <UseMaui Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != ''">true</UseMaui>
         <SingleProject>true</SingleProject>
         <ImplicitUsings>enable</ImplicitUsings>
         <EnableDefaultCssItems>false</EnableDefaultCssItems>
@@ -47,7 +47,16 @@
 
     <!-- Adjust output type for the testable net8.0 target (class library) -->
     <PropertyGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-        <OutputType>Library</OutputType>
+      <OutputType>Library</OutputType>
+      <!-- Disable Razor item inference/generation for the pure .NET test TFM -->
+      <EnableDefaultRazorGenerateItems>false</EnableDefaultRazorGenerateItems>
+    </PropertyGroup>
+
+    <!-- Adjust output type for the testable net10.0 target (class library) -->
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+      <OutputType>Library</OutputType>
+      <!-- Disable Razor item inference/generation for the pure .NET test TFM -->
+      <EnableDefaultRazorGenerateItems>false</EnableDefaultRazorGenerateItems>
     </PropertyGroup>
 
     <!-- When targeting net8.0 for tests, exclude MAUI-specific source files and include only non-UI code (e.g., Services) -->
@@ -56,6 +65,32 @@
       <Compile Remove="**\*.cs" />
       <!-- Include only service layer (adjust if you add more shared folders) -->
       <Compile Include="Services\**\*.cs" />
+      <!-- Ensure no Razor files are considered in the test TFM -->
+      <None Remove="**\*.razor" />
+      <Content Remove="**\*.razor" />
+      <RazorComponent Remove="**\*.razor" />
+      <RazorGenerate Remove="**\*.razor" />
+      <!-- Exclude scoped CSS for Razor components in test TFM -->
+      <None Remove="**\*.razor.css" />
+      <Content Remove="**\*.razor.css" />
+      <MauiCss Remove="**\*.razor.css" />
+    </ItemGroup>
+
+    <!-- When targeting net10.0 for tests, exclude MAUI-specific source files and include only non-UI code (e.g., Services) -->
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+      <!-- Remove default wildcard compile include -->
+      <Compile Remove="**\*.cs" />
+      <!-- Include only service layer (adjust if you add more shared folders) -->
+      <Compile Include="Services\**\*.cs" />
+      <!-- Ensure no Razor files are considered in the test TFM -->
+      <None Remove="**\*.razor" />
+      <Content Remove="**\*.razor" />
+      <RazorComponent Remove="**\*.razor" />
+      <RazorGenerate Remove="**\*.razor" />
+      <!-- Exclude scoped CSS for Razor components in test TFM -->
+      <None Remove="**\*.razor.css" />
+      <Content Remove="**\*.razor.css" />
+      <MauiCss Remove="**\*.razor.css" />
     </ItemGroup>
 
     <!-- MAUI resources only for MAUI-enabled TFMs -->
