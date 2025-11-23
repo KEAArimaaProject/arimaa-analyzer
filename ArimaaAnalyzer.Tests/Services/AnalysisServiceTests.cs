@@ -8,7 +8,8 @@ using Xunit;
 namespace ArimaaAnalyzer.Tests.Services;
 
 /// <summary>
-/// Skeleton tests for AnalysisService. These are placeholders to be filled in with real engine paths and scenarios.
+/// Skeleton tests for AnalysisService.
+/// These are placeholders to be filled in with real engine paths and scenarios.
 /// </summary>
 public class AnalysisServiceTests
 {
@@ -23,7 +24,8 @@ public class AnalysisServiceTests
         svc.IsRunning.Should().BeFalse();
     }
 
-    [Fact(DisplayName = "StartAsync requires a valid engine executable", Skip = "Skeleton only: provide a real engine exe path and remove Skip.")]
+    [Fact(DisplayName = "StartAsync requires a valid engine executable", 
+        Skip = "Skeleton only: provide a real engine exe path and remove Skip.")]
     public async Task StartAsync_RequiresValidEnginePath()
     {
         var svc = new AnalysisService();
@@ -38,7 +40,8 @@ public class AnalysisServiceTests
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
-    [Fact(DisplayName = "Sharp2015 AEI smoke test: handshake, isready, setoption, setposition, go (expects bestmove)")]
+    [Fact(DisplayName = "Sharp2015 AEI smoke test: handshake, " +
+                        "isready, setoption, setposition, go (expects bestmove)")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest()
     {
         // Absolute path provided by user
@@ -48,21 +51,24 @@ public class AnalysisServiceTests
         {
             // Can't truly mark as Skipped here without adding a conditional Fact or extra packages.
             // Treat as a no-op pass with a helpful message.
-            Console.WriteLine($"[SKIP] Engine executable not found at '{exePath}'. Place sharp2015.exe there to run this test.");
+            Console.WriteLine($"[SKIP] Engine executable not found at " +
+                              $"'{exePath}'. Place sharp2015.exe there to run this test.");
             return;
         }
 
         static string BoardToAei(string[] board, string side)
         {
             // Replace dots with spaces and concatenate rows
-            var flat = string.Join(string.Empty, Array.ConvertAll(board, r => r.Replace('.', ' ')));
+            var flat = string.Join(string.Empty, 
+                Array.ConvertAll(board, r => r.Replace('.', ' ')));
             return $"setposition {side} \"{flat}\"";
         }
 
         await using var svc = new AnalysisService();
         try
         {
-            // Start the engine with the 'aei' argument (matches Python helper) and the service will also send 'aei' over stdin
+            // Start the engine with the 'aei' argument
+            // (matches Python helper) and the service will also send 'aei' over stdin
             await svc.StartAsync(exePath, arguments: "aei");
 
             // Ensure engine is ready
@@ -91,12 +97,15 @@ public class AnalysisServiceTests
             await svc.IsReadyAsync();
 
             // Ask engine to move; capture output until bestmove
-            var (best, ponder, log) = await svc.GoAsync(string.Empty);
+            var (best, ponder, 
+                log) = await svc.GoAsync(string.Empty);
 
-            best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
+            best.Should().NotBeNullOrWhiteSpace(
+                "engine should return a bestmove sequence");
 
             // Validate our parsing matches the engine's raw line by reconstructing expected sequence
-            var bestLine = log.LastOrDefault(l => l.StartsWith("bestmove ", StringComparison.OrdinalIgnoreCase));
+            var bestLine = log.LastOrDefault(l => 
+                l.StartsWith("bestmove ", StringComparison.OrdinalIgnoreCase));
             if (bestLine is not null)
             {
                 var after = bestLine.Substring("bestmove ".Length).Trim();
