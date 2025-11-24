@@ -125,6 +125,7 @@
 
     <ItemGroup>
       <Folder Include="Aiexecutables\" />
+      <Folder Include="Resources\Pieceicons\" />
     </ItemGroup>
 
   <!-- Improve Android Debug deploy reliability -->
