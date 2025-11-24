@@ -20,7 +20,7 @@
                         <img src="@($"pieces/{piece.SvgFileName}")"
                              alt="@($"{piece.Side} {piece.Type}")"
                              draggable="false"
-                             title="Drag to move"
+                             title="@(Behavior.IsInteractive ? "Drag to move" : "")"
                              @onpointerdown="() => OnDragStart(pos)"
                              />
                 }
@@ -31,10 +31,15 @@
 </div>
 
 @code {
+    [Parameter]
+    public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
+
     private Position? _dragFrom;
 
     private void OnDragStart(Position from)
     {
+        if (!Behavior.IsInteractive) return;
+
         // Only start a drag if there's a piece on the square
         if (Game.State.GetPiece(from) is not null)
         {
