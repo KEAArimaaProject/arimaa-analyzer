@@ -112,6 +112,14 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)"/>
     </ItemGroup>
 
+    <!-- Expose piece SVGs to BlazorWebView as static web assets under wwwroot/pieces -->
+    <ItemGroup Condition=" '$(UseMaui)' == 'true' ">
+      <Content Include="Resources\Pieceicons\vector\*.svg">
+        <Link>wwwroot\pieces\%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
     <ItemGroup>
       <!-- Logging package is TFM-agnostic -->
       <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0"/>

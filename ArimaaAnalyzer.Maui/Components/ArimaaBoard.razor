@@ -1,0 +1,52 @@
+﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@inject ArimaaGameService Game
+
+<div class="board">
+    @for (var r = 0; r < 8; r++)
+    {
+        <div class="rank">
+            @for (var c = 0; c < 8; c++)
+            {
+                var pos = new Position(r, c);
+                var piece = Game.State.GetPiece(pos);
+                var isDark = (r + c) % 2 == 1;
+                var isSelected = Game.Selected is { } s && s == pos;
+                <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : null)"
+                     @onclick="() => OnSquareClick(pos)">
+                    @if (piece is not null)
+                    {
+                        <img src="@($"pieces/{piece.SvgFileName}")" alt="@($"{piece.Side} {piece.Type}")" />
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private void OnSquareClick(Position pos)
+    {
+        var piece = Game.State.GetPiece(pos);
+        if (Game.Selected is null)
+        {
+            if (piece is not null)
+            {
+                Game.Select(pos);
+            }
+            return;
+        }
+
+        // If clicking the selected square, clear selection
+        if (Game.Selected == pos)
+        {
+            Game.ClearSelection();
+            return;
+        }
+
+        // Try move, otherwise select new piece if there is one
+        if (!Game.TryMoveTo(pos) && piece is not null)
+        {
+            Game.Select(pos);
+        }
+    }
+}

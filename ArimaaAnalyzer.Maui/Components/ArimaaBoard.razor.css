@@ -1,0 +1,30 @@
+﻿.board {
+  display: inline-block;
+  border: 2px solid #333;
+}
+
+.rank {
+  display: flex;
+}
+
+.square {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.square.light { background: #f0d9b5; }
+.square.dark { background: #b58863; }
+
+.square.selected {
+  outline: 3px solid #ffbf00;
+}
+
+.square img {
+  width: 44px;
+  height: 44px;
+  pointer-events: none; /* allow click to hit the square */
+}
