@@ -9,7 +9,10 @@
             {
                 var pos = new Position(r, c);
                 var piece = Game.State.GetPiece(pos);
-                var isDark = (r + c) % 2 == 1;
+                // Arimaa traps: only C3, F3, C6, F6 should be dark.
+                // With 0-based indices, columns A..H -> 0..7, rows top(8)..bottom(1) -> 0..7
+                // So C3 -> (row 5, col 2), F3 -> (5,5), C6 -> (2,2), F6 -> (2,5)
+                var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
                 var isSelected = Game.Selected is { } s && s == pos;
                 <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : null)"
                      @onclick="() => OnSquareClick(pos)">
