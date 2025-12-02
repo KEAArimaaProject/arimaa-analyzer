@@ -22,7 +22,7 @@ html, body {
 
 body {
     /* This padding will push your entire app content down below the status bar */
-    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* The actual navbar — make sure it has a solid background and proper height */
@@ -58,10 +58,10 @@ button.navbar-toggler {
     margin-left: 0.5rem;
 }
 
-/* Optional: add a little extra top margin to main content so it doesn't touch the navbar */
+/* This pushes the page content below the white navbar */
 .main > .content,
 .page {
-    padding-top: 1rem;   /* adjust if you already have .content padding */
+    padding-top: calc(3.5rem + env(safe-area-inset-top));
 }
 
 /* ============================================= */
