@@ -1,5 +1,14 @@
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* Ensure the background color is visible across platforms */
+    background-color: #ff00aa; /*#f7f7f7;  */
+    min-height: 100%;
+    margin: 0; /* prevent default white margins around the page */
+}
+
+/* Make sure the Blazor root fills the viewport so the background shows */
+#app {
+    min-height: 100vh;
 }
 
 a, .btn-link {
