@@ -3,17 +3,71 @@ html, body {
     /* Ensure the background color is visible across platforms */
     background-color: #ff00aa; /*#f7f7f7;  */
     min-height: 100%;
-    margin: 0; /* prevent default white margins around the page */
+    margin: 0; /* prevent default white margins around the page height: 100%;
+    overflow-x: hidden;*/
 }
 
 /* Make sure the Blazor root fills the viewport so the background shows */
 #app {
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-a, .btn-link {
-    color: #006bb7;
+/* ============================================= */
+/*  FIX: Proper top padding + safe area handling  */
+/* ============================================= */
+
+body {
+    /* This padding will push your entire app content down below the status bar */
+    padding-top: env(safe-area-inset-top, 0px) !important;
 }
+
+
+/* The actual navbar — make sure it has a solid background and proper height */
+nav.navbar,
+.navbar,                     /* whatever class your navbar uses */
+.top-row,                    /* default Blazor template uses .top-row */
+.main-layout-header          /* if you renamed it */
+{
+    position: sticky !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5rem;                     /* default Blazor height */
+    background-color: white !important; /* force white background */
+    border-bottom: 1px solid #ddd;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding-left: max(env(safe-area-inset-left), 1rem);
+    padding-right: max(env(safe-area-inset-right), 1rem);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Make sure the burger menu icon is visible and clickable */
+.navbar-toggler,
+button[aria-label="Navigation menu"],
+button.navbar-toggler {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    color: #333;
+    margin-left: 0.5rem;
+}
+
+/* Optional: add a little extra top margin to main content so it doesn't touch the navbar */
+.main > .content,
+.page {
+    padding-top: 2rem;   /* adjust if you already have .content padding */
+}
+
+/* ============================================= */
+/*  Keep everything else exactly as you had it    */
+/* ============================================= */
+
+a, .btn-link { color: #006bb7; }
 
 .btn-primary {
     color: #fff;
@@ -21,8 +75,9 @@ a, .btn-link {
     border-color: #1861ac;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus,
+.form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
