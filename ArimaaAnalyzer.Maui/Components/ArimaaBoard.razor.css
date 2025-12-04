@@ -1,4 +1,41 @@
-﻿.board {
+﻿/* Outer container (may include toolbars/sidebars). When no extras are rendered,
+   it will be effectively the same size as the inner board. */
+.board-outer {
+  display: inline-block;
+}
+
+/* Optional regions when outer UI is enabled */
+.outer-top,
+.outer-bottom {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.outer-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.outer-left,
+.outer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outer-btn { padding: 4px 8px; }
+.outer-caption { font-size: 0.9rem; color: #555; }
+
+/* Inner board: previously .board */
+.board-inner {
+  --square-size: 56px;  /* inner square size */
+  --piece-size: 44px;   /* piece image size */
+
   display: inline-block;
   border: 2px solid #333;
   /* Prevents the browser from interpreting touch gestures (like scrolling) within the board */
@@ -10,8 +47,8 @@
 }
 
 .square {
-  width: 56px;
-  height: 56px;
+  width: var(--square-size);
+  height: var(--square-size);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,8 +68,8 @@
 }
 
 .square img {
-  width: 44px;
-  height: 44px;
+  width: var(--piece-size);
+  height: var(--piece-size);
   /* Allow the image to receive drag events */
   pointer-events: auto;
   cursor: grab;

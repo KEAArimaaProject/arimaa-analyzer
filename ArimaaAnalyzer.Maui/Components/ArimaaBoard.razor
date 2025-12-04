@@ -1,35 +1,73 @@
 ﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using ArimaaAnalyzer.Maui.Components
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @inject ArimaaGameService Game
 @inject IJSRuntime JS
 
-<div class="board">
-    @for (var r = 0; r < 8; r++)
+<div class="board-outer">
+    @if (Game.ShowOuterUi)
     {
-        <div class="rank">
-            @for (var c = 0; c < 8; c++)
+        <div class="outer-top">
+            <button disabled class="outer-btn">Analyze</button>
+            <button disabled class="outer-btn">Undo</button>
+            <button disabled class="outer-btn">Redo</button>
+        </div>
+    }
+
+    <div class="outer-main">
+        @if (Game.ShowOuterUi)
+        {
+            <div class="outer-left">
+                <button disabled class="outer-btn">Rotate</button>
+            </div>
+        }
+
+        <div class="board-inner">
+            @for (var r = 0; r < 8; r++)
             {
-                var pos = new Position(r, c);
-                var piece = Game.State.GetPiece(pos);
-                // Arimaa traps: only C3, F3, C6, F6 should be dark.
-                // With 0-based indices, columns A..H -> 0..7, rows top(8)..bottom(1) -> 0..7
-                // So C3 -> (row 5, col 2), F3 -> (5,5), C6 -> (2,2), F6 -> (2,5)
-                var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
-                var isSelected = _selectedPos == pos;
-                <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : "")"
-                     data-row="@r"
-                     data-col="@c"
-                     @onpointerup="async (e) => await OnPointerUp(e)">
-                    @if (piece is not null)
+                <div class="rank">
+                    @for (var c = 0; c < 8; c++)
                     {
-                        <img src="@($"pieces/{piece.SvgFileName}")"
-                             alt="@($"{piece.Side} {piece.Type}")"
-                             draggable="false"
-                             title="@(Behavior.IsInteractive ? "Drag to move" : "")"
-                             @onpointerdown="() => OnDragStart(pos)"
-                        />
+                        var pos = new Position(r, c);
+                        var piece = Game.State.GetPiece(pos);
+                        // Arimaa traps: only C3, F3, C6, F6 should be dark.
+                        // With 0-based indices, columns A..H -> 0..7, rows top(8)..bottom(1) -> 0..7
+                        // So C3 -> (row 5, col 2), F3 -> (5,5), C6 -> (2,2), F6 -> (2,5)
+                        var isDark = (r == 2 || r == 5) && (c == 2 || c == 5);
+                        var isSelected = _selectedPos == pos;
+                        <div class="square @(isDark ? "dark" : "light") @(isSelected ? "selected" : "")"
+                             data-row="@r"
+                             data-col="@c"
+                             @onpointerup="async (e) => await OnPointerUp(e)">
+                            @if (piece is not null)
+                            {
+                                <img src="@($"pieces/{piece.SvgFileName}")"
+                                     alt="@($"{piece.Side} {piece.Type}")"
+                                     draggable="false"
+                                     title="@(Behavior.IsInteractive ? "Drag to move" : "")"
+                                     @onpointerdown="() => OnDragStart(pos)"
+                                />
+                            }
+                        </div>
                     }
                 </div>
             }
+        </div>
+
+        @if (Game.ShowOuterUi)
+        {
+            <div class="outer-right">
+                <button disabled class="outer-btn">Options</button>
+            </div>
+        }
+    </div>
+
+    @if (Game.ShowOuterUi)
+    {
+        <div class="outer-bottom">
+            <span class="outer-caption">Outer UI enabled</span>
         </div>
     }
 </div>

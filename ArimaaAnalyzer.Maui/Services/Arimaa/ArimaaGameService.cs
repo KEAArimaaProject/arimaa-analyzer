@@ -7,6 +7,10 @@ public sealed class ArimaaGameService
 
     public Position? Selected { get; private set; }
 
+    // Controls whether the board component renders outer UI around the inner 8x8 grid.
+    // When false, the outer size matches the inner board size.
+    public bool ShowOuterUi { get; set; } = false;
+
     public void Select(Position p)
     {
         if (!p.IsOnBoard) return;
