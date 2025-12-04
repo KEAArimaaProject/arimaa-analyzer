@@ -3,7 +3,12 @@
 // Simple stateful service to drive the UI. Keeps a selected square and exposes move methods.
 public sealed class ArimaaGameService
 {
-    public GameState State { get; } = new();
+    public ArimaaGameService(GameState state)
+    {
+        State = state ?? throw new ArgumentNullException(nameof(state));
+    }
+
+    public GameState State { get; }
 
     public Position? Selected { get; private set; }
 

@@ -12,6 +12,30 @@
 <ArimaaBoard Game="DemoGame" />
 
 @code {
-    // Dummy game service for manual testing. Internally uses GameState's demo setup.
-    private ArimaaGameService DemoGame { get; } = new();
+    // Dummy game service for manual testing, built from AEI board string.
+    private ArimaaGameService DemoGame { get; } = CreateDemo();
+
+    private static ArimaaGameService CreateDemo()
+    {
+        var board = new[]
+        {
+            "rrrrrrrr",
+            "hdcemcdh",
+            "........",
+            "........",
+            "........",
+            "........",
+            "HDCMECDH",
+            "RRRRRRRR"
+        };
+        static string BoardToAei(string[] b, string side)
+        {
+            var flat = string.Join(string.Empty, Array.ConvertAll(b, r => r.Replace('.', ' ')));
+            return $"setposition {side} \"{flat}\"";
+        }
+
+        var aei = BoardToAei(board, "g");
+        var state = new GameState(aei);
+        return new ArimaaGameService(state);
+    }
 }

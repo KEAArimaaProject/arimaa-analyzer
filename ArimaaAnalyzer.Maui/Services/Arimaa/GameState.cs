@@ -4,23 +4,80 @@ namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 
 public sealed class GameState
 {
-    // 8x8 board for a starter demo (Arimaa is 8x8). Null means empty square.
+    // 8x8 board (Arimaa is 8x8). Null means empty square.
     private readonly Piece?[,] _board = new Piece?[8, 8];
 
-    public GameState()
+    public Side SideToMove { get; }
+
+    /// <summary>
+    /// Initialize the state from an AEI "setposition" command string.
+    /// Example: setposition g "rrrrrrrrhdcemcdh                                HDCMECDHRRRRRRRR"
+    /// Where the quoted part is 64 characters (spaces for empty, letters for pieces),
+    /// and the side is 'g' (gold) or 's' (silver).
+    /// </summary>
+    public GameState(string aeiSetPosition)
     {
-        // Minimal demo setup: a few pieces to interact with
-        // Gold bottom two rabbits
-        _board[6, 3] = new Piece(PieceType.Rabbit, Side.Gold);
-        _board[6, 4] = new Piece(PieceType.Rabbit, Side.Gold);
+        if (string.IsNullOrWhiteSpace(aeiSetPosition))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(aeiSetPosition));
 
-        // Silver top two rabbits
-        _board[1, 3] = new Piece(PieceType.Rabbit, Side.Silver);
-        _board[1, 4] = new Piece(PieceType.Rabbit, Side.Silver);
+        // Expect: setposition <g|s> "<64 chars>"
+        // We'll parse leniently but validate essentials.
+        var trimmed = aeiSetPosition.Trim();
+        if (!trimmed.StartsWith("setposition ", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Expected string starting with 'setposition'.", nameof(aeiSetPosition));
 
-        // A couple of stronger pieces
-        _board[7, 0] = new Piece(PieceType.Elephant, Side.Gold);
-        _board[0, 7] = new Piece(PieceType.Camel, Side.Silver);
+        // Remove leading keyword
+        var rest = trimmed.Substring("setposition ".Length).TrimStart();
+        if (rest.Length < 3)
+            throw new ArgumentException("Malformed setposition string.", nameof(aeiSetPosition));
+
+        // First non-space char must be side
+        var sideChar = char.ToLowerInvariant(rest[0]);
+        SideToMove = sideChar switch
+        {
+            'g' => Side.Gold,
+            's' => Side.Silver,
+            _ => throw new ArgumentException("Side must be 'g' or 's'.", nameof(aeiSetPosition))
+        };
+
+        // Find the first quote and last quote to extract the 64-char flat board string
+        var firstQuote = rest.IndexOf('"');
+        var lastQuote = rest.LastIndexOf('"');
+        if (firstQuote < 0 || lastQuote <= firstQuote)
+            throw new ArgumentException("Board string must be quoted.", nameof(aeiSetPosition));
+
+        var flat = rest.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+        if (flat.Length != 64)
+            throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiSetPosition));
+
+        // Fill board row-major: rows 0..7, cols 0..7, as per UI expects top row is index 0
+        for (var i = 0; i < 64; i++)
+        {
+            var r = i / 8;
+            var c = i % 8;
+            var ch = flat[i];
+            _board[r, c] = CharToPiece(ch);
+        }
+    }
+
+    private static Piece? CharToPiece(char ch)
+    {
+        if (ch == ' ')
+            return null;
+
+        var isUpper = char.IsUpper(ch);
+        var side = isUpper ? Side.Gold : Side.Silver;
+        var up = char.ToUpperInvariant(ch);
+        return up switch
+        {
+            'R' => new Piece(PieceType.Rabbit, side),
+            'C' => new Piece(PieceType.Cat, side),
+            'D' => new Piece(PieceType.Dog, side),
+            'H' => new Piece(PieceType.Horse, side),
+            'M' => new Piece(PieceType.Camel, side),
+            'E' => new Piece(PieceType.Elephant, side),
+            _ => null
+        };
     }
 
     public Piece? GetPiece(Position p) => p.IsOnBoard ? _board[p.Row, p.Col] : null;
