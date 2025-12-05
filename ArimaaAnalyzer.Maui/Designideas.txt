@@ -5,12 +5,12 @@
 in CorrectMoveService and GameState needs to be changed. 
 so game state is only saved as a single String, and not nested lists of SVG. references.
 
-in CorrectMoveService, create a function that 
+|||in CorrectMoveService, create a function that 
 takes a state and a move, and checks if a capture should take place.
 create it, by asking the Ai to extract the code needed for 
 checking capture.
 
-in CorrectMoveService, implement push pull.
+|||in CorrectMoveService, implement push pull.
 
 ask the AI if more is needed than push pull.
 

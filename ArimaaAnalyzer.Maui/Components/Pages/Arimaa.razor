@@ -9,7 +9,7 @@
     </button>
 </div>
 
-<ArimaaBoard Game="DemoGame" />
+<ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
 
 @code {
     // Dummy game service for manual testing, built from AEI board string.
@@ -38,4 +38,7 @@
         var state = new GameState(aei);
         return new ArimaaGameService(state);
     }
+
+    // Example: choose a preset for this page; other pages can pass different settings
+    private ArimaaBoardSettings PageBoardSettings { get; } = ArimaaBoardSettings.PlayableLarge;
 }

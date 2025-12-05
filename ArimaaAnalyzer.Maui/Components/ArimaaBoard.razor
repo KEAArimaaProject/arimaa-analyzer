@@ -6,7 +6,7 @@
 @inject IJSRuntime JS
 
 <div class="board-outer">
-    @if (Game.ShowOuterUi)
+    @if (EffectiveShowOuterUi)
     {
         <div class="outer-top">
             <button disabled class="outer-btn">Analyze</button>
@@ -16,14 +16,14 @@
     }
 
     <div class="outer-main">
-        @if (Game.ShowOuterUi)
+        @if (EffectiveShowOuterUi)
         {
             <div class="outer-left">
                 <button disabled class="outer-btn">Rotate</button>
             </div>
         }
 
-        <div class="board-inner">
+        <div class="board-inner" style="--square-size:@(EffectiveSettings.SquareSizePx)px; --piece-size:@(EffectiveSettings.PieceSizePx)px;">
             @for (var r = 0; r < 8; r++)
             {
                 <div class="rank">
@@ -45,7 +45,7 @@
                                 <img src="@($"pieces/{piece.SvgFileName}")"
                                      alt="@($"{piece.Side} {piece.Type}")"
                                      draggable="false"
-                                     title="@(Behavior.IsInteractive ? "Drag to move" : "")"
+                                     title="@(EffectiveBehavior.IsInteractive ? "Drag to move" : "")"
                                      @onpointerdown="() => OnDragStart(pos)"
                                 />
                             }
@@ -55,7 +55,7 @@
             }
         </div>
 
-        @if (Game.ShowOuterUi)
+        @if (EffectiveShowOuterUi)
         {
             <div class="outer-right">
                 <button disabled class="outer-btn">Options</button>
@@ -63,7 +63,7 @@
         }
     </div>
 
-    @if (Game.ShowOuterUi)
+    @if (EffectiveShowOuterUi)
     {
         <div class="outer-bottom">
             <span class="outer-caption">Outer UI enabled</span>
@@ -72,6 +72,14 @@
 </div>
 
 @code {
+    // New preferred parameter name
+    [Parameter]
+    public ArimaaBoardSettings? BoardSettings { get; set; }
+
+    // Back-compat alias; if both provided, BoardSettings wins
+    [Parameter]
+    public ArimaaBoardSettings? Settings { get; set; }
+
     [Parameter]
     public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
 
@@ -81,9 +89,13 @@
 
     private Position? _selectedPos;
 
+    private ArimaaBoardSettings EffectiveSettings => BoardSettings ?? Settings ?? ArimaaBoardSettings.Default;
+    private BoardBehavior EffectiveBehavior => (EffectiveSettings?.Behavior) ?? Behavior;
+    private bool EffectiveShowOuterUi => (EffectiveSettings?.ShowOuterUi) ?? Game.ShowOuterUi;
+
     private void OnDragStart(Position from)
     {
-        if (!Behavior.IsInteractive) return;
+        if (!EffectiveBehavior.IsInteractive) return;
 
         // Only start a drag if there's a piece on the square
         if (Game.State.GetPiece(from) is not null)
