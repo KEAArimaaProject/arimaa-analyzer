@@ -1,64 +1,117 @@
-﻿using ArimaaAnalyzer.Maui.Services.Arimaa;
+﻿namespace ArimaaAnalyzer.Maui.Components;
 
-namespace ArimaaAnalyzer.Maui.Components;
-
-public sealed class ArimaaBoardSettings
+/// <summary>
+/// Configuration for an Arimaa board display.
+/// Allows different board instances to have different sizes, behaviors, and visual settings.
+/// </summary>
+public class ArimaaBoardSettings
 {
-    // Make properties mutable so pages can toggle settings at runtime (e.g., ShowOuterUi)
-    public double SquareSizePx { get; set; } = 56; // maps to --square-size
-    public double PieceSizePx { get; set; } = 44;  // maps to --piece-size
+    /// <summary>
+    /// Size of each square in pixels. Board will be 8x this size (plus outer UI if enabled).
+    /// </summary>
+    public int SquareSizePx { get; set; } = 56;
+
+    /// <summary>
+    /// Size of piece images in pixels.
+    /// </summary>
+    public int PieceSizePx { get; set; } = 44;
+
+    /// <summary>
+    /// Whether to show the outer UI frame (top/bottom/left/right buttons/labels).
+    /// </summary>
     public bool ShowOuterUi { get; set; } = false;
+
+    /// <summary>
+    /// Interactive behavior of the board (playable, spectator, etc.).
+    /// </summary>
     public BoardBehavior Behavior { get; set; } = BoardBehavior.Playable;
 
-    // Presets
-    public static ArimaaBoardSettings PlayableSmall => new()
+    /// <summary>
+    /// If true, the board will scale responsively to fill available viewport space.
+    /// If false, board size is fixed based on SquareSizePx.
+    /// </summary>
+    public bool IsResponsive { get; set; } = true;
+
+    /// <summary>
+    /// Small responsive board (useful for sidebars or analysis panels).
+    /// Size: ~40px per square, responsive, read-only.
+    /// </summary>
+    public static ArimaaBoardSettings Compact => new()
     {
-        SquareSizePx = 44,
-        PieceSizePx = 36,
+        SquareSizePx = 40,
+        PieceSizePx = 32,
         ShowOuterUi = false,
-        Behavior = BoardBehavior.Playable
+        Behavior = BoardBehavior.Spectator,
+        IsResponsive = true
     };
 
-    public static ArimaaBoardSettings PlayableMedium => new()
+    /// <summary>
+    /// Large playable board (main game board).
+    /// Size: ~56px per square, responsive, interactive.
+    /// </summary>
+    public static ArimaaBoardSettings PlayableLarge => new()
     {
         SquareSizePx = 56,
         PieceSizePx = 44,
         ShowOuterUi = false,
-        Behavior = BoardBehavior.Playable
+        Behavior = BoardBehavior.Playable,
+        IsResponsive = true
     };
 
-    public static ArimaaBoardSettings PlayableLarge => new()
+    /// <summary>
+    /// Large board with outer UI controls enabled.
+    /// Size: ~56px per square, responsive, interactive, with toolbars.
+    /// </summary>
+    public static ArimaaBoardSettings PlayableLargeWithUi => new()
     {
-        SquareSizePx = 72,
-        PieceSizePx = 58,
+        SquareSizePx = 56,
+        PieceSizePx = 44,
         ShowOuterUi = true,
-        Behavior = BoardBehavior.Playable
+        Behavior = BoardBehavior.Playable,
+        IsResponsive = true
     };
 
-    public static ArimaaBoardSettings SpectatorSmall => new()
+    /// <summary>
+    /// Fixed-size board (does not scale with viewport).
+    /// Size: ~56px per square, fixed, interactive.
+    /// </summary>
+    public static ArimaaBoardSettings PlayableFixed => new()
     {
-        SquareSizePx = 36,
-        PieceSizePx = 30,
+        SquareSizePx = 56,
+        PieceSizePx = 44,
         ShowOuterUi = false,
-        Behavior = BoardBehavior.Spectator
+        Behavior = BoardBehavior.Playable,
+        IsResponsive = false
     };
 
-    public static ArimaaBoardSettings SpectatorMedium => new()
+    /// <summary>
+    /// Tiny board for embedded display in lists or grids.
+    /// Size: ~24px per square, responsive, read-only.
+    /// </summary>
+    public static ArimaaBoardSettings Tiny => new()
+    {
+        SquareSizePx = 24,
+        PieceSizePx = 18,
+        ShowOuterUi = false,
+        Behavior = BoardBehavior.Spectator,
+        IsResponsive = true
+    };
+
+    /// <summary>
+    /// Medium board, good for tablets.
+    /// Size: ~48px per square, responsive, interactive.
+    /// </summary>
+    public static ArimaaBoardSettings PlayableMedium => new()
     {
         SquareSizePx = 48,
-        PieceSizePx = 40,
+        PieceSizePx = 38,
         ShowOuterUi = false,
-        Behavior = BoardBehavior.Spectator
+        Behavior = BoardBehavior.Playable,
+        IsResponsive = true
     };
 
-    public static ArimaaBoardSettings SpectatorLarge => new()
-    {
-        SquareSizePx = 64,
-        PieceSizePx = 52,
-        ShowOuterUi = true,
-        Behavior = BoardBehavior.Spectator
-    };
-
-    // Default
-    public static ArimaaBoardSettings Default => PlayableMedium;
+    /// <summary>
+    /// Default settings (same as PlayableLarge).
+    /// </summary>
+    public static ArimaaBoardSettings Default => PlayableLarge;
 }
