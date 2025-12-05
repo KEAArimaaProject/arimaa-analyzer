@@ -4,47 +4,41 @@ using ArimaaAnalyzer.Maui.Services.Arimaa;
 namespace ArimaaAnalyzer.Maui.Services;
 
 /// <summary>
-/// Attempts to validate and reconstruct a legal Arimaa move sequence (up to 4 steps)
-/// that transforms a position "before" into a position "after".
-///
+/// Stateless service for Arimaa move validation and trap capture logic.
+/// All methods are static and contain no mutable state.
+/// 
+/// Responsibilities:
+/// - Compute legal move sequences (up to 4 steps) from board state transitions
+/// - Apply trap captures after moves
+/// - Validate freezing and rabbit movement rules
+/// 
 /// Limitations (initial implementation):
 /// - Supports only slide steps (orthogonal move by one square into empty).
 /// - Enforces rabbit non-backward rule and freezing (cannot move a frozen piece).
 /// - Applies trap captures after each step.
 /// - Does NOT implement push/pull, goal, repetition, or advanced rules yet.
-///
-/// If a matching sequence is found, returns the official step notation like
-/// "Re2n Hh2w Rc2n Rd2n" (1 to 4 steps). Otherwise returns "error".
 /// </summary>
-public sealed class CorrectMoveService
+public static class CorrectMoveService
 {
-    // Lightweight helpers for char-based board representation
-    // Empty squares are represented as space ' ' (matching AEI default)
     private static bool IsGold(char ch) => ch != ' ' && char.IsUpper(ch);
     private static char ToUpper(char ch) => char.ToUpperInvariant(ch);
-    // PieceHierarchy is now the source of truth for piece strength (1..6)
 
     /// <summary>
     /// Try to compute a legal sequence (1..4 steps) for <paramref name="sideToMove"/> that transforms
     /// <paramref name="before"/> into <paramref name="after"/>. Returns official notation string or "error".
     /// </summary>
-    public string ComputeMoveSequence(GameState before, GameState after, Side sideToMove)
+    public static string ComputeMoveSequence(GameState before, GameState after, Side sideToMove)
     {
         if (before == null || after == null) return "error";
 
-        // Quick sanity: side after a completed turn should be the opponent.
-        // We don't hard-fail on mismatch, but it helps prune impossible cases.
         var expectedAfterSide = Opposite(sideToMove);
 
-        // Build boards (fast char-based representation)
         var start = BoardState.From(before, sideToMove);
         var goal = BoardState.From(after, expectedAfterSide);
 
-        // If already equal (no change), no legal sequence (must spend at least one step)
         if (start.BoardEquals(goal)) return "error";
 
-        // BFS over sequences up to 4 steps
-        var seen = new HashSet<string> { start.Hash }; // hash excludes step history
+        var seen = new HashSet<string> { start.Hash };
         var q = new Queue<BoardState>();
         q.Enqueue(start);
 
@@ -59,7 +53,6 @@ public sealed class CorrectMoveService
 
             if (cur.StepsCount >= 4) continue;
 
-            // Generate legal slide moves
             foreach (var next in GenerateSlides(cur))
             {
                 if (seen.Add(next.Hash))
@@ -72,9 +65,36 @@ public sealed class CorrectMoveService
         return "error";
     }
 
+    /// <summary>
+    /// Apply trap captures to the GameState using only AEI string operations.
+    /// This method mutates the passed GameState by removing unsupported pieces from traps.
+    /// </summary>
+    public static void ApplyTrapCaptures(GameState state)
+    {
+        if (state == null) return;
+
+        // Traps: (2,2), (2,5), (5,2), (5,5) -> indices 18, 21, 42, 45
+        var trapIndices = new[] { 18, 21, 42, 45 };
+
+        foreach (var trapIdx in trapIndices)
+        {
+            var piece = state.GetPieceCharAtIndex(trapIdx);
+            if (piece == ' ') continue;
+
+            var trapRow = trapIdx / 8;
+            var trapCol = trapIdx % 8;
+            var trapPos = new Position(trapRow, trapCol);
+
+            var side = IsGold(piece) ? Side.Gold : Side.Silver;
+            if (!HasAdjacentFriendly(state, trapRow, trapCol, side))
+            {
+                state.RemovePieceAt(trapPos);
+            }
+        }
+    }
+
     private static IEnumerable<BoardState> GenerateSlides(BoardState state)
     {
-        // Directions: N,E,S,W
         var dirs = new (int dr, int dc, char dch)[] { (-1, 0, 'n'), (0, 1, 'e'), (1, 0, 's'), (0, -1, 'w') };
 
         for (var r = 0; r < 8; r++)
@@ -83,7 +103,6 @@ public sealed class CorrectMoveService
             var ch = state.Board[r, c];
             if (ch == ' ' || (IsGold(ch) ? Side.Gold : Side.Silver) != state.SideToMove) continue;
 
-            // Frozen pieces can't move
             if (IsFrozen(state.Board, r, c)) continue;
 
             foreach (var (dr, dc, dch) in dirs)
@@ -91,22 +110,19 @@ public sealed class CorrectMoveService
                 var r2 = r + dr;
                 var c2 = c + dc;
                 if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
-                if (state.Board[r2, c2] != ' ') continue; // slide into empty only
+                if (state.Board[r2, c2] != ' ') continue;
 
-                // Rabbit cannot move backward
                 if (ToUpper(ch) == 'R')
                 {
-                    if (IsGold(ch) && dr == 1) continue; // south
-                    if (!IsGold(ch) && dr == -1) continue; // north
+                    if (IsGold(ch) && dr == 1) continue;
+                    if (!IsGold(ch) && dr == -1) continue;
                 }
 
-                // Apply step
                 var next = state.CloneForNext();
                 next.Board[r2, c2] = ch;
                 next.Board[r, c] = ' ';
                 next.AppendStep(ch, r, c, r2, c2, dch);
 
-                // Apply immediate trap captures
                 ApplyTrapCaptures(next.Board);
 
                 yield return next;
@@ -119,10 +135,8 @@ public sealed class CorrectMoveService
         var p = board[r, c];
         if (p == ' ') return false;
 
-        // Friendly neighbor unfroze
         if (HasAdjacentFriendly(board, r, c, IsGold(p) ? Side.Gold : Side.Silver)) return false;
 
-        // Adjacent stronger enemy => frozen
         var myStr = PieceHierarchy.GetHierarchy(p);
         return HasAdjacentStrongerEnemy(board, r, c, IsGold(p) ? Side.Gold : Side.Silver, myStr);
     }
@@ -136,6 +150,24 @@ public sealed class CorrectMoveService
             if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
             var q = b[r2, c2];
             if (q != ' ' && ((IsGold(q) ? Side.Gold : Side.Silver) == side)) return true;
+        }
+        return false;
+    }
+
+    private static bool HasAdjacentFriendly(GameState state, int r, int c, Side side)
+    {
+        for (var k = 0; k < 4; k++)
+        {
+            var r2 = r + ((k == 0) ? -1 : (k == 2) ? 1 : 0);
+            var c2 = c + ((k == 1) ? 1 : (k == 3) ? -1 : 0);
+            if (r2 < 0 || r2 > 7 || c2 < 0 || c2 > 7) continue;
+
+            var piece = state.GetPieceChar(new Position(r2, c2));
+            if (piece != ' ')
+            {
+                var pieceSide = IsGold(piece) ? Side.Gold : Side.Silver;
+                if (pieceSide == side) return true;
+            }
         }
         return false;
     }
@@ -159,7 +191,6 @@ public sealed class CorrectMoveService
 
     private static void ApplyTrapCaptures(char[,] board)
     {
-        // Traps: (2,2), (2,5), (5,2), (5,5)
         var traps = new (int r, int c)[] { (2, 2), (2, 5), (5, 2), (5, 5) };
         foreach (var (r, c) in traps)
         {
@@ -167,7 +198,7 @@ public sealed class CorrectMoveService
             if (p == ' ') continue;
             if (!HasAdjacentFriendly(board, r, c, IsGold(p) ? Side.Gold : Side.Silver))
             {
-                board[r, c] = ' '; // captured
+                board[r, c] = ' ';
             }
         }
     }
@@ -193,8 +224,6 @@ public sealed class CorrectMoveService
         public static BoardState From(GameState s, Side side)
         {
             var b = new char[8, 8];
-            // Use the AEI setposition string already stored in GameState to build the char board directly.
-            // Expected format: setposition <g|s> "<64 chars>"
             var aei = s.localAeiSetPosition;
             if (string.IsNullOrWhiteSpace(aei))
                 throw new ArgumentException("GameState.localAeiSetPosition must be set.");
@@ -213,13 +242,9 @@ public sealed class CorrectMoveService
             {
                 var r = i / 8;
                 var c = i % 8;
-                var ch = flat[i];
-                // Keep spaces as spaces for empties
-                b[r, c] = ch;
+                b[r, c] = flat[i];
             }
 
-            // Do not apply trap captures here; the input states are considered authoritative.
-            // Trap captures are applied only as a consequence of steps during search.
             return new BoardState(b, side);
         }
 
@@ -235,15 +260,11 @@ public sealed class CorrectMoveService
 
         public void AppendStep(char pieceChar, int r1, int c1, int r2, int c2, char dir)
         {
-            // Notation: PieceLetter + origin square + dir
             var sb = new StringBuilder(4);
             sb.Append(char.ToUpperInvariant(pieceChar));
             sb.Append(SquareString(r1, c1));
             sb.Append(dir);
             _steps.Add(sb.ToString());
-
-            // After 1..4 steps, turn ends; we keep the side to move unchanged during building
-            // and only compare to the goal board (which is built with the opponent side).
         }
 
         public string RenderNotation() => string.Join(" ", _steps);
@@ -253,9 +274,7 @@ public sealed class CorrectMoveService
             for (var r = 0; r < 8; r++)
             for (var c = 0; c < 8; c++)
             {
-                var a = Board[r, c];
-                var b = other.Board[r, c];
-                if (a != b) return false;
+                if (Board[r, c] != other.Board[r, c]) return false;
             }
             return true;
         }
@@ -275,7 +294,6 @@ public sealed class CorrectMoveService
 
         private static string SquareString(int r, int c)
         {
-            // file a..h = col 0..7; rank 1..8 bottom to top => rank = 8 - r
             char file = (char)('a' + c);
             int rank = 8 - r;
             return string.Create(2, (file, rank), (span, st) =>
@@ -284,7 +302,5 @@ public sealed class CorrectMoveService
                 span[1] = (char)('0' + st.rank);
             });
         }
-
-        // Uses outer helper IsGold/ToUpper
     }
 }

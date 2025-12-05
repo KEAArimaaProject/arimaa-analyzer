@@ -26,23 +26,17 @@ public sealed class ArimaaGameService
         }
     }
 
-    public bool TryMoveTo(Position target)
-    {
-        if (Selected is null) return false;
-        var from = Selected.Value;
-        var success = State.TryMove(from, target);
-        if (success)
-        {
-            Selected = null;
-        }
-        return success;
-    }
-
     // Drag-and-drop entry point: move directly from a known origin to target.
     public bool TryMove(Position from, Position to)
     {
         if (!from.IsOnBoard || !to.IsOnBoard) return false;
-        return State.TryMove(from, to);
+        var success = State.TryMove(from, to);
+        if (success)
+        {
+            // After a successful user move, apply trap captures via CorrectMoveService
+            CorrectMoveService.ApplyTrapCaptures(State);
+        }
+        return success;
     }
 
     public void ClearSelection() => Selected = null;

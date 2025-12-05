@@ -4,10 +4,15 @@ namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 
 public sealed class GameState
 {
-    // 8x8 board (Arimaa is 8x8). Null means empty square.
-    private readonly Piece?[,] _board = new Piece?[8, 8];
-
-    public string localAeiSetPosition { get; }
+    // Board state is now represented only as the AEI setposition string
+    // No internal _board array needed for performance
+    private string _aeiSetPosition;
+    
+    public string localAeiSetPosition
+    {
+        get => _aeiSetPosition;
+        private set => _aeiSetPosition = value;
+    }
     
     public Side SideToMove { get; }
 
@@ -19,49 +24,193 @@ public sealed class GameState
     /// </summary>
     public GameState(string aeiSetPosition)
     {
-        localAeiSetPosition = aeiSetPosition;
-        
         if (string.IsNullOrWhiteSpace(aeiSetPosition))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(aeiSetPosition));
 
-        // Expect: setposition <g|s> "<64 chars>"
-        // We'll parse leniently but validate essentials.
+        // Validate and parse the AEI string
+        ValidateAndParseAei(aeiSetPosition, out var side, out var boardString);
+        
+        SideToMove = side;
+        _aeiSetPosition = aeiSetPosition;
+    }
+
+    /// <summary>
+    /// Move a piece from one position to another.
+    /// Updates the internal AEI string directly (no intermediate _board).
+    /// </summary>
+    public bool TryMove(Position from, Position to)
+    {
+        if (!from.IsOnBoard || !to.IsOnBoard) return false;
+        if (from == to) return false;
+
+        // Extract the current board string from AEI
+        var boardChars = ExtractBoardString();
+        if (boardChars == null) return false;
+
+        // Check source and destination
+        var fromIdx = from.Row * 8 + from.Col;
+        var toIdx = to.Row * 8 + to.Col;
+
+        var sourcePiece = boardChars[fromIdx];
+        if (sourcePiece == ' ') return false; // no piece at source
+        if (boardChars[toIdx] != ' ') return false; // destination not empty
+
+        // Perform move by modifying the board string
+        var newBoardChars = boardChars.ToCharArray();
+        newBoardChars[toIdx] = sourcePiece;
+        newBoardChars[fromIdx] = ' ';
+
+        // Rebuild AEI string
+        RebuildAei(new string(newBoardChars));
+        return true;
+    }
+
+    /// <summary>
+    /// Remove a piece at the given position.
+    /// Used after trap captures or other removals.
+    /// </summary>
+    public void RemovePieceAt(Position p)
+    {
+        if (!p.IsOnBoard) return;
+
+        var boardChars = ExtractBoardString();
+        if (boardChars == null) return;
+
+        var idx = p.Row * 8 + p.Col;
+        if (boardChars[idx] == ' ') return; // already empty
+
+        var newBoardChars = boardChars.ToCharArray();
+        newBoardChars[idx] = ' ';
+
+        RebuildAei(new string(newBoardChars));
+    }
+
+    /// <summary>
+    /// Get the character at a position (for direct AEI-based queries).
+    /// </summary>
+    public char GetPieceChar(Position p)
+    {
+        if (!p.IsOnBoard) return ' ';
+        var boardChars = ExtractBoardString();
+        if (boardChars == null) return ' ';
+        var idx = p.Row * 8 + p.Col;
+        return boardChars[idx];
+    }
+
+    /// <summary>
+    /// Get the character at a raw board index (0-63).
+    /// </summary>
+    public char GetPieceCharAtIndex(int index)
+    {
+        if (index < 0 || index >= 64) return ' ';
+        var boardChars = ExtractBoardString();
+        return boardChars?[index] ?? ' ';
+    }
+
+    /// <summary>
+    /// Legacy method for UI compatibility.
+    /// Reconstructs a Piece from the AEI string on demand.
+    /// </summary>
+    public Piece? GetPiece(Position p)
+    {
+        var ch = GetPieceChar(p);
+        return CharToPiece(ch);
+    }
+
+    public bool IsEmpty(Position p) => GetPieceChar(p) == ' ';
+
+    /// <summary>
+    /// Iterate all pieces by reading the AEI string directly.
+    /// </summary>
+    public IEnumerable<(Position pos, Piece piece)> AllPieces()
+    {
+        var boardChars = ExtractBoardString();
+        if (boardChars == null) yield break;
+
+        for (var i = 0; i < 64; i++)
+        {
+            var ch = boardChars[i];
+            if (ch != ' ')
+            {
+                var r = i / 8;
+                var c = i % 8;
+                var piece = CharToPiece(ch);
+                if (piece != null)
+                    yield return (new Position(r, c), piece);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extract the 64-character board string from the AEI setposition format.
+    /// Returns null if the AEI string is malformed.
+    /// </summary>
+    private string? ExtractBoardString()
+    {
+        if (string.IsNullOrWhiteSpace(_aeiSetPosition)) return null;
+
+        var trimmed = _aeiSetPosition.Trim();
+        var firstQuote = trimmed.IndexOf('"');
+        var lastQuote = trimmed.LastIndexOf('"');
+
+        if (firstQuote < 0 || lastQuote <= firstQuote || lastQuote - firstQuote - 1 != 64)
+            return null;
+
+        return trimmed.Substring(firstQuote + 1, 64);
+    }
+
+    /// <summary>
+    /// Internal helper for consumers that require a guaranteed valid board string.
+    /// Throws when the AEI string is not present or malformed.
+    /// </summary>
+    internal string GetBoardStringOrThrow()
+    {
+        var board = ExtractBoardString();
+        if (board is null)
+            throw new ArgumentException("Malformed AEI setposition: board string must be exactly 64 characters.");
+        if (board.Length != 64)
+            throw new ArgumentException("Malformed AEI setposition: board string must be exactly 64 characters.");
+        return board;
+    }
+
+    /// <summary>
+    /// Rebuild the AEI setposition string with the new board configuration.
+    /// </summary>
+    private void RebuildAei(string newBoardString)
+    {
+        if (newBoardString.Length != 64)
+            throw new ArgumentException("Board string must be exactly 64 characters.", nameof(newBoardString));
+
+        var sideChar = SideToMove == Side.Gold ? 'g' : 's';
+        localAeiSetPosition = $"setposition {sideChar} \"{newBoardString}\"";
+    }
+
+    private static void ValidateAndParseAei(string aeiSetPosition, out Side side, out string boardString)
+    {
         var trimmed = aeiSetPosition.Trim();
         if (!trimmed.StartsWith("setposition ", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Expected string starting with 'setposition'.", nameof(aeiSetPosition));
 
-        // Remove leading keyword
         var rest = trimmed.Substring("setposition ".Length).TrimStart();
         if (rest.Length < 3)
             throw new ArgumentException("Malformed setposition string.", nameof(aeiSetPosition));
 
-        // First non-space char must be side
         var sideChar = char.ToLowerInvariant(rest[0]);
-        SideToMove = sideChar switch
+        side = sideChar switch
         {
             'g' => Side.Gold,
             's' => Side.Silver,
             _ => throw new ArgumentException("Side must be 'g' or 's'.", nameof(aeiSetPosition))
         };
 
-        // Find the first quote and last quote to extract the 64-char flat board string
         var firstQuote = rest.IndexOf('"');
         var lastQuote = rest.LastIndexOf('"');
         if (firstQuote < 0 || lastQuote <= firstQuote)
             throw new ArgumentException("Board string must be quoted.", nameof(aeiSetPosition));
 
-        var flat = rest.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-        if (flat.Length != 64)
+        boardString = rest.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+        if (boardString.Length != 64)
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiSetPosition));
-
-        // Fill board row-major: rows 0..7, cols 0..7, as per UI expects top row is index 0
-        for (var i = 0; i < 64; i++)
-        {
-            var r = i / 8;
-            var c = i % 8;
-            var ch = flat[i];
-            _board[r, c] = CharToPiece(ch);
-        }
     }
 
     private static Piece? CharToPiece(char ch)
@@ -82,33 +231,5 @@ public sealed class GameState
             'E' => new Piece(PieceType.Elephant, side),
             _ => null
         };
-    }
-
-    public Piece? GetPiece(Position p) => p.IsOnBoard ? _board[p.Row, p.Col] : null;
-
-    public bool IsEmpty(Position p) => GetPiece(p) is null;
-
-    public IEnumerable<(Position pos, Piece piece)> AllPieces()
-    {
-        for (var r = 0; r < 8; r++)
-        for (var c = 0; c < 8; c++)
-        {
-            var piece = _board[r, c];
-            if (piece != null) yield return (new Position(r, c), piece);
-        }
-    }
-
-    // Extremely simplified move: move a piece to any empty square on the board.
-    public bool TryMove(Position from, Position to)
-    {
-        if (!from.IsOnBoard || !to.IsOnBoard) return false;
-        if (from == to) return false;
-        var piece = _board[from.Row, from.Col];
-        if (piece is null) return false;
-        if (_board[to.Row, to.Col] is not null) return false;
-
-        _board[to.Row, to.Col] = piece;
-        _board[from.Row, from.Col] = null;
-        return true;
     }
 }

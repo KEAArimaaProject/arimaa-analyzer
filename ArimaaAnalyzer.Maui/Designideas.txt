@@ -1,7 +1,7 @@
 ﻿
 2025-12-04
 
---to be done to improve move validation
+||||--to be done to improve move validation
 in CorrectMoveService and GameState needs to be changed. 
 so game state is only saved as a single String, and not nested lists of SVG. references.
 
