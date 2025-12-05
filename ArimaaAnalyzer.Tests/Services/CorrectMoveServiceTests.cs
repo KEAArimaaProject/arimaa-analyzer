@@ -135,12 +135,12 @@ public class CorrectMoveServiceTests
         result.Should().Be("Cc4s");
     }
 
-    [Fact(DisplayName = "Push/Pull required transition returns error (not implemented)")]
-    public void PushPull_Required_ReturnsError()
+    [Fact(DisplayName = "Push/Pull required transition is now supported (push)")]
+    public void PushPull_Required_IsSupported_Push()
     {
         // Before: Gold Elephant at d4, Silver Rabbit at d5
         // After:  Elephant at d5, Rabbit at d6 (a legal push in real Arimaa)
-        // Our solver doesn't implement push/pull, so it must return "error".
+        // Solver implements push/pull, expect two-step push sequence.
 
         var before = EmptyBoard();
         // E at d4
@@ -158,8 +158,9 @@ public class CorrectMoveServiceTests
         var gsAfter = new GameState(BoardToAei(after, "s"));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
-
-        result.Should().Be("error");
+        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        steps.Should().HaveCount(2);
+        steps.Should().ContainInOrder("Rd5n", "Ed4n");
     }
 
     private static string ReplaceChar(string s, int index, char ch)
@@ -188,7 +189,7 @@ public class CorrectMoveServiceTests
     // Push / Pull mechanics tests
     // =============================
 
-    [Fact(DisplayName = "Push: Elephant pushes rabbit north (two-step)", Skip = "Push/Pull not implemented yet")]
+    [Fact(DisplayName = "Push: Elephant pushes rabbit north (two-step)")]
     public void Push_Elephant_Pushes_Rabbit_North_TwoSteps()
     {
         // Before: Gold Elephant at d4 (row4,col3), Silver Rabbit at d5 (row3,col3)
@@ -206,23 +207,21 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
-        // Expected in the future (either order): "rd5n Ed4n" OR "Ed4n rd5n"
-        // Once implemented, replace Skip with assertions like below:
-        // var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        // steps.Should().HaveCount(2);
-        // steps.ToHashSet().Should().BeEquivalentTo(new HashSet<string> { "rd5n", "Ed4n" });
-        result.Should().NotBeNull(); // placeholder to avoid warnings
+        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        steps.Should().HaveCount(2);
+        // Our notation uses uppercase piece letters always
+        steps.Should().ContainInOrder("Rd5n", "Ed4n"); // push = enemy moves first, then pusher
     }
 
-    [Fact(DisplayName = "Push onto trap causes immediate capture", Skip = "Push/Pull not implemented yet")]
+    [Fact(DisplayName = "Push onto trap causes immediate capture")]
     public void Push_Onto_Trap_Captures_Immediately()
     {
         // Trap square: c3 -> (row5,col2)
-        // Setup: Gold Elephant at c4 (row4,col2), Silver Rabbit at b3 (row5,col1), no silver support.
-        // Push r b3->c3 (onto trap, no support) -> captured; then E moves b3.
+        // Setup: Gold Elephant at a3 (row5,col0), Silver Rabbit at b3 (row5,col1), no silver support.
+        // Push r b3->c3 (onto trap, no support) -> captured; then E moves a3->b3.
         // After: E at b3 (row5,col1), c3 empty.
         var before = EmptyBoard();
-        before[4] = ReplaceChar(before[4], 2, 'E'); // c4
+        before[5] = ReplaceChar(before[5], 0, 'E'); // a3
         before[5] = ReplaceChar(before[5], 1, 'r'); // b3
 
         var after = EmptyBoard();
@@ -234,50 +233,95 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
-        // Expected later (either order): "rb3e Eb3w" OR "Eb3w rb3e" with capture at c3 after rb3e.
-        result.Should().NotBeNull();
+        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        steps.Should().HaveCount(2);
+        // Enemy rabbit is pushed onto c3 (trap) and captured immediately, then E moves into b3
+        steps.Should().ContainInOrder("Rb3e", "Ea3e");
     }
 
-    [Fact(DisplayName = "Pull: Elephant pulls rabbit south (two-step)", Skip = "Push/Pull not implemented yet")]
+    [Fact(DisplayName = "Pull: Elephant pulls rabbit north (two-step)")]
     public void Pull_Elephant_Pulls_Rabbit_South_TwoSteps()
     {
         // Setup for a pull: Gold Elephant at e5 (row3,col4), Silver Rabbit at e4 (row4,col4).
-        // Pull south: first E e5->e4, then r e4->e3 (or the reverse order depending on convention).
+        // Pull north: first E e5->e6, then r e4->e5.
         var before = EmptyBoard();
         before[3] = ReplaceChar(before[3], 4, 'E'); // e5
         before[4] = ReplaceChar(before[4], 4, 'r'); // e4
 
         var after = EmptyBoard();
-        after[4] = ReplaceChar(after[4], 4, 'E'); // e4
-        after[5] = ReplaceChar(after[5], 4, 'r'); // e3
+        after[2] = ReplaceChar(after[2], 4, 'E'); // e6
+        after[3] = ReplaceChar(after[3], 4, 'r'); // e5
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
-        // Expected later: two steps, order-insensitive: {"Ee5s", "re4s"}
-        result.Should().NotBeNull();
+        var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        steps.Should().HaveCount(2);
+        // Pull = pusher moves first, then enemy follows into origin square
+        steps.Should().ContainInOrder("Ee5n", "Re4n");
     }
 
-    [Fact(DisplayName = "Attempt to pull off trap is illegal and should be error")]
-    public void Pull_Off_Trap_Should_Return_Error()
+    [Fact(DisplayName = "Illegal pull by weaker piece should return error")]
+    public void IllegalPull_ByWeaker_ReturnsError()
     {
-        // Enemy on trap c3 supported only by our pulling piece at c4.
-        // If we move off c4 as first step, enemy on c3 loses all support and is captured immediately,
-        // so the subsequent pull step cannot be made. Thus the target after-state (where enemy relocates) is illegal.
-        // Set desired after-state as if a pull were attempted: E c4->b4, r c3->c4 (but this is impossible).
+        // Gold Horse attempts to pull Silver Camel (stronger) — illegal.
+        // Before: H at d4, m at d5. After (as if pull): H at d5, m at d4.
         var before = EmptyBoard();
-        before[4] = ReplaceChar(before[4], 2, 'E'); // c4 (our support)
-        before[5] = ReplaceChar(before[5], 2, 'r'); // c3 (enemy on trap)
+        before[4] = ReplaceChar(before[4], 3, 'H'); // d4
+        before[3] = ReplaceChar(before[3], 3, 'm'); // d5 (silver camel)
 
         var after = EmptyBoard();
-        after[4] = ReplaceChar(after[4], 1, 'E'); // pretend E moved to b4
-        after[5] = ReplaceChar(after[5], 2, 'r'); // pretend r stayed or would move later (keep same to force impossibility)
+        after[3] = ReplaceChar(after[3], 3, 'H'); // d5
+        after[4] = ReplaceChar(after[4], 3, 'm'); // d4
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        
+
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+
+        result.Should().Be("error");
+    }
+
+    [Fact(DisplayName = "Rabbit cannot initiate pull by moving backward")]
+    public void Rabbit_Cannot_Pull_Backward()
+    {
+        // Gold Rabbit at d4, Silver Cat at d5.
+        // Attempted pull south (backward for gold rabbit): R d4->d3, then c d5->d4.
+        var before = EmptyBoard();
+        before[4] = ReplaceChar(before[4], 3, 'R'); // d4 gold rabbit
+        before[3] = ReplaceChar(before[3], 3, 'c'); // d5 silver cat
+
+        var after = EmptyBoard();
+        after[5] = ReplaceChar(after[5], 3, 'R'); // d3
+        after[4] = ReplaceChar(after[4], 3, 'c'); // d4
+
+        var gsBefore = new GameState(BoardToAei(before, "g"));
+        var gsAfter = new GameState(BoardToAei(after, "s"));
+
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+
+        result.Should().Be("error");
+    }
+
+    [Fact(DisplayName = "Frozen pusher cannot push or pull")]
+    public void FrozenPusher_CannotPushOrPull_ReturnsError()
+    {
+        // Gold Cat at d4 is frozen by adjacent stronger Silver Dog at c4 (no friendly support).
+        // There is also a Silver Rabbit at d5. Attempt an after-state as if Cat pushed the rabbit: Rd5n Cd4n.
+        var before = EmptyBoard();
+        before[4] = ReplaceChar(before[4], 3, 'C'); // d4 gold cat (pusher, but frozen)
+        before[4] = ReplaceChar(before[4], 2, 'd'); // c4 silver dog (freezes C)
+        before[3] = ReplaceChar(before[3], 3, 'r'); // d5 silver rabbit (target to push)
+
+        var after = EmptyBoard();
+        after[2] = ReplaceChar(after[2], 3, 'r'); // d6 (as if pushed)
+        after[3] = ReplaceChar(after[3], 3, 'C'); // d5 (as if cat advanced)
+
+        var gsBefore = new GameState(BoardToAei(before, "g"));
+        var gsAfter = new GameState(BoardToAei(after, "s"));
+
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
