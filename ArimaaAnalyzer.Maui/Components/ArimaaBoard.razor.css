@@ -1,7 +1,13 @@
 ﻿/* Outer container (may include toolbars/sidebars). When no extras are rendered,
    it will be effectively the same size as the inner board. */
 .board-outer {
-  display: inline-block;
+  /* Fixed square sized by settings */
+  --outer-size: 448px; /* fallback if not provided inline */
+  width: var(--outer-size);
+  height: var(--outer-size);
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* top / main (fills) / bottom */
+  box-sizing: border-box;
 }
 
 /* Optional regions when outer UI is enabled */
@@ -15,6 +21,7 @@
 }
 
 .outer-main {
+  /* Middle band: left | inner | right */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,24 +38,30 @@
 .outer-btn { padding: 4px 8px; }
 .outer-caption { font-size: 0.9rem; color: #555; }
 
-/* Inner board: previously .board */
+/* Inner board should scale to whatever space is left inside the fixed outer container. */
 .board-inner {
-  --square-size: 56px;  /* inner square size */
   --piece-size: 44px;   /* piece image size */
-
-  display: inline-block;
+  display: block;
   border: 2px solid #333;
-  /* Prevents the browser from interpreting touch gestures (like scrolling) within the board */
-  touch-action: none;
+  touch-action: none; /* prevent scroll on touch */
+  /* Fit within center cell; keep square shape, shrink if needed */
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
 }
 
 .rank {
   display: flex;
+  height: 12.5%; /* 1/8 of inner height */
 }
 
 .square {
-  width: var(--square-size);
-  height: var(--square-size);
+  width: 12.5%;  /* 1/8 of inner width */
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,6 +83,8 @@
 .square img {
   width: var(--piece-size);
   height: var(--piece-size);
+  max-width: 90%;
+  max-height: 90%;
   /* Allow the image to receive drag events */
   pointer-events: auto;
   cursor: grab;
