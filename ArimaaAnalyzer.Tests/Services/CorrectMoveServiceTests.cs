@@ -43,8 +43,7 @@ public class CorrectMoveServiceTests
 
         var after = new GameState(BoardToAei(afterBoard, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
         result.Should().Be("Hh2n");
     }
@@ -65,8 +64,7 @@ public class CorrectMoveServiceTests
 
         var after = new GameState(BoardToAei(afterBoard, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
         // Accept either order since BFS may find any order of the two independent steps
         var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
@@ -81,8 +79,7 @@ public class CorrectMoveServiceTests
         // after equals before side switched to Silver
         var after = new GameState(BoardToAei(BaseBoard, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(before, after, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
         result.Should().Be("error");
     }
@@ -109,8 +106,7 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
     }
@@ -134,8 +130,7 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("Cc4s");
     }
@@ -162,8 +157,7 @@ public class CorrectMoveServiceTests
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
 
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
     }
@@ -209,8 +203,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         // Expected in the future (either order): "rd5n Ed4n" OR "Ed4n rd5n"
         // Once implemented, replace Skip with assertions like below:
@@ -237,8 +231,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         // Expected later (either order): "rb3e Eb3w" OR "Eb3w rb3e" with capture at c3 after rb3e.
         result.Should().NotBeNull();
@@ -259,8 +253,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         // Expected later: two steps, order-insensitive: {"Ee5s", "re4s"}
         result.Should().NotBeNull();
@@ -283,8 +277,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
     }
@@ -304,8 +298,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
     }
@@ -326,8 +320,8 @@ public class CorrectMoveServiceTests
 
         var gsBefore = new GameState(BoardToAei(before, "g"));
         var gsAfter = new GameState(BoardToAei(after, "s"));
-        var svc = new CorrectMoveService();
-        var result = svc.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
         result.Should().Be("error");
     }
