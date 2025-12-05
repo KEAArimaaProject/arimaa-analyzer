@@ -1,33 +1,18 @@
-﻿/* Outer container (may include toolbars/sidebars). When no extras are rendered,
-   it will be effectively the same size as the inner board. */
+﻿
 .board-outer {
-  /* Maximum square size comes from settings; shrink to fit available screen */
-  --outer-size: 448px; /* fallback if not provided inline */
-  /* Compute a size that fits both axes. Use a cascade of units where the last
-     supported declaration wins. This avoids dropping the whole rule on engines
-     that don't support `sv*`/`dv*` units (e.g., some WebView2 builds on Windows). */
-
-  /* Keep it square and constrained by the smaller of viewport width/height */
-  aspect-ratio: 1 / 1;
-  /* Drive size by inline (width) axis and let aspect-ratio compute height. */
-  /* Fallback: classic viewport units, subtract the sticky header (3.5rem) */
-  width: min(var(--outer-size), 100%, 100vw, calc(100vh - 3.5rem));
-  /* Prefer dynamic viewport units when available */
-  width: min(var(--outer-size), 100%, 100dvw, calc(100dvh - 3.5rem));
-  /* Prefer small viewport units when available */
-  width: min(var(--outer-size), 100%, 100svw, calc(100svh - 3.5rem));
+  --outer-size: 448px;
+  /* Prefer target size but never exceed container. Height auto so content defines height. */
+  width: min(var(--outer-size), 100%);
   height: auto;
-  /* Also cap the block size so we shrink if vertical space is tighter. */
-  max-height: 100%;    /* fit inside parent if it provides a height */
-  max-height: calc(100vh - 3.5rem);   /* fallback */
-  max-height: calc(100dvh - 3.5rem);  /* prefer dynamic vh */
-  max-height: calc(100svh - 3.5rem);  /* prefer small vh */
+
+  /* Absolute hard stops */
   max-width: 100%;
+  max-height: 100%;
 
   display: grid;
-  grid-template-rows: auto 1fr auto; /* top / main (fills) / bottom */
+  grid-template-rows: auto 1fr auto;
   box-sizing: border-box;
-  margin: 0 auto; /* center when there's extra horizontal space */
+  margin: 0 auto;
 }
 
 /* Optional regions when outer UI is enabled */
@@ -46,6 +31,8 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  /* Allow the center band to shrink when vertical space is tight */
+  min-height: 0;
 }
 
 .outer-left,
@@ -65,14 +52,21 @@
   border: 2px solid #333;
   touch-action: none; /* prevent scroll on touch */
   /* Fit within center cell; keep square shape, shrink if needed */
-  flex: 1 1 auto;
+  /* Prevent flex growth from stretching width beyond the square */
+  flex: 0 0 auto;
+  /* Fallback: fill available width, keep square, limit by container height */
   width: 100%;
-  height: 100%;
+  height: auto;
   aspect-ratio: 1 / 1;
   max-width: 100%;
   max-height: 100%;
   box-sizing: border-box;
+  align-self: center;
 }
+
+/* Removed container query sizing due to WebView2 layout issue where block-size
+   can resolve to 0, collapsing the board. Fallback sizing below keeps a square
+   and allows vertical constraints to shrink it. */
 
 .rank {
   display: flex;

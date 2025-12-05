@@ -7,39 +7,37 @@ html, body {
     overflow-x: hidden;*/
 }
 
-/* Make sure the Blazor root fills the viewport so the background shows */
 #app {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    /* NEW: ensure app fills viewport and doesn't scroll internally */
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* ============================================= */
-/*  FIX: Proper top padding + safe area handling  */
-/* ============================================= */
-
-body {
-    /* This padding will push your entire app content down below the status bar */
-    padding-top: env(safe-area-inset-top, 0px) !important;
+/* NEW: Container for all page content below the sticky header */
+.page-wrapper {
+    flex: 1 1 auto;  /* Claim all remaining vertical space */
+    overflow: hidden; /* Don't let content overflow */
+    display: flex;
+    flex-direction: column;
 }
 
-
-/* The actual navbar — make sure it has a solid background and proper height */
+.top-row,
 nav.navbar,
-.navbar,                     /* whatever class your navbar uses */
-.top-row,                    /* default Blazor template uses .top-row */
-.main-layout-header          /* if you renamed it */
-{
+.navbar {
     position: sticky !important;
     top: 0;
     left: 0;
     right: 0;
-    height: 3.5rem;                     /* default Blazor height */
-    background-color: white !important; /* force white background */
+    height: 3.5rem;
+    background-color: white !important;
     border-bottom: 1px solid #ddd;
     z-index: 1000;
     display: flex;
     align-items: center;
+    flex-shrink: 0; /* Don't let it shrink */
     padding-left: max(env(safe-area-inset-left), 1rem);
     padding-right: max(env(safe-area-inset-right), 1rem);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -58,9 +56,15 @@ button.navbar-toggler {
 }
 
 /* Optional: add a little extra top margin to main content so it doesn't touch the navbar */
-.main > .content,
-.page {
+.main > .content {
     padding-top: 2rem;   /* adjust if you already have .content padding */
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* ============================================= */
@@ -80,8 +84,16 @@ a, .btn-link { color: #006bb7; }
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+/* Main content area that scrolls if needed, but contains the board */
 .content {
-    padding-top: 1.1rem;
+    padding-top: 1rem;
+    flex: 1 1 auto;
+    min-height: 0;    /* ← ADD THIS! Critical for flex children to shrink */
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 h1:focus {

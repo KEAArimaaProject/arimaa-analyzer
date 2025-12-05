@@ -8,9 +8,8 @@
 <div class="page">
     <NavMenu/>
 
-    <main>
+    <main class="page-wrapper">
         <div class="top-row px-4">
-            <!-- Burger trigger placed in the global top bar to ensure visibility on Android/iOS -->
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
             @if (IsOnArimaaPage)
             {
@@ -21,7 +20,7 @@
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
-        <article class="content px-4">
+        <article class="content">
             <CascadingValue Value="_sharedSettings">
                 @Body
             </CascadingValue>
