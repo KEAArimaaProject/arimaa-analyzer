@@ -1,8 +1,5 @@
-﻿@page "/weather"
+﻿@page "/loadgamemanual"
 
-<h1>Weather</h1>
-
-<p>This component demonstrates showing data.</p>
 
 @if (forecasts == null)
 {
@@ -12,7 +9,11 @@
 }
 else
 {
-    <table class="table">
+    <p>Page to load games manually from Arimaa.com</p>
+}
+
+@* 
+<table class="table">
         <thead>
         <tr>
             <th>Date</th>
@@ -33,7 +34,7 @@ else
         }
         </tbody>
     </table>
-}
+ *@
 
 @code {
     private WeatherForecast[]? forecasts;
