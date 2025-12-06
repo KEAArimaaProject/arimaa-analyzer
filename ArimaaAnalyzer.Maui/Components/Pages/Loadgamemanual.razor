@@ -1,67 +1,35 @@
 ﻿@page "/loadgamemanual"
 
 
-@if (forecasts == null)
-{
-    <p>
-        <em>Loading...</em>
-    </p>
-}
-else
-{
     <p>Page to load games manually from Arimaa.com</p>
-}
-
-@* 
-<table class="table">
-        <thead>
-        <tr>
-            <th>Date</th>
-            <th aria-label="Temperature in Celsius">Temp. (C)</th>
-            <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-            <th>Summary</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var forecast in forecasts)
-        {
-            <tr>
-                <td>@forecast.Date.ToShortDateString()</td>
-                <td>@forecast.TemperatureC</td>
-                <td>@forecast.TemperatureF</td>
-                <td>@forecast.Summary</td>
-            </tr>
-        }
-        </tbody>
-    </table>
- *@
-
-@code {
-    private String onlinegame;
+    <div class="mb-3">
+        <label for="gameNotation" class="form-label">Enter Arimaa game notation:</label>
+        <div class="input-group">
+            <textarea id="gameNotation" class="form-control" rows="15" @bind="GameNotation" placeholder="Paste the full game notation here..."></textarea>
+        </div>
+    </div>
     
-    private WeatherForecast[]? forecasts;
-
-    protected override async Task OnInitializedAsync()
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="LoadGame">Load Game</button>
+    </div>
+    
+    @if (LoadedGame != null)
     {
-        // Simulate asynchronous loading to demonstrate a loading indicator
-        await Task.Delay(500);
-
-        var startDate = DateOnly.FromDateTime(DateTime.Now);
-        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-        forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
-        {
-            Date = startDate.AddDays(index),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = summaries[Random.Shared.Next(summaries.Length)]
-        }).ToArray();
+    <h5>Loaded Game:</h5>
+    <pre class="border p-3 bg-light">@LoadedGame</pre>
     }
 
-    private class WeatherForecast
+@code {
+    private string? GameNotation { get; set; }
+    private string? LoadedGame { get; set; }
+
+    private void LoadGame()
     {
-        public DateOnly Date { get; set; }
-        public int TemperatureC { get; set; }
-        public string? Summary { get; set; }
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+        // Basic trimming - you can add validation later if needed
+        LoadedGame = GameNotation?.Trim();
+        
+        // Optional: Clear the input after loading
+        // GameNotation = string.Empty;
     }
 
 }
