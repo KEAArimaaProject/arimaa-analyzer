@@ -160,18 +160,47 @@ h1:focus {
     display: none;
 }
 
-@supports (-webkit-touch-callout: none) {
-    .status-bar-safe-area {
-        display: flex;
+/* Mobile-only: Push the top-row header down to respect the status bar safe area */
+@media (max-width: 1024px) {
+    /* Target mobile devices more reliably – most phones/tablets in portrait are <1024px wide */
+    .top-row {
+        padding-top: env(safe-area-inset-top);
         position: sticky;
         top: 0;
-        height: env(safe-area-inset-top);
-        background-color: #f7f7f7;
-        width: 100%;
-        z-index: 1;
     }
 
-    .flex-column, .navbar-brand {
-        padding-left: env(safe-area-inset-left);
+    /* Optional: If you want the background to extend into the status bar area (common "immersive" look) */
+    .top-row {
+        background-color: #f7f7f7 !important; /* Ensure it matches your current color */
+    }
+
+    /* Also ensure the hidden checkbox toggle (in NavMenu) respects safe area */
+    .navbar-toggler {
+        top: env(safe-area-inset-top);
     }
 }
+
+
+/* Mobile safe area fix for MAUI Blazor Hybrid - pushes everything down below status bar */
+@supports (-webkit-touch-callout: none) {
+    /* Targets iOS and most Android WebViews in MAUI reliably */
+    body {
+        padding-top: env(safe-area-inset-top, 44px);  /* Fallback to ~44px if env() is 0 - common status bar height on modern Android */
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Optional: Adjust your top-row background if you want it to fill the padded area */
+    .top-row {
+        background-color: #f7f7f7 !important;  /* Matches your current header color */
+    }
+}
+
+/* Extra fallback for any Android devices where the above doesn't trigger */
+@media (hover: none) and (pointer: coarse) {
+    body {
+        padding-top: max(44px, env(safe-area-inset-top));  /* Ensures at least 44px on Android */
+    }
+}
+
