@@ -167,17 +167,28 @@ public class NotationServiceTests
         var test = "";
     }
     
-    [Fact(DisplayName = "NotationService test that an arimaa game can be converted to a list of turns")]
+    [Fact(DisplayName = "NotationService parses a game into a main-line turn tree")]
     public void ConvertGameNotationToListOfTupples_mixedBoard()
     {
         // before: base position, gold to move
-        List<GameTurn> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+        GameTurn? root = NotationService.ExtractTurnsWithMoves(Game_base);
 
-        singleString.Count.Should().Be(81);
+        root.Should().NotBeNull();
+
+        // Enumerate main line by following IsMainLine children
+        var main = new List<GameTurn>();
+        var node = root;
+        while (node != null)
+        {
+            main.Add(node);
+            node = node.Children.FirstOrDefault(c => c.IsMainLine);
+        }
+
+        main.Count.Should().Be(81);
         
-        singleString[4].MoveNumber.ToString().Should().Be("3");
-        singleString[4].Side.Should().Be("w");
-        singleString[4].Moves[0].Should().Be("Ed5w");
+        main[4].MoveNumber.ToString().Should().Be("3");
+        main[4].Side.Should().Be("w");
+        main[4].Moves[0].Should().Be("Ed5w");
 
         var test = "";
     }
@@ -186,18 +197,19 @@ public class NotationServiceTests
     public void ConvertGameArrayAndIndexToAEI_mixedBoard()
     {
         // before: base position, gold to move
-        List<GameTurn> singleString = NotationService.ExtractTurnsWithMoves(Game_base);
+        GameTurn? root = NotationService.ExtractTurnsWithMoves(Game_base);
+        root.Should().NotBeNull();
 
-        var aeiFromTurn_0 = NotationService.GameToAeiAtTurn(singleString, 0);
+        var aeiFromTurn_0 = NotationService.GameToAeiAtTurn(root!, 0);
         aeiFromTurn_0.Should().Be("setposition b \"RCRDRRRRHMREDCHR                                                \"");
         
-        var aeiFromTurn_1 = NotationService.GameToAeiAtTurn(singleString, 1);
+        var aeiFromTurn_1 = NotationService.GameToAeiAtTurn(root!, 1);
         aeiFromTurn_1.Should().Be("setposition g \"RCRDRRRRHMREDCHR                                rhchecmdrrrrdrrr\"");
         
-        var aeiFromTurn_2 = NotationService.GameToAeiAtTurn(singleString, 2);
+        var aeiFromTurn_2 = NotationService.GameToAeiAtTurn(root!, 2);
         aeiFromTurn_2.Should().Be("setposition b \"RMRERRRRH REDCHR   E                            rhchecmdrrrrdrrr\"");
 
-        var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(singleString, 80);
+        var aeiFromTurn_80 = NotationService.GameToAeiAtTurn(root!, 80);
         aeiFromTurn_80.Should().Be("setposition b \"  RR  HRH RR H RHCRR H   e Rhhr heC R   R D R h  Red   hrr Rh Hh\"");
 
         var test = "";

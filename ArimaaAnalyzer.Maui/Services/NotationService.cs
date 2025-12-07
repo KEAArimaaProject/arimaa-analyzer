@@ -11,7 +11,7 @@ public static class NotationService
     /// <summary>
     /// Converts a parsed Arimaa game up to a specific turn into an AEI position string.
     /// </summary>
-    /// <param name="turns">The list of parsed turns from ExtractTurnsWithMoves</param>
+    /// <param name="root">The root (first node) of the parsed main-line turn tree from ExtractTurnsWithMoves</param>
     /// <param name="upToTurnIndex">
     /// The 0-based index in the turns list. 
     /// -1 means the final position (all turns applied).
@@ -19,26 +19,35 @@ public static class NotationService
     /// </param>
     /// <returns>The AEI string (setposition ...) for the position after the specified turn.</returns>
     public static string GameToAeiAtTurn(
-        List<GameTurn> turns,
+        GameTurn root,
         int upToTurnIndex = -1)
     {
-        if (turns == null) throw new ArgumentNullException(nameof(turns));
+        if (root == null) throw new ArgumentNullException(nameof(root));
 
         string[] board = InitializeEmptyBoard();
         string sideToMove = "g"; // Gold always starts
 
-        int lastIndex = upToTurnIndex == -1 ? turns.Count - 1 : upToTurnIndex;
-        if (lastIndex < -1 || (turns.Count > 0 && lastIndex >= turns.Count))
+        // Build the main-line sequence by traversing children where IsMainLine is true.
+        var mainLine = new List<GameTurn>();
+        var node = root;
+        while (node != null)
+        {
+            mainLine.Add(node);
+            node = node.Children.FirstOrDefault(c => c.IsMainLine);
+        }
+
+        int lastIndex = upToTurnIndex == -1 ? mainLine.Count - 1 : upToTurnIndex;
+        if (lastIndex < -1 || (mainLine.Count > 0 && lastIndex >= mainLine.Count))
             throw new ArgumentOutOfRangeException(nameof(upToTurnIndex));
 
-        // If upToTurnIndex is -1 and turns is empty, return initial position
-        if (turns.Count == 0 || lastIndex < -1)
+        // If upToTurnIndex is -1 and there are no turns, return initial position
+        if (mainLine.Count == 0 || lastIndex < -1)
             return BoardToAei(board, sideToMove);
 
         // Apply moves up to and including the specified turn
         for (int i = 0; i <= lastIndex; i++)
         {
-            var turn = turns[i];
+            var turn = mainLine[i];
             string moveSide = turn.Side == "w" ? "g" : "b";
 
             // Optional safety: ensure turns are in expected order (alternating sides)
@@ -67,13 +76,14 @@ public static class NotationService
     /// the move number, side ('w' or 'b'), and the list of individual moves in that turn.
     /// </summary>
     /// <param name="gameText">The full game notation text.</param>
-    /// <returns>List of turns with move number, side, and moves.</returns>
-    public static List<GameTurn> ExtractTurnsWithMoves(string gameText)
+    /// <returns>The root node of the main-line turn tree (first turn). Returns null if no turns found.</returns>
+    public static GameTurn? ExtractTurnsWithMoves(string gameText)
     {
-        var turns = new List<GameTurn>();
+        GameTurn? root = null;
+        GameTurn? current = null;
 
         if (string.IsNullOrWhiteSpace(gameText))
-            return turns;
+            return null;
 
         // Step 1: Replace literal "\n" (the text) with actual newline characters
         // This handles cases where the text contains "\n" as part of the string
@@ -101,22 +111,34 @@ public static class NotationService
             string side = match.Groups[2].Value;
             string movesPart = match.Groups[3].Value.Trim();
 
+            IReadOnlyList<string> individualMoves;
             if (string.IsNullOrWhiteSpace(movesPart))
             {
-                turns.Add(new GameTurn(moveNumber, side, Array.Empty<string>()));
-                continue;
+                individualMoves = Array.Empty<string>();
+            }
+            else
+            {
+                individualMoves = movesPart
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(m => m.Trim())
+                    .Where(m => !string.IsNullOrEmpty(m))
+                    .ToArray();
             }
 
-            var individualMoves = movesPart
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(m => m.Trim())
-                .Where(m => !string.IsNullOrEmpty(m))
-                .ToArray();
-
-            turns.Add(new GameTurn(moveNumber, side, individualMoves));
+            var node = new GameTurn(moveNumber, side, individualMoves, isMainLine: true);
+            if (root == null)
+            {
+                root = node;
+                current = node;
+            }
+            else
+            {
+                current!.AddChild(node);
+                current = node;
+            }
         }
 
-        return turns;
+        return root;
     }
     
     
