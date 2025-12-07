@@ -20,7 +20,7 @@
 
     @if (LoadedGame != null)
     {
-        <h5>Loaded Game (@LoadedGame.Moves.Count moves):</h5>
+        <h5>Loaded Game (@LoadedGame.Moves.Length moves):</h5>
         <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@LoadedGame.RawNotation</pre>
     }
 
@@ -31,23 +31,9 @@
 
     private void LoadGame()
     {
-        ErrorMessage = null;
-        LoadedGame = null;
-
-        if (string.IsNullOrWhiteSpace(GameNotation))
-        {
-            ErrorMessage = "Please enter game notation.";
-            return;
-        }
-
-        if (ArimaaGameService.TryParse(GameNotation, out var game, out var error))
-        {
-            LoadedGame = game;
-        }
-        else
-        {
-            ErrorMessage = $"Invalid game: {error}";
-        }
+        
+        LoadedGame = new ArimaaGameService(GameNotation);
+        
     }
 
 }

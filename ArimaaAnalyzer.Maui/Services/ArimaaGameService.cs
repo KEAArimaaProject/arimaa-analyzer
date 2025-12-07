@@ -12,75 +12,85 @@ public record ArimaaGameService
     /// The original raw notation string (trimmed).
     /// </summary>
     public string RawNotation { get; init; }
-
     /// <summary>
     /// The individual moves/lines (split by newline and trimmed).
     /// </summary>
-    public IReadOnlyList<string> Moves { get; init; } = Array.Empty<string>();
+    public string[] Moves { get; init; } = Array.Empty<string>();
+    public string? ErrorMessage { get; init; }
 
-    private ArimaaGameService(string rawNotation, IReadOnlyList<string> moves)
+    public ArimaaGameService(string rawNotation)
     {
-        RawNotation = rawNotation;
-        Moves = moves;
-    }
+        RawNotation = rawNotation.Trim();
+        ErrorMessage = FindError(rawNotation);
 
+        Moves = ErrorMessage == null
+            ? GenerateMoves(rawNotation)
+            : Array.Empty<string>();
+    }
+    
+    private static string[] GenerateMoves(string rawNotation)
+    {
+        try
+        {
+            // Normalize escaped literals first (if input contains "\\n" or "\\r\\n")
+            rawNotation = rawNotation
+                .Replace("\\r\\n", "\n")
+                .Replace("\\n", "\n")
+                .Replace("\\r", "\n");
+
+            // Normalize all real line endings to \n
+            var normalized = rawNotation.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            // Split on \n only, after normalization
+            string[] moves = normalized
+                .Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(move => move.Trim()) // trim first
+                .Where(move => !string.IsNullOrWhiteSpace(move)) // then filter
+                .ToArray();
+
+            return moves;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing moves: {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+    
+    
     /// <summary>
     /// Attempts to parse and validate the game notation.
-    /// Returns true if valid, false otherwise.
+    /// Returns null if valid, an error string otherwise.
     /// </summary>
-    public static bool TryParse(string notation, out ArimaaGameService? game, out string? errorMessage)
+    private static string? FindError(string rawNotation)
     {
-        game = null;
-        errorMessage = null;
-
-        if (string.IsNullOrWhiteSpace(notation))
+        if (string.IsNullOrWhiteSpace(rawNotation))
         {
-            errorMessage = "Game notation cannot be null or empty.";
-            return false;
+            return "Game notation cannot be null or empty.";
         }
 
-        var trimmed = notation.Trim();
-        var lines = trimmed.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                           .Select(l => l.Trim())
-                           .Where(l => !string.IsNullOrEmpty(l))
-                           .ToList();
-
-        if (lines.Count == 0)
+        string[] generatedmoves = GenerateMoves(rawNotation);
+        if (generatedmoves.Length == 0)
         {
-            errorMessage = "No valid move lines found.";
-            return false;
+            return "No valid move lines found.";
         }
-
+        
         // Basic validation: each line should match the expected pattern for Arimaa notation
         // Example patterns:
         // "1w Ed2 Mb2 ..."          -> move number + side + spaces + moves
         // "1b ra7 hb7 ..."
         var moveLinePattern = new Regex(@"^\d+[wb]\s+.*", RegexOptions.Compiled);
 
-        foreach (var line in lines)
+        foreach (var line in generatedmoves)
         {
             if (!moveLinePattern.IsMatch(line))
             {
-                errorMessage = $"Invalid move line format: '{line}'";
-                return false;
+                return $"Invalid move line format: '{line}'";
             }
-
-            // Additional per-line validation can go here (piece codes, coordinates, etc.)
-            // For now, we accept basic structure.
         }
 
-        game = new ArimaaGameService(trimmed, lines.AsReadOnly());
-        return true;
+        return null;
     }
 
-    /// <summary>
-    /// Parses and throws if invalid. Use only when you're sure input is trusted.
-    /// </summary>
-    public static ArimaaGameService Parse(string notation)
-    {
-        if (TryParse(notation, out var game, out var error))
-            return game!;
 
-        throw new ArgumentException($"Invalid Arimaa game notation: {error}");
-    }
 }

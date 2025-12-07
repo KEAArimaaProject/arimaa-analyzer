@@ -18,13 +18,12 @@ public class ArimaaGameServiceTests
 1b ra7 hb7 cc7
 2w Ed2n Ed3n";
 
-        var success = ArimaaGameService.TryParse(notation, out var game, out var error);
+        var success = new ArimaaGameService(notation);
 
-        Assert.True(success);
-        Assert.NotNull(game);
-        Assert.Null(error);
-        Assert.Equal(3, game.Moves.Count);
-        Assert.Contains("1w Ed2 Mb2 Ha2 Hg2", game.RawNotation);
+        Assert.True(success.Moves.Length > 0);
+        Assert.Null(success.ErrorMessage);
+        Assert.Equal(3, success.Moves.Length);
+        Assert.Contains("1w Ed2 Mb2 Ha2 Hg2", success.RawNotation);
     }
     
     [Fact(DisplayName = "ArimaaGameService invalidates plain text input" )]
@@ -34,19 +33,19 @@ public class ArimaaGameServiceTests
 Invalid line here
 2b another move";
 
-        var success = ArimaaGameService.TryParse(notation, out var game, out var error);
+        var success = new ArimaaGameService(notation);
 
-        Assert.False(success);
-        Assert.Null(game);
-        Assert.Contains("Invalid move line format", error);
+        Assert.False(success.Moves.Length > 0);
+        Assert.NotNull(success.ErrorMessage);
+        Assert.Contains("Invalid move line format", success.ErrorMessage);
     }
 
     [Fact(DisplayName = "ArimaaGameService invalidates the empty string" )]
     public void TryParse_Empty_ReturnsFalse()
     {
-        var success = ArimaaGameService.TryParse("", out var game, out var error);
-        Assert.False(success);
-        Assert.Contains("cannot be null or empty", error);
+        var success = new ArimaaGameService("");
+        Assert.False(success.Moves.Length > 0);
+        Assert.Contains("cannot be null or empty", success.ErrorMessage);
     }
     
     [Fact(DisplayName = "ArimaaGameService validates a whole game" )]
@@ -77,13 +76,12 @@ Invalid line here
 41w Rd6e Re6n Re7n";
 
         
-        var success = ArimaaGameService.TryParse(notation, out var game, out var error);
+        var success = new ArimaaGameService(notation);
 
-        Assert.True(success);
-        Assert.NotNull(game);
-        Assert.Null(error);
-        Assert.Equal(23, game.Moves.Count);
-        Assert.Contains("41w Rd6e Re6n Re7n", game.RawNotation);
+        Assert.True(success.Moves.Length > 0);
+        Assert.Null(success.ErrorMessage);
+        Assert.Equal(81, success.Moves.Length);
+        Assert.Contains("2w Ed2n Ed3n Ed4n Mb2n", success.Moves);
     }
     
 }
