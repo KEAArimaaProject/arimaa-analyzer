@@ -48,7 +48,7 @@ public class NotationServiceTests
         "R.RRR.RR"
     };
     
-    private static string Game_base = @"1w Ed2 Mb2 Ha2 Hg2 Dd1 De2 Cb1 Cf2 Ra1 Rc1 Re1 Rf1 Rg1 Rh1 Rc2 Rh2\n
+    public static string Game_base = @"1w Ed2 Mb2 Ha2 Hg2 Dd1 De2 Cb1 Cf2 Ra1 Rc1 Re1 Rf1 Rg1 Rh1 Rc2 Rh2\n
 1b ra7 hb7 cc7 hd7 ee7 cf7 mg7 dh7 ra8 rb8 rc8 rd8 de8 rf8 rg8 rh8\n2w Ed2n Ed3n Ed4n Mb2n\n
 2b hb7s ee7s dh7s ee6w\n3w Ed5w Ec5w Eb5e hb6s\n3b ed6s ed5s mg7s ed4w\n4w hb5s Ec5w Ha2n Ha3n\n
 4b mg6s hd7s de8s dh6w\n5w Mb3s hb4s hb3w Mb2n\n5b mg5s ec4w Mb3e eb4s\n6w Eb5s Cb1n Ra1n Rc1w\n

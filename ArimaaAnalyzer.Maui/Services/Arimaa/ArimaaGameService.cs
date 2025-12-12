@@ -1,4 +1,6 @@
-﻿namespace ArimaaAnalyzer.Maui.Services.Arimaa;
+﻿using YourApp.Models;
+
+namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 
 // Simple stateful service to drive the UI. Keeps a selected square and exposes move methods.
 public sealed class ArimaaGameService
@@ -8,7 +10,9 @@ public sealed class ArimaaGameService
         State = state ?? throw new ArgumentNullException(nameof(state));
     }
 
-    public GameState State { get; }
+    public GameState State { get; private set; }
+
+    public GameTurn? CurrentNode { get; private set; }
 
     public Position? Selected { get; private set; }
 
@@ -40,4 +44,33 @@ public sealed class ArimaaGameService
     }
 
     public void ClearSelection() => Selected = null;
+
+    // Load a GameTurn node and update the underlying GameState accordingly
+    public void Load(GameTurn node)
+    {
+        if (node == null) throw new ArgumentNullException(nameof(node));
+        CurrentNode = node;
+        State = new GameState(node);
+    }
+
+    public bool CanPrev => CurrentNode?.Parent is not null;
+    public bool CanNext => CurrentNode?.Children is { Count: > 0 };
+
+    public void GoPrev()
+    {
+        if (CurrentNode?.Parent is { } p)
+        {
+            Load(p);
+        }
+    }
+
+    public void GoNextMainLine()
+    {
+        if (CurrentNode is null) return;
+        var next = CurrentNode.Children.FirstOrDefault(c => c.IsMainLine) ?? CurrentNode.Children.FirstOrDefault();
+        if (next != null)
+        {
+            Load(next);
+        }
+    }
 }

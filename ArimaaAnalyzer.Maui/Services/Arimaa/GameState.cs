@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using YourApp.Models;
 
 namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 
@@ -16,6 +17,9 @@ public sealed class GameState
     
     public Side SideToMove { get; }
 
+    // Optional: track current node when initialized from a GameTurn
+    public GameTurn? CurrentNode { get; }
+
     /// <summary>
     /// Initialize the state from an AEI "setposition" command string.
     /// Example: setposition g "rrrrrrrrhdcemcdh                                HDCMECDHRRRRRRRR"
@@ -32,6 +36,18 @@ public sealed class GameState
         
         SideToMove = side;
         _aeiSetPosition = aeiSetPosition;
+    }
+
+    /// <summary>
+    /// Initialize the state from a parsed GameTurn node. Uses the node's AEIstring.
+    /// </summary>
+    public GameState(GameTurn node)
+    {
+        if (node == null) throw new ArgumentNullException(nameof(node));
+        CurrentNode = node;
+        ValidateAndParseAei(node.AEIstring, out var side, out _);
+        SideToMove = side;
+        _aeiSetPosition = node.AEIstring;
     }
 
     /// <summary>

@@ -15,9 +15,17 @@
     @if (EffectiveShowOuterUi)
     {
         <div class="outer-top">
-            <button disabled class="outer-btn outer-icon" title="Analyze" aria-label="Analyze">A</button>
-            <button disabled class="outer-btn outer-icon" title="Undo" aria-label="Undo">U</button>
-            <button disabled class="outer-btn outer-icon" title="Redo" aria-label="Redo">R</button>
+            <button class="outer-btn outer-icon"
+                    title="Previous turn"
+                    aria-label="Previous turn"
+                    disabled="@(!Game.CanPrev)"
+                    @onclick="() => { Game.GoPrev(); StateHasChanged(); }">◀</button>
+
+            <button class="outer-btn outer-icon"
+                    title="Next turn"
+                    aria-label="Next turn"
+                    disabled="@(!Game.CanNext)"
+                    @onclick="() => { Game.GoNextMainLine(); StateHasChanged(); }">▶</button>
         </div>
     }
 
