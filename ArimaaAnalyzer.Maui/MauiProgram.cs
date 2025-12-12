@@ -32,7 +32,7 @@ public static class MauiProgram
                 "RRRRRRRR"
             };
 
-            var aei = NotationService.BoardToAei(board, "g");
+            var aei = NotationService.BoardToAei(board, Sides.Gold);
             var state = new GameState(aei);
             return new ArimaaGameService(state);
         });

@@ -83,7 +83,7 @@ public class AnalysisServiceTests
             };
 
             // Send setposition in the exact format Sharp expects
-            await svc.SendAsync(NotationService.BoardToAei(board, "g"));
+            await svc.SendAsync(NotationService.BoardToAei(board, Sides.Gold));
 
             // Ready check after setting position
             await svc.IsReadyAsync();

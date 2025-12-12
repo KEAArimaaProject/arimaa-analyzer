@@ -26,7 +26,7 @@ public class CorrectMoveServiceTests
     public void SingleStep_Horse_h2_to_h3()
     {
         // before: base position, gold to move
-        var before = new GameState(NotationService.BoardToAei(BaseBoard, "g"));
+        var before = new GameState(NotationService.BoardToAei(BaseBoard, Sides.Gold));
 
         // after: move gold Horse from h2 -> h3 (row6,col7 -> row5,col7)
         var afterBoard = (string[])BaseBoard.Clone();
@@ -36,7 +36,7 @@ public class CorrectMoveServiceTests
         // row 5: "........" => set col 7 to 'H'
         afterBoard[5] = ReplaceChar(afterBoard[5], 7, 'H');
 
-        var after = new GameState(NotationService.BoardToAei(afterBoard, "s"));
+        var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
@@ -46,7 +46,7 @@ public class CorrectMoveServiceTests
     [Fact(DisplayName = "ComputeMoveSequence finds two slide steps (order-insensitive)")]
     public void TwoSteps_Hh2n_and_Dg2n()
     {
-        var before = new GameState(NotationService.BoardToAei(BaseBoard, "g"));
+        var before = new GameState(NotationService.BoardToAei(BaseBoard, Sides.Gold));
 
         // Move Horse h2 -> h3 and Dog g2 -> g3
         var afterBoard = (string[])BaseBoard.Clone();
@@ -57,7 +57,7 @@ public class CorrectMoveServiceTests
         afterBoard[6] = ReplaceChar(afterBoard[6], 6, '.');
         afterBoard[5] = ReplaceChar(afterBoard[5], 6, 'D');
 
-        var after = new GameState(NotationService.BoardToAei(afterBoard, "s"));
+        var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
@@ -70,9 +70,9 @@ public class CorrectMoveServiceTests
     [Fact(DisplayName = "ComputeMoveSequence returns error when no change or impossible")]
     public void NoChange_ReturnsError()
     {
-        var before = new GameState(NotationService.BoardToAei(BaseBoard, "g"));
+        var before = new GameState(NotationService.BoardToAei(BaseBoard, Sides.Gold));
         // after equals before side switched to Silver
-        var after = new GameState(NotationService.BoardToAei(BaseBoard, "s"));
+        var after = new GameState(NotationService.BoardToAei(BaseBoard, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(before, after, Side.Gold);
 
@@ -98,8 +98,8 @@ public class CorrectMoveServiceTests
         after[4] = ReplaceChar(after[4], 3, '.');
         after[5] = ReplaceChar(after[5], 3, 'C');
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -122,8 +122,8 @@ public class CorrectMoveServiceTests
         // ensure c3 empty
         after[5] = ReplaceChar(after[5], 2, '.');
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -149,8 +149,8 @@ public class CorrectMoveServiceTests
         // r pushed to d6
         after[2] = ReplaceChar(after[2], 3, 'r');
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
         var steps = result.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
@@ -197,8 +197,8 @@ public class CorrectMoveServiceTests
         after[2] = ReplaceChar(after[2], 3, 'r'); // d6
         after[3] = ReplaceChar(after[3], 3, 'E'); // d5
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -223,8 +223,8 @@ public class CorrectMoveServiceTests
         after[5] = ReplaceChar(after[5], 1, 'E'); // E ends on b3
         // c3 remains empty (captured)
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -247,8 +247,8 @@ public class CorrectMoveServiceTests
         after[2] = ReplaceChar(after[2], 4, 'E'); // e6
         after[3] = ReplaceChar(after[3], 4, 'r'); // e5
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -271,8 +271,8 @@ public class CorrectMoveServiceTests
         after[3] = ReplaceChar(after[3], 3, 'H'); // d5
         after[4] = ReplaceChar(after[4], 3, 'm'); // d4
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -292,8 +292,8 @@ public class CorrectMoveServiceTests
         after[5] = ReplaceChar(after[5], 3, 'R'); // d3
         after[4] = ReplaceChar(after[4], 3, 'c'); // d4
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -314,8 +314,8 @@ public class CorrectMoveServiceTests
         after[2] = ReplaceChar(after[2], 3, 'r'); // d6 (as if pushed)
         after[3] = ReplaceChar(after[3], 3, 'C'); // d5 (as if cat advanced)
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -335,8 +335,8 @@ public class CorrectMoveServiceTests
         after[2] = ReplaceChar(after[2], 3, 'e'); // d6 (as if pushed)
         after[3] = ReplaceChar(after[3], 3, 'H'); // d5 (as if pusher advanced)
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 
@@ -357,8 +357,8 @@ public class CorrectMoveServiceTests
         after[2] = ReplaceChar(after[2], 3, 'r'); // pretend r at d6
         after[3] = ReplaceChar(after[3], 3, 'E'); // pretend E at d5
 
-        var gsBefore = new GameState(NotationService.BoardToAei(before, "g"));
-        var gsAfter = new GameState(NotationService.BoardToAei(after, "s"));
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter, Side.Gold);
 

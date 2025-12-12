@@ -25,7 +25,7 @@ public static class NotationService
         if (root == null) throw new ArgumentNullException(nameof(root));
 
         string[] board = InitializeEmptyBoard();
-        string sideToMove = "g"; // Gold always starts
+        Sides sideToMove = Sides.Gold; // Gold always starts
 
         // Build the main-line sequence by traversing children where IsMainLine is true.
         var mainLine = new List<GameTurn>();
@@ -48,7 +48,7 @@ public static class NotationService
         for (int i = 0; i <= lastIndex; i++)
         {
             var turn = mainLine[i];
-            string moveSide = turn.Side == "w" ? "g" : "b";
+            Sides moveSide = turn.Side == "w" ? Sides.Gold : Sides.Silver;
 
             // Optional safety: ensure turns are in expected order (alternating sides)
             // You can remove this check if you're confident in the input
@@ -65,7 +65,7 @@ public static class NotationService
             }
 
             // Switch side for next turn
-            sideToMove = sideToMove == "g" ? "b" : "g";
+            sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
         }
 
         return BoardToAei(board, sideToMove);
@@ -145,7 +145,7 @@ public static class NotationService
     public static string GameToAei(string gameText)
     {
         string[] board = InitializeEmptyBoard();
-        string sideToMove = "g"; // gold (white) starts
+        Sides sideToMove = Sides.Gold; // gold (white) starts
 
         var lines = gameText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
                             .Select(l => l.Trim())
@@ -158,9 +158,16 @@ public static class NotationService
             // Match move number + side: e.g., "1w", "41w", "1b"
             var sideMatch = System.Text.RegularExpressions.Regex.Match(line, @"^\d+[wb]");
             if (!sideMatch.Success) continue;
-
-            char notationSide = sideMatch.Value[^1]; // last char: 'w' or 'b'
-            string moveSide = notationSide == 'w' ? "g" : "b";
+            
+            char code = sideMatch.Value[^1]; // last char: 'g' or 's'
+            Sides moveSide = code switch
+            {
+                'w' => Sides.Gold,
+                'g' => Sides.Gold,
+                'b' => Sides.Silver,
+                's' => Sides.Silver,
+                _   => throw new InvalidOperationException($"Unknown side code: {code}")
+            }; // last char: 'w' or 'b'
 
             if (moveSide != sideToMove)
                 continue; // out of order, skip (shouldn't happen)
@@ -174,7 +181,7 @@ public static class NotationService
             }
 
             // Switch turn
-            sideToMove = sideToMove == "g" ? "b" : "g";
+            sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
         }
 
         return BoardToAei(board, sideToMove);
@@ -195,7 +202,7 @@ public static class NotationService
         };
     }
 
-    private static void ApplyMove(ref string[] board, string move, string side)
+    private static void ApplyMove(ref string[] board, string move, Sides side)
     {
         // We'll work on a mutable char[,] for ease, then copy back
         char[,] b = new char[8, 8];
@@ -210,7 +217,7 @@ public static class NotationService
             int col = char.ToLower(move[1]) - 'a';
             int row = move[2] - '1'; // '1' -> 0, '8' -> 7
 
-            char actualPiece = side == "g" ? char.ToUpper(piece) : char.ToLower(piece);
+            char actualPiece = side == Sides.Gold ? char.ToUpper(piece) : char.ToLower(piece);
             b[row, col] = actualPiece;
         }
         else if (move.Length >= 4)
@@ -221,7 +228,7 @@ public static class NotationService
             int startRow = move[2] - '1';
             char dirChar = move[^1] == 'x' ? move[^2] : move[^1]; // direction is last or second-last if 'x'
 
-            char actualPiece = side == "g" ? char.ToUpper(piece) : char.ToLower(piece);
+            char actualPiece = side == Sides.Gold ? char.ToUpper(piece) : char.ToLower(piece);
 
             // Clear starting position
             b[startRow, startCol] = '.';
@@ -264,10 +271,10 @@ public static class NotationService
         }
     }
     
-    public static string BoardToAei(string[] b, string side)
+    public static string BoardToAei(string[] b, Sides side)
     {
         var flat = string.Join(string.Empty, System.Array.ConvertAll(b, r => r.Replace('.', ' ')));
-        return $"setposition {side} \"{flat}\"";
+        return $"setposition {side.GetCode()} \"{flat}\"";
     }
     
     public static string[] AeiToBoard(string internalArimaaString)
