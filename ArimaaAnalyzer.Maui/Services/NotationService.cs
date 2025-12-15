@@ -416,4 +416,54 @@ public static class NotationService
 
         return new string(b);
     }
+    
+    public static void PrintBoard(string command)
+    {
+        // Extract the board part: everything between the quotes after "setposition g"
+        int quoteStart = command.IndexOf('"');
+        int quoteEnd = command.LastIndexOf('"');
+        
+        if (quoteStart == -1 || quoteEnd == -1 || quoteEnd - quoteStart - 1 != 64)
+        {
+            Console.WriteLine("Invalid board string: expected 64 characters inside quotes.");
+            return;
+        }
+
+        string boardString = command.Substring(quoteStart + 1, 64);
+
+        Console.WriteLine("  +-----------------+");
+        // Print from top row (rank 8) to bottom (rank 1)
+        for (int row = 7; row >= 0; row--)
+        {
+            int rankNumber = row + 1;
+            Console.Write($"{rankNumber} | ");
+
+            for (int col = 0; col < 8; col++)
+            {
+                int index = row * 8 + col; // Note: row 7 (top) uses indices 56-63, row 0 (bottom) uses 0-7
+                char cell = boardString[index];
+
+                string display;
+                if (cell == ' ')
+                {
+                    display = "·"; // Middle dot for empty square (very readable)
+                }
+                else if (cell == 'x')
+                {
+                    display = "x"; // Trap square
+                }
+                else
+                {
+                    display = cell.ToString(); // Piece (upper or lower case)
+                }
+
+                Console.Write(display + " ");
+            }
+
+            Console.WriteLine($"| {rankNumber}");
+        }
+
+        Console.WriteLine("  +-----------------+");
+        Console.WriteLine("    a b c d e f g h");
+    }
 }

@@ -12,14 +12,14 @@ public class CorrectMoveServiceTests
 
     private static string[] BaseBoard => new[]
     {
-        "rrrrrrrr",
-        "hdcemcdh",
+        "RRRRRRRR",
+        "HDCEMCDH",
         "........",
         "........",
         "........",
         "........",
-        "HDCMECDH",
-        "RRRRRRRR"
+        "hdcmecdh",
+        "rrrrrrrr"
     };
 
     [Fact(DisplayName = "ComputeMoveSequence finds single slide step (Hh2n)")]
@@ -32,15 +32,20 @@ public class CorrectMoveServiceTests
         var afterBoard = (string[])BaseBoard.Clone();
         // row indices: 0=top (rank8)..7=bottom (rank1)
         // row 6: "HDCMECDH" => set col 7 to '.'
-        afterBoard[6] = ReplaceChar(afterBoard[6], 7, '.');
+        afterBoard[1] = ReplaceChar(afterBoard[1], 3, '.');
         // row 5: "........" => set col 7 to 'H'
-        afterBoard[5] = ReplaceChar(afterBoard[5], 7, 'H');
+        afterBoard[2] = ReplaceChar(afterBoard[2], 3, 'E');
 
         var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
-        result.Item1.Should().Be("Hh2n");
+        Console.WriteLine("SingleStep_Horse_h2_to_h3()");
+        NotationService.PrintBoard(before.localAeiSetPosition);
+        NotationService.PrintBoard(after.localAeiSetPosition);
+        Console.WriteLine("Ed2n");
+        
+        result.Item1.Should().Be("Ed2n");
     }
 
     [Fact(DisplayName = "ComputeMoveSequence finds two slide steps (order-insensitive)")]
@@ -51,20 +56,18 @@ public class CorrectMoveServiceTests
         // Move Horse h2 -> h3 and Dog g2 -> g3
         var afterBoard = (string[])BaseBoard.Clone();
         // h2 (row6,col7) to h3 (row5,col7)
-        afterBoard[6] = ReplaceChar(afterBoard[6], 7, '.');
-        afterBoard[5] = ReplaceChar(afterBoard[5], 7, 'H');
+        afterBoard[1] = ReplaceChar(afterBoard[1], 0, '.');
+        afterBoard[2] = ReplaceChar(afterBoard[2], 0, 'H');
         // g2 (row6,col6) to g3 (row5,col6)
-        afterBoard[6] = ReplaceChar(afterBoard[6], 6, '.');
-        afterBoard[5] = ReplaceChar(afterBoard[5], 6, 'D');
+        afterBoard[1] = ReplaceChar(afterBoard[1], 1, '.');
+        afterBoard[2] = ReplaceChar(afterBoard[2], 1, 'D');
 
         var after = new GameState(NotationService.BoardToAei(afterBoard, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
         // Accept either order since BFS may find any order of the two independent steps
-        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        steps.Should().HaveCount(2);
-        steps.ToHashSet().Should().BeEquivalentTo(new HashSet<string> { "Hh2n", "Dg2n" });
+        result.Item1.Should().Be("Ha2n Db2n");
     }
 
     [Fact(DisplayName = "ComputeMoveSequence returns error when no change or impossible")]
@@ -131,7 +134,12 @@ public class CorrectMoveServiceTests
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Cc4s");
+        Console.WriteLine("TrapCapture_FromSlide_RemovesPiece()");
+        NotationService.PrintBoard(gsBefore.localAeiSetPosition);
+        NotationService.PrintBoard(gsAfter.localAeiSetPosition);
+        Console.WriteLine("Ed2n");
+        
+        result.Item1.Should().Be("Cc5n");
     }
 
     [Fact(DisplayName = "Push/Pull required transition is now supported (push)")]
@@ -157,9 +165,44 @@ public class CorrectMoveServiceTests
         var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
 
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
-        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        steps.Should().HaveCount(2);
-        steps.Should().ContainInOrder("Rd5n", "Ed4n");
+        
+        Console.WriteLine("PushPull_Required_IsSupported_Push()");
+        NotationService.PrintBoard(gsBefore.localAeiSetPosition);
+        NotationService.PrintBoard(gsAfter.localAeiSetPosition);
+        Console.WriteLine("Rd4s Ed5s");
+        
+        result.Item1.Should().Be("Rd4s Ed5s");
+    }
+    
+    [Fact(DisplayName = "An Elephant implicitly push and pull a rabbit, or walk arround it")]
+    public void MoveAroundOrPushPull()
+    {
+        // Before: Gold Elephant at d5, Silver Rabbit at d4
+        // After:  Elephant at d3, Rabbit at d4 (either walk around or a legal push and pull)
+
+        var before = EmptyBoard();
+        // E at d5
+        before[4] = ReplaceChar(before[4], 3, 'E');
+        // r at d4
+        before[3] = ReplaceChar(before[3], 3, 'r');
+
+        var after = EmptyBoard();
+        // E moved to d3
+        after[4] = ReplaceChar(after[4], 3, '.');
+        after[3] = ReplaceChar(after[3], 3, 'r');
+        after[2] = ReplaceChar(after[2], 3, 'E');
+
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
+
+        Console.WriteLine("An Elephant implicitly push and pull a rabbit, or walk arround it");
+        NotationService.PrintBoard(gsBefore.localAeiSetPosition);
+        NotationService.PrintBoard(gsAfter.localAeiSetPosition);
+        Console.WriteLine("Rd4s Ed5s");
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
+        
+        result.Item1.Should().Be("Ed5e Ee5s Ee4s Ee3w");
     }
 
     private static string ReplaceChar(string s, int index, char ch)
@@ -206,10 +249,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        steps.Should().HaveCount(2);
-        // Our notation uses uppercase piece letters always
-        steps.Should().ContainInOrder("Rd5n", "Ed4n"); // push = enemy moves first, then pusher
+        result.Item1.Should().Be("Rd4s Ed5s"); // push = enemy moves first, then pusher
     }
 
     [Fact(DisplayName = "Push onto trap causes immediate capture")]
@@ -232,10 +272,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        steps.Should().HaveCount(2);
-        // Enemy rabbit is pushed onto c3 (trap) and captured immediately, then E moves into b3
-        steps.Should().ContainInOrder("Rb3e", "Ea3e");
+        result.Item1.Should().Be("Rb6e Ea6e");
     }
 
     [Fact(DisplayName = "Pull: Elephant pulls rabbit north (two-step)")]
@@ -256,10 +293,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        var steps = result.Item1.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
-        steps.Should().HaveCount(2);
-        // Pull = pusher moves first, then enemy follows into origin square
-        steps.Should().ContainInOrder("Ee5n", "Re4n");
+        result.Item1.Should().Be("Ee4s Re5s");
     }
 
     [Fact(DisplayName = "Illegal pull by weaker piece should return error")]
@@ -375,16 +409,59 @@ public class CorrectMoveServiceTests
     [Fact(DisplayName = "I had a failure where two states couldnt be computed after two siler pieces were moved")]
     public void Push_Blocked_Destination_TwoSilverOiecesMovedShouldNotReturnErrorr()
     {
-        var beforeAEI = "setposition s \"RCRDRRRR  REDCHRHM                              rhchecmdrrrrdrrr\"";
-        var afterAEI = "setposition g \"RCRDRRRR  REDCHRHM                      rh        checmdrrrrdrrr\"";
+        var before = "setposition s \"RCRDRRRR  REDCHRHM                              rhchecmdrrrrdrrr\"";
+        var after = "setposition g \"RCRDRRRR  REDCHRHM                      rh        checmdrrrrdrrr\"";
         
 
-        var gsBefore = new GameState(beforeAEI);
-        var gsAfter = new GameState(afterAEI);
+        var gsBefore = new GameState(before);
+        var gsAfter = new GameState(after);
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("error");
+        Console.WriteLine("SingleStep_Horse_h2_to_h3()");
+        NotationService.PrintBoard(before);
+        NotationService.PrintBoard(after);
+        Console.WriteLine("Hh7s");
+        
+        result.Item1.Should().Be("Ra7s Hb7s");
     }
     
+    
+    [Fact(DisplayName = "An Elephant must implicitly push and pull a rabbit")]
+    public void ElephantMustImplicitlyPushPull()
+    {
+        // Before: Gold Elephant at d5, Silver Rabbit at d4, Gold rabbits at c3 and e3
+        // After:  Elephant at d3, Rabbit at d4 (Elephant must push and pull)
+
+        var before = EmptyBoard();
+        // E at d5
+        before[4] = ReplaceChar(before[4], 3, 'E');
+        before[4] = ReplaceChar(before[4], 3, 'E');
+        before[2] = ReplaceChar(before[2], 2, 'R');
+        before[2] = ReplaceChar(before[2], 4, 'R');
+        // r at d4
+        before[3] = ReplaceChar(before[3], 3, 'r');
+
+        var after = EmptyBoard();
+        // E moved to d3
+        after[4] = ReplaceChar(after[4], 3, '.');
+        after[3] = ReplaceChar(after[3], 3, 'r');
+        after[2] = ReplaceChar(after[2], 3, 'E');
+        after[2] = ReplaceChar(after[2], 2, 'R');
+        after[2] = ReplaceChar(after[2], 4, 'R');
+
+        var gsBefore = new GameState(NotationService.BoardToAei(before, Sides.Gold));
+        var gsAfter = new GameState(NotationService.BoardToAei(after, Sides.Silver));
+
+        Console.WriteLine("An Elephant implicitly push and pull a rabbit, or walk arround it");
+        NotationService.PrintBoard(gsBefore.localAeiSetPosition);
+        NotationService.PrintBoard(gsAfter.localAeiSetPosition);
+        Console.WriteLine("Rd4s Ed5s");
+        
+        var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
+        
+        result.Item1.Should().NotBe("error");
+    }
+//setposition g "                  R R      r       E                            "
+    //setposition s "                  RER      r                                    "
 }
