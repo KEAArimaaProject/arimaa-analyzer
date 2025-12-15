@@ -1,5 +1,14 @@
 ﻿
 
+2025-12-15
+The current i dea of inferring all four moves from too statesis not practical.
+instead, change the code so each time  a piece is picked up and placed again, 
+a list will be filled with a new AEI,
+and then the code will infer each step one at a time.
+then update the tests.
+
+
+
 
 2025-12-06
 
