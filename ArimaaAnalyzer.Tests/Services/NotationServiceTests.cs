@@ -91,7 +91,8 @@ public class NotationServiceTests
 
         var newShapeBoard = NotationService.AeiToBoard(singleString);
         
-        newShapeBoard.Should().BeEquivalentTo(EmptyBoard);
+        // Use strict ordering: rows must match exactly (detect orientation issues)
+        newShapeBoard.Should().Equal(EmptyBoard);
         
     }
     
@@ -117,7 +118,8 @@ public class NotationServiceTests
 
         var newShapeBoard = NotationService.AeiToBoard(singleString);
         
-        newShapeBoard.Should().BeEquivalentTo(BaseBoard);
+        // Use strict ordering: rows must match exactly (detect orientation issues)
+        newShapeBoard.Should().Equal(BaseBoard);
         
     }
     
@@ -131,7 +133,8 @@ public class NotationServiceTests
 
         var newShapeBoard = NotationService.AeiToBoard(singleString);
 
-        newShapeBoard.Should().BeEquivalentTo(MixedBoard);
+        // Use strict ordering: rows must match exactly (detect orientation issues)
+        newShapeBoard.Should().Equal(MixedBoard);
 
     }
 

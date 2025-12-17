@@ -222,7 +222,14 @@ public static class NotationService
             for (int c = 0; c < 8; c++)
                 b[r, c] = board[r][c];
 
-        if (move.Length == 3 && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8')
+        // Pure removal token: e.g., "Rf6x" — remove whatever is on f6 (trap capture annotation). No movement.
+        if (move.Length == 4 && char.IsLetter(move[0]) && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8' && move[3] == 'x')
+        {
+            int col = char.ToLower(move[1]) - 'a';
+            int row = 7 - (move[2] - '1');
+            b[row, col] = '.';
+        }
+        else if (move.Length == 3 && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8')
         {
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
@@ -234,17 +241,16 @@ public static class NotationService
             // Preserve the case of the piece from notation to determine color
             b[row, col] = piece;
         }
-        else if (move.Length >= 4)
+        else if (move.Length == 4)
         {
-            // Regular move: e.g., "Ed4n", "hb5s", "rc5x"
+            // Regular single-step move: e.g., "Ed4n", "hb5s"
             char piece = move[0];
             int startCol = char.ToLower(move[1]) - 'a';
             // Map algebraic rank to internal row: '1' -> 7 (bottom), '8' -> 0 (top)
             int startRow = 7 - (move[2] - '1');
-            char dirChar = move[^1] == 'x' ? move[^2] : move[^1]; // direction is last or second-last if 'x'
+            char dirChar = move[3];
             
-            // Clear starting position
-            b[startRow, startCol] = '.';
+            // Move piece: compute target and transfer piece
 
             // Compute target
             int dr = 0, dc = 0;
@@ -263,16 +269,10 @@ public static class NotationService
 
             if (targetRow >= 0 && targetRow < 8 && targetCol >= 0 && targetCol < 8)
             {
-                if (move.EndsWith('x'))
-                {
-                    // Capture/push: the target square becomes empty (opponent piece removed)
-                    b[targetRow, targetCol] = '.';
-                }
-                else
-                {
-                    // Normal step: move piece to target, preserving original case from notation
-                    b[targetRow, targetCol] = piece;
-                }
+                // Normal step: move piece to target, preserving original case from notation
+                b[targetRow, targetCol] = piece;
+                // Clear starting position after move
+                b[startRow, startCol] = '.';
             }
         }
 
@@ -313,7 +313,9 @@ public static class NotationService
 
         string flatWithSpaces = internalArimaaString.Substring(quoteStart + 1, quoteEnd - quoteStart - 1);
 
-        // Replace spaces with '.' to restore empty squares
+        // AEI flat string lists rows from bottom (rank 1) to top (rank 8).
+        // Our internal board uses row 0 = top (rank 8) .. row 7 = bottom (rank 1).
+        // So when reconstructing, we must reverse: the first 8 chars (rank 1) go to board[7], etc.
         string flat = flatWithSpaces.Replace(' ', '.');
 
         if (flat.Length != 64)
@@ -323,7 +325,9 @@ public static class NotationService
         string[] board = new string[8];
         for (int i = 0; i < 8; i++)
         {
-            board[i] = flat.Substring(i * 8, 8);
+            // i=0 -> bottom rank (1) -> board[7]
+            // i=7 -> top rank (8)    -> board[0]
+            board[7 - i] = flat.Substring(i * 8, 8);
         }
 
         return board;
@@ -388,7 +392,16 @@ public static class NotationService
 
         char[] b = flat.ToCharArray(); // spaces for empty
 
-        if (move.Length == 3 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
+        // Pure removal token: e.g., "Rf6x" — remove whatever is on f6 (trap capture annotation). No movement.
+        if (move.Length == 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]) && move[3] == 'x')
+        {
+            int col = char.ToLower(move[1]) - 'a';
+            int row = move[2] - '1'; // flat uses 0 for rank 1 (bottom), 7 for rank 8 (top)
+            if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
+            int index = row * 8 + col;
+            b[index] = ' ';
+        }
+        else if (move.Length == 3 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
         {
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
@@ -399,42 +412,36 @@ public static class NotationService
             int index = row * 8 + col;
             b[index] = piece;
         }
-        else if (move.Length >= 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
+        else if (move.Length == 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
         {
-            // Regular move or removal: e.g., "Ed4n", "hb5s", "rc5x"
+            // Regular single-step move: e.g., "Ed4n", "hb5s"
             char piece = move[0];
             int col = char.ToLower(move[1]) - 'a';
             int row = move[2] - '1';
             if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
 
             int index = row * 8 + col;
-
-            // Clear starting position (for moves and removals)
-            b[index] = ' ';
-
-            if (!move.EndsWith('x'))
+            // Normal step: compute target and place piece there
+            char dirChar = move[3];
+            int dr = 0, dc = 0;
+            switch (dirChar)
             {
-                // Normal step: compute target and place piece there
-                char dirChar = move[^1];
-                int dr = 0, dc = 0;
-                switch (dirChar)
-                {
-                    case 'n': dr = 1; break; // north: higher row (towards rank 8)
-                    case 's': dr = -1; break; // south: lower row (towards rank 1)
-                    case 'e': dc = 1; break;
-                    case 'w': dc = -1; break;
-                }
-
-                int targetRow = row + dr;
-                int targetCol = col + dc;
-
-                if (targetRow >= 0 && targetRow < 8 && targetCol >= 0 && targetCol < 8)
-                {
-                    int targetIndex = targetRow * 8 + targetCol;
-                    b[targetIndex] = piece;
-                }
+                case 'n': dr = 1; break; // north: higher row (towards rank 8)
+                case 's': dr = -1; break; // south: lower row (towards rank 1)
+                case 'e': dc = 1; break;
+                case 'w': dc = -1; break;
             }
-            // If ends with 'x', it's a removal: already cleared the position, no further action
+
+            int targetRow = row + dr;
+            int targetCol = col + dc;
+
+            if (targetRow >= 0 && targetRow < 8 && targetCol >= 0 && targetCol < 8)
+            {
+                int targetIndex = targetRow * 8 + targetCol;
+                b[targetIndex] = piece;
+                // Clear starting position after move
+                b[index] = ' ';
+            }
         }
 
         return new string(b);
