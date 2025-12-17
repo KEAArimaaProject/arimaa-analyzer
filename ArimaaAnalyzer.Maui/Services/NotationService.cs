@@ -276,7 +276,16 @@ public static class NotationService
     
     public static string BoardToAei(string[] b, Sides side)
     {
-        var flat = string.Join(string.Empty, System.Array.ConvertAll(b, r => r.Replace('.', ' ')));
+        // AEI expects rows ordered from south -> north (bottom to top).
+        // Our internal board uses row 0 = top (north) .. row 7 = bottom (south).
+        // Therefore we must output rows in reverse order: 7 down to 0.
+        var sb = new System.Text.StringBuilder(64);
+        for (int r = 7; r >= 0; r--)
+        {
+            // AEI uses spaces for empty squares, while our internal uses '.'
+            sb.Append(b[r].Replace('.', ' '));
+        }
+        var flat = sb.ToString();
         return $"setposition {side.GetCode()} \"{flat}\"";
     }
     
