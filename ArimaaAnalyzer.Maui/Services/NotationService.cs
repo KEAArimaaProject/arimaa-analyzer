@@ -147,6 +147,11 @@ public static class NotationService
     
     public static string GameToAei(string gameText)
     {
+        // Normalize escaped newlines from verbatim strings into real newlines
+        if (gameText != null)
+        {
+            gameText = gameText.Replace("\\r", "\r").Replace("\\n", "\n");
+        }
         string[] board = InitializeEmptyBoard();
         Sides sideToMove = Sides.Gold; // gold (white) starts
 
@@ -176,7 +181,11 @@ public static class NotationService
                 continue; // out of order, skip (shouldn't happen)
 
             string movesPart = line.Substring(sideMatch.Length).Trim();
-            var moves = movesPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var moves = movesPart
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(m => m.Trim())
+                .Where(m => !string.IsNullOrEmpty(m))
+                .ToArray();
 
             foreach (var move in moves)
             {
@@ -218,7 +227,9 @@ public static class NotationService
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
             int col = char.ToLower(move[1]) - 'a';
-            int row = move[2] - '1'; // '1' -> 0, '8' -> 7
+            // Map algebraic rank to internal row (row 0 is the top/north, row 7 is the bottom/south).
+            // Algebraic '1' is the bottom rank, so it should map to internal row 7; '8' -> row 0.
+            int row = 7 - (move[2] - '1');
 
             // Preserve the case of the piece from notation to determine color
             b[row, col] = piece;
@@ -228,7 +239,8 @@ public static class NotationService
             // Regular move: e.g., "Ed4n", "hb5s", "rc5x"
             char piece = move[0];
             int startCol = char.ToLower(move[1]) - 'a';
-            int startRow = move[2] - '1';
+            // Map algebraic rank to internal row: '1' -> 7 (bottom), '8' -> 0 (top)
+            int startRow = 7 - (move[2] - '1');
             char dirChar = move[^1] == 'x' ? move[^2] : move[^1]; // direction is last or second-last if 'x'
             
             // Clear starting position
@@ -238,10 +250,10 @@ public static class NotationService
             int dr = 0, dc = 0;
             switch (char.ToLowerInvariant(dirChar))
             {
-                // With rank '1' at bottom (row 0) and rank '8' at top (row 7),
-                // moving north increases the row index, south decreases it.
-                case 'n': dr = 1; break;
-                case 's': dr = -1; break;
+                // Internal board rows: 0 = top (rank 8), 7 = bottom (rank 1).
+                // Moving north goes up (towards smaller row index), south goes down (larger row index).
+                case 'n': dr = -1; break;
+                case 's': dr = 1; break;
                 case 'e': dc = 1; break;
                 case 'w': dc = -1; break;
             }

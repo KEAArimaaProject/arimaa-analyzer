@@ -45,7 +45,7 @@ public class CorrectMoveServiceTests
         NotationService.PrintBoard(after.localAeiSetPosition);
         Console.WriteLine("Ed2n");
         
-        result.Item1.Should().Be("Ed2n");
+        result.Item1.Should().Be("Ed7s");
     }
 
     [Fact(DisplayName = "ComputeMoveSequence finds two slide steps (order-insensitive)")]
@@ -67,7 +67,7 @@ public class CorrectMoveServiceTests
         var result = CorrectMoveService.ComputeMoveSequence(before, after);
 
         // Accept either order since BFS may find any order of the two independent steps
-        result.Item1.Should().Be("Ha2n Db2n");
+        result.Item1.Should().Be("Ha7s Db7s");
     }
 
     [Fact(DisplayName = "ComputeMoveSequence returns error when no change or impossible")]
@@ -139,7 +139,7 @@ public class CorrectMoveServiceTests
         NotationService.PrintBoard(gsAfter.localAeiSetPosition);
         Console.WriteLine("Ed2n");
         
-        result.Item1.Should().Be("Cc5n");
+        result.Item1.Should().Be("Cc4s");
     }
 
     [Fact(DisplayName = "Push/Pull required transition is now supported (push)")]
@@ -171,7 +171,7 @@ public class CorrectMoveServiceTests
         NotationService.PrintBoard(gsAfter.localAeiSetPosition);
         Console.WriteLine("Rd4s Ed5s");
         
-        result.Item1.Should().Be("Rd4s Ed5s");
+        result.Item1.Should().Be("Rd5n Ed4n");
     }
     
     [Fact(DisplayName = "An Elephant implicitly push and pull a rabbit, or walk arround it")]
@@ -202,7 +202,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
         
-        result.Item1.Should().Be("Ed5e Ee5s Ee4s Ee3w");
+        result.Item1.Should().Be("Ed4e Ee4n Ee5n Ee6w");
     }
 
     private static string ReplaceChar(string s, int index, char ch)
@@ -249,7 +249,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Rd4s Ed5s"); // push = enemy moves first, then pusher
+        result.Item1.Should().Be("Rd5n Ed4n"); // push = enemy moves first, then pusher
     }
 
     [Fact(DisplayName = "Push onto trap causes immediate capture")]
@@ -272,7 +272,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Rb6e Ea6e");
+        result.Item1.Should().Be("Rb3e Ea3e");
     }
 
     [Fact(DisplayName = "Pull: Elephant pulls rabbit north (two-step)")]
@@ -293,7 +293,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Ee4s Re5s");
+        result.Item1.Should().Be("Ee5n Re4n");
     }
 
     [Fact(DisplayName = "Illegal pull by weaker piece should return error")]
