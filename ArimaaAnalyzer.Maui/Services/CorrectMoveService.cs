@@ -419,7 +419,8 @@ public static class CorrectMoveService
         public void AppendStep(char pieceChar, int r1, int c1, int r2, int c2, char dir)
         {
             var sb = new StringBuilder(4);
-            sb.Append(char.ToUpperInvariant(pieceChar));
+            // Preserve side-sensitive casing: Gold uppercase, Silver lowercase
+            sb.Append(pieceChar);
             sb.Append(SquareString(r1, c1));
             sb.Append(dir);
             _steps.Add(sb.ToString());

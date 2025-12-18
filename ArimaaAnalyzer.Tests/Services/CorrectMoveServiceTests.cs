@@ -171,7 +171,7 @@ public class CorrectMoveServiceTests
         NotationService.PrintBoard(gsAfter.localAeiSetPosition);
         Console.WriteLine("Rd4s Ed5s");
         
-        result.Item1.Should().Be("Rd5n Ed4n");
+        result.Item1.Should().Be("rd5n Ed4n");
     }
     
     [Fact(DisplayName = "An Elephant implicitly push and pull a rabbit, or walk arround it")]
@@ -249,7 +249,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Rd5n Ed4n"); // push = enemy moves first, then pusher
+        result.Item1.Should().Be("rd5n Ed4n"); // push = enemy moves first, then pusher
     }
 
     [Fact(DisplayName = "Push onto trap causes immediate capture")]
@@ -272,7 +272,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Rb3e Ea3e");
+        result.Item1.Should().Be("rb3e Ea3e");
     }
 
     [Fact(DisplayName = "Pull: Elephant pulls rabbit north (two-step)")]
@@ -293,7 +293,7 @@ public class CorrectMoveServiceTests
         
         var result = CorrectMoveService.ComputeMoveSequence(gsBefore, gsAfter);
 
-        result.Item1.Should().Be("Ee5n Re4n");
+        result.Item1.Should().Be("Ee5n re4n");
     }
 
     [Fact(DisplayName = "Illegal pull by weaker piece should return error")]
@@ -423,7 +423,7 @@ public class CorrectMoveServiceTests
         NotationService.PrintBoard(after);
         Console.WriteLine("Hh7s");
         
-        result.Item1.Should().Be("Ra7s Hb7s");
+        result.Item1.Should().Be("ra7s hb7s");
     }
     
     /*
