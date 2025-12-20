@@ -17,7 +17,10 @@
         }
         @foreach (var child in children)
         {
-            <div class="gtc-item">@string.Join(" ", child.Moves.ToArray())</div>
+            <button class="gtc-item" title="Go to this variation"
+                    @onclick="() => Game.Load(child)">
+                @string.Join(" ", child.Moves.ToArray())
+            </button>
         }
     }
     else

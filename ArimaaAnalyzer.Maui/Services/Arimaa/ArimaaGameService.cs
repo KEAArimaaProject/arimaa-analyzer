@@ -43,6 +43,16 @@ public sealed class ArimaaGameService
     public bool TryMove(Position from, Position to)
     {
         if (!from.IsOnBoard || !to.IsOnBoard) return false;
+        // Ensure snapshots are initialized so pending-move logic works even if Load wasn't called recently
+        if (_snapshots is null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+            _snapshots = new List<GameState>
+            {
+                new GameState(State.localAeiSetPosition) { boardorientation = orientation }
+            };
+        }
+
         var success = State.TryMove(from, to);
         if (success)
         {
@@ -60,6 +70,7 @@ public sealed class ArimaaGameService
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
         CurrentNode = node;
+        //System.Console.WriteLine($"[DEBUG_LOG] Load: node Move#={node.MoveNumber}, isMain={node.IsMainLine}, children={node.Children?.Count ?? 0}");
         // Preserve current board orientation across loads so UI rotation stays consistent
         // Default to canonical orientation: GoldSouth (bottom) vs SilverNorth (top)
         var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
@@ -70,10 +81,11 @@ public sealed class ArimaaGameService
         {
             new GameState(node) { boardorientation = orientation }
         };
-        var test = "test";
 
         // Notify listeners that the active node has changed
         CurrentNodeChanged?.Invoke();
+        // Also notify that the underlying board state changed so views like ArimaaBoard re-render
+        StateChanged?.Invoke();
     }
 
     public bool CanPrev => CurrentNode?.Parent is not null;
@@ -145,6 +157,7 @@ public sealed class ArimaaGameService
         // Build child turn with IsMainLine = false
         var child = new GameTurn(CurrentNode.AEIstring, notation.Item2, moveNumberStr, sidesEnum, new List<string> { notation.Item1 }, isMainLine: false);
         CurrentNode.AddChild(child);
+        System.Console.WriteLine($"[DEBUG_LOG] CommitMove: created child under Move#={CurrentNode.MoveNumber}. Parent now has {CurrentNode.Children.Count} children");
 
         // Load the newly created variation node
         Load(child);

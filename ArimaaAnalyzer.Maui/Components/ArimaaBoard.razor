@@ -125,6 +125,30 @@
     private BoardBehavior EffectiveBehavior => (EffectiveSettings?.Behavior) ?? Behavior;
     private bool EffectiveShowOuterUi => (EffectiveSettings?.ShowOuterUi) ?? Game.ShowOuterUi;
 
+    protected override void OnInitialized()
+    {
+        // Keep the board in sync when the game state or current node changes elsewhere (e.g., from GameTurnChildren)
+        if (Game is not null)
+        {
+            Game.StateChanged += OnGameChanged;
+            Game.CurrentNodeChanged += OnGameChanged;
+        }
+    }
+
+    private void OnGameChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (Game is not null)
+        {
+            Game.StateChanged -= OnGameChanged;
+            Game.CurrentNodeChanged -= OnGameChanged;
+        }
+    }
+
     private void OnDragStart(Position from)
     {
         if (!EffectiveBehavior.IsInteractive) return;
