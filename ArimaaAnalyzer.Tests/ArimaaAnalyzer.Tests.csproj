@@ -18,4 +18,11 @@
     <ProjectReference Include="..\ArimaaAnalyzer.Maui\ArimaaAnalyzer.Maui.csproj" />
   </ItemGroup>
 
+  <!-- Make the Sharp engine available in test output -->
+  <ItemGroup>
+    <None Include="..\ArimaaAnalyzer.Maui\Aiexecutables\sharp2015.exe" Link="Aiexecutables\sharp2015.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
