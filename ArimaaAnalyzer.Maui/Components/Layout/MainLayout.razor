@@ -13,6 +13,10 @@
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
             @if (IsOnArimaaPage)
             {
+                
+                <button class="analyze-position" @onclick="AnalyzePosition">
+                    Analyze Position
+                </button>
                 <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
                     Toggle Outer UI (@(_sharedSettings.ShowOuterUi ? "On" : "Off"))
                 </button>
@@ -31,6 +35,11 @@
 @code {
     private readonly ArimaaBoardSettings _sharedSettings = ArimaaBoardSettings.PlayableLarge;
 
+    private void AnalyzePosition()
+    {
+        Console.WriteLine("Test AnalyzePosition");
+    }
+    
     private bool IsOnArimaaPage =>
         Nav is not null &&
         Uri.TryCreate(Nav.Uri, UriKind.Absolute, out var uri) &&
