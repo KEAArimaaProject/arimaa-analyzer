@@ -95,6 +95,36 @@ public class NotationServiceTests
         newShapeBoard.Should().Equal(EmptyBoard);
         
     }
+
+    [Fact(DisplayName = "NotationService cleans trap after each step when supporter moves away")]
+    public void TrapCapture_AfterEachStep_SupporterMovesAway()
+    {
+        // Construct a flat board with:
+        // - Gold Rabbit on trap c6 (index 18)
+        // - Gold Horse supporting on b6 (index 17)
+        var chars = new string(' ', 64).ToCharArray();
+        chars[18] = 'R'; // c6
+        chars[17] = 'H'; // b6
+        var flat = new string(chars);
+        var aei = $"setposition g \"{flat}\"";
+
+        // Move the supporter Horse from b6 north to b7: Hb6n
+        var resultAei = NotationService.GamePlusMovesToAei(aei, new[] { "Hb6n" });
+
+        // Extract the resulting flat string
+        int qs = resultAei.IndexOf('"');
+        int qe = resultAei.LastIndexOf('"');
+        qe.Should().BeGreaterThan(qs);
+        var outFlat = resultAei.Substring(qs + 1, qe - qs - 1);
+        outFlat.Length.Should().Be(64);
+
+        // The rabbit on c6 (index 18) should have been captured after the step
+        outFlat[18].Should().Be(' ');
+        // And the horse moved to b7 (row1,col1 => index 9)
+        outFlat[9].Should().Be('H');
+        // Original b6 should now be empty
+        outFlat[17].Should().Be(' ');
+    }
     
     [Fact(DisplayName = "NotationService test that gold setup can be converted to a AEI string")]
     public void ConvertGameNotationToStringAndBack_goldSetup()

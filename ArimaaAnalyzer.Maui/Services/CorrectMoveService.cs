@@ -157,6 +157,34 @@ public static class CorrectMoveService
         }
     }
 
+    /// <summary>
+    /// Clean a 64-character flat board string by applying trap-capture rules.
+    /// This reuses the existing ApplyTrapCaptures(GameState) logic to avoid duplication.
+    /// Returns the cleaned 64-char flat string; on any error, returns the original input.
+    /// </summary>
+    public static string CleanTrapsInFlat(string flat)
+    {
+        if (string.IsNullOrEmpty(flat) || flat.Length != 64) return flat;
+        try
+        {
+            var state = new GameState($"setposition g \"{flat}\"");
+            ApplyTrapCaptures(state);
+            var aei = state.localAeiSetPosition;
+            int qs = aei.IndexOf('"');
+            int qe = aei.LastIndexOf('"');
+            if (qs >= 0 && qe > qs)
+            {
+                var inner = aei.Substring(qs + 1, qe - qs - 1);
+                if (inner.Length == 64) return inner;
+            }
+            return flat;
+        }
+        catch
+        {
+            return flat;
+        }
+    }
+
     private static IEnumerable<BoardState> GenerateSlides(BoardState state)
     {
         for (var r = 0; r < 8; r++)

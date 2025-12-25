@@ -436,6 +436,10 @@ public static class NotationService
                 b[targetIndex] = piece;
                 // Clear starting position after move
                 b[index] = ' ';
+
+                // After each step, apply trap captures using existing game logic
+                var cleaned = CorrectMoveService.CleanTrapsInFlat(new string(b));
+                b = cleaned.ToCharArray();
             }
         }
 

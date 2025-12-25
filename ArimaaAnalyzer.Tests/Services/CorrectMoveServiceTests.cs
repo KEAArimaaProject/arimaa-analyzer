@@ -48,6 +48,36 @@ public class CorrectMoveServiceTests
         result.Item1.Should().Be("Ed7s");
     }
 
+    [Fact(DisplayName = "CleanTrapsInFlat removes unsupported piece on trap")]
+    public void CleanTrapsInFlat_Removes_Unsupported_On_Trap()
+    {
+        // Trap index 18 (row=2,col=2 => c6). Place a single Gold Rabbit there with no support.
+        var chars = new string(' ', 64).ToCharArray();
+        chars[18] = 'R';
+        var flat = new string(chars);
+
+        var cleaned = CorrectMoveService.CleanTrapsInFlat(flat);
+
+        cleaned.Length.Should().Be(64);
+        cleaned[18].Should().Be(' ');
+    }
+
+    [Fact(DisplayName = "CleanTrapsInFlat preserves supported piece on trap")]
+    public void CleanTrapsInFlat_Preserves_Supported_On_Trap()
+    {
+        // Trap index 18 (c6). Place Gold Rabbit on trap and Gold Horse adjacent at index 17 (b6) to support.
+        var chars = new string(' ', 64).ToCharArray();
+        chars[18] = 'R';
+        chars[17] = 'H'; // friendly adjacent support
+        var flat = new string(chars);
+
+        var cleaned = CorrectMoveService.CleanTrapsInFlat(flat);
+
+        cleaned.Length.Should().Be(64);
+        cleaned[18].Should().Be('R');
+        cleaned[17].Should().Be('H');
+    }
+
     [Fact(DisplayName = "ComputeMoveSequence finds two slide steps (order-insensitive)")]
     public void TwoSteps_Hh2n_and_Dg2n()
     {
