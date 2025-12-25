@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using ArimaaAnalyzer.Maui.Services.Arimaa;
-using YourApp.Models;
 
 namespace ArimaaAnalyzer.Maui.Services;
 public static class NotationService
@@ -43,7 +42,8 @@ public static class NotationService
         if (mainLine.Count == 0 || lastIndex < -1)
             return BoardToAei(board, sideToMove);
 
-        // Apply moves up to and including the specified turn
+        // Apply moves up to and including the specified turn index over the main-line nodes.
+        // Note: mainLine[0] is the root with no moves; applying it changes nothing but keeps indices aligned with tests.
         for (int i = 0; i <= lastIndex; i++)
         {
             var turn = mainLine[i];
@@ -58,13 +58,18 @@ public static class NotationService
                 sideToMove = moveSide;
             }
 
+            bool appliedAny = false;
             foreach (var move in turn.Moves)
             {
                 ApplyMove(ref board, move, moveSide);
+                appliedAny = true;
             }
 
-            // Switch side for next turn
-            sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+            // Switch side for next turn only if at least one move was applied in this node
+            if (appliedAny)
+            {
+                sideToMove = sideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+            }
         }
 
         return BoardToAei(board, sideToMove);
@@ -101,7 +106,8 @@ public static class NotationService
         var regex = new Regex(@"^(\d+)([wbgs])\s+(.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         string currentAei = NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Sides.Gold);
-        root = new GameTurn(currentAei, currentAei, "0", Sides.Silver, Array.Empty<string>(), isMainLine: true);
+        // Root represents the initial position; set side to move = Gold.
+        root = new GameTurn(currentAei, currentAei, "0", Sides.Gold, Array.Empty<string>(), isMainLine: true);
         current = root;
         foreach (var line in lines)
         {
@@ -135,8 +141,11 @@ public static class NotationService
                     .ToArray();
             }
 
-            var node = new GameTurn(currentAei, "", moveNumber, sideToMove, individualMoves, isMainLine: true);
-            currentAei = node.AEIstring;
+            // Compute the updated AEI explicitly from the current AEI and the parsed moves,
+            // so that currentAei is advanced only after applying moves.
+            var updatedAei = GamePlusMovesToAei(currentAei, individualMoves);
+            var node = new GameTurn(currentAei, updatedAei, moveNumber, sideToMove, individualMoves, isMainLine: true);
+            currentAei = updatedAei;
             current!.AddChild(node);
             current = node;
         }
@@ -222,14 +231,7 @@ public static class NotationService
             for (int c = 0; c < 8; c++)
                 b[r, c] = board[r][c];
 
-        // Pure removal token: e.g., "Rf6x" — remove whatever is on f6 (trap capture annotation). No movement.
-        if (move.Length == 4 && char.IsLetter(move[0]) && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8' && move[3] == 'x')
-        {
-            int col = char.ToLower(move[1]) - 'a';
-            int row = 7 - (move[2] - '1');
-            b[row, col] = '.';
-        }
-        else if (move.Length == 3 && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8')
+        if (move.Length == 3 && move[1] >= 'a' && move[1] <= 'h' && move[2] >= '1' && move[2] <= '8')
         {
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
@@ -392,17 +394,7 @@ public static class NotationService
 
         char[] b = flat.ToCharArray(); // spaces for empty
 
-        // Pure removal token: e.g., "Rf6x" — remove whatever is on f6 (trap capture annotation). No movement.
-        if (move.Length == 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]) && move[3] == 'x')
-        {
-            int col = char.ToLower(move[1]) - 'a';
-            int rank = move[2] - '0'; // '1'..'8'
-            int row = 8 - rank; // flat uses 0 for top (rank 8), 7 for bottom (rank 1)
-            if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
-            int index = row * 8 + col;
-            b[index] = ' ';
-        }
-        else if (move.Length == 3 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
+        if (move.Length == 3 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]))
         {
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
@@ -480,10 +472,6 @@ public static class NotationService
                 if (cell == ' ')
                 {
                     display = "·"; // Middle dot for empty square (very readable)
-                }
-                else if (cell == 'x')
-                {
-                    display = "x"; // Trap square
                 }
                 else
                 {
