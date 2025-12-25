@@ -228,7 +228,8 @@ public sealed class GameState
             return null;
 
         var aeiPayload = trimmed.Substring(firstQuote + 1, 64);
-        // AEI rows are south->north; convert to normalized top->bottom for internal use
+        // AEI rows are in new format: north->south (top to bottom).
+        // Convert to normalized top->bottom for internal use (identity mapping now).
         return ConvertAeiToNormalized(aeiPayload);
     }
 
@@ -255,7 +256,7 @@ public sealed class GameState
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(newBoardString));
 
         var sideChar = SideToMove == Sides.Gold ? 'g' : 's';
-        // Convert internal normalized (top->bottom) to AEI order (south->north)
+        // Convert internal normalized (top->bottom) to AEI order (north->south in new format)
         var aeiPayload = ConvertNormalizedToAei(newBoardString);
         localAeiSetPosition = $"setposition {sideChar} \"{aeiPayload}\"";
     }
@@ -288,36 +289,20 @@ public sealed class GameState
             throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiSetPosition));
     }
 
-    // Convert AEI board (south->north ranks) into normalized internal order (top/north at row 0)
+    // Convert AEI board (north->south ranks in new format) into normalized internal order (top/north at row 0)
     private static string ConvertAeiToNormalized(string aeiBoard64)
     {
         if (aeiBoard64.Length != 64) throw new ArgumentException("Board string must be exactly 64 characters.", nameof(aeiBoard64));
-        var result = new char[64];
-        for (int r = 0; r < 8; r++)
-        {
-            var srcRow = 7 - r; // AEI rank index -> normalized row
-            for (int c = 0; c < 8; c++)
-            {
-                result[r * 8 + c] = aeiBoard64[srcRow * 8 + c];
-            }
-        }
-        return new string(result);
+        // Identity mapping now: AEI row 0 is top, row 7 is bottom.
+        return aeiBoard64;
     }
 
-    // Convert normalized (top->bottom) to AEI (south->north)
+    // Convert normalized (top->bottom) to AEI (north->south in new format)
     private static string ConvertNormalizedToAei(string normalizedBoard64)
     {
         if (normalizedBoard64.Length != 64) throw new ArgumentException("Board string must be exactly 64 characters.", nameof(normalizedBoard64));
-        var result = new char[64];
-        for (int r = 0; r < 8; r++)
-        {
-            var dstRow = 7 - r; // normalized row -> AEI rank index
-            for (int c = 0; c < 8; c++)
-            {
-                result[dstRow * 8 + c] = normalizedBoard64[r * 8 + c];
-            }
-        }
-        return new string(result);
+        // Identity mapping now.
+        return normalizedBoard64;
     }
 
     private static Piece? CharToPiece(char ch)

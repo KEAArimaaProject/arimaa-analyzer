@@ -409,8 +409,8 @@ public class CorrectMoveServiceTests
     [Fact(DisplayName = "I had a failure where two states couldnt be computed after two siler pieces were moved")]
     public void Push_Blocked_Destination_TwoSilverOiecesMovedShouldNotReturnErrorr()
     {
-        var before = "setposition s \"RCRDRRRR  REDCHRHM                              rhchecmdrrrrdrrr\"";
-        var after = "setposition g \"RCRDRRRR  REDCHRHM                      rh        checmdrrrrdrrr\"";
+        var before = "setposition s \"rrrrdrrrrhchecmd                        HM        REDCHRRCRDRRRR\"";
+        var after = "setposition s \"rrrrdrrr  checmdrh                      HM        REDCHRRCRDRRRR\"";
         
 
         var gsBefore = new GameState(before);

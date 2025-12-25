@@ -288,11 +288,11 @@ public static class NotationService
     
     public static string BoardToAei(string[] b, Sides side)
     {
-        // AEI expects rows ordered from south -> north (bottom to top).
+        // New AEI format: rows ordered from north -> south (top to bottom).
         // Our internal board uses row 0 = top (north) .. row 7 = bottom (south).
-        // Therefore we must output rows in reverse order: 7 down to 0.
+        // Therefore we output rows in natural order: 0 up to 7.
         var sb = new System.Text.StringBuilder(64);
-        for (int r = 7; r >= 0; r--)
+        for (int r = 0; r < 8; r++)
         {
             // AEI uses spaces for empty squares, while our internal uses '.'
             sb.Append(b[r].Replace('.', ' '));
@@ -313,9 +313,9 @@ public static class NotationService
 
         string flatWithSpaces = internalArimaaString.Substring(quoteStart + 1, quoteEnd - quoteStart - 1);
 
-        // AEI flat string lists rows from bottom (rank 1) to top (rank 8).
+        // New AEI format lists rows from top (rank 8, north) to bottom (rank 1, south).
         // Our internal board uses row 0 = top (rank 8) .. row 7 = bottom (rank 1).
-        // So when reconstructing, we must reverse: the first 8 chars (rank 1) go to board[7], etc.
+        // So we map directly: the first 8 chars (top rank) go to board[0], etc.
         string flat = flatWithSpaces.Replace(' ', '.');
 
         if (flat.Length != 64)
@@ -325,9 +325,9 @@ public static class NotationService
         string[] board = new string[8];
         for (int i = 0; i < 8; i++)
         {
-            // i=0 -> bottom rank (1) -> board[7]
-            // i=7 -> top rank (8)    -> board[0]
-            board[7 - i] = flat.Substring(i * 8, 8);
+            // i=0 -> top rank (8)    -> board[0]
+            // i=7 -> bottom rank (1) -> board[7]
+            board[i] = flat.Substring(i * 8, 8);
         }
 
         return board;
@@ -396,7 +396,8 @@ public static class NotationService
         if (move.Length == 4 && char.IsLetter(move[0]) && char.IsLetter(move[1]) && char.IsDigit(move[2]) && move[3] == 'x')
         {
             int col = char.ToLower(move[1]) - 'a';
-            int row = move[2] - '1'; // flat uses 0 for rank 1 (bottom), 7 for rank 8 (top)
+            int rank = move[2] - '0'; // '1'..'8'
+            int row = 8 - rank; // flat uses 0 for top (rank 8), 7 for bottom (rank 1)
             if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
             int index = row * 8 + col;
             b[index] = ' ';
@@ -406,7 +407,8 @@ public static class NotationService
             // Setup move: e.g., "Ra1", "ra8"
             char piece = move[0];
             int col = char.ToLower(move[1]) - 'a';
-            int row = move[2] - '1'; // 0 for '1' (bottom), 7 for '8' (top)
+            int rank = move[2] - '0';
+            int row = 8 - rank; // 0 for rank 8 (top), 7 for rank 1 (bottom)
             if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
 
             int index = row * 8 + col;
@@ -417,7 +419,8 @@ public static class NotationService
             // Regular single-step move: e.g., "Ed4n", "hb5s"
             char piece = move[0];
             int col = char.ToLower(move[1]) - 'a';
-            int row = move[2] - '1';
+            int rank = move[2] - '0';
+            int row = 8 - rank;
             if (row < 0 || row > 7 || col < 0 || col > 7) return flat; // invalid
 
             int index = row * 8 + col;
@@ -426,8 +429,8 @@ public static class NotationService
             int dr = 0, dc = 0;
             switch (dirChar)
             {
-                case 'n': dr = 1; break; // north: higher row (towards rank 8)
-                case 's': dr = -1; break; // south: lower row (towards rank 1)
+                case 'n': dr = -1; break; // north: up (towards smaller row index)
+                case 's': dr = 1; break;  // south: down (towards larger row index)
                 case 'e': dc = 1; break;
                 case 'w': dc = -1; break;
             }
@@ -463,14 +466,14 @@ public static class NotationService
 
         Console.WriteLine("  +-----------------+");
         // Print from top row (rank 8) to bottom (rank 1)
-        for (int row = 7; row >= 0; row--)
+        for (int row = 0; row < 8; row++)
         {
-            int rankNumber = row + 1;
+            int rankNumber = 8 - row;
             Console.Write($"{rankNumber} | ");
 
             for (int col = 0; col < 8; col++)
             {
-                int index = row * 8 + col; // Note: row 7 (top) uses indices 56-63, row 0 (bottom) uses 0-7
+                int index = row * 8 + col; // row 0 (top) uses indices 0-7, row 7 (bottom) uses 56-63
                 char cell = boardString[index];
 
                 string display;

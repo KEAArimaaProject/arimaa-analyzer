@@ -388,13 +388,12 @@ public static class CorrectMoveService
             if (flat.Length != 64)
                 throw new ArgumentException("Malformed AEI setposition: board string must be exactly 64 characters.");
 
-            // AEI convention per user: first 8 chars are Gold's home rank (rank1),
-            // next 8 are rank2, ... last 8 are Silver's home rank (rank8).
-            // Internal board uses row 0 = top (rank8) .. row 7 = bottom (rank1).
-            // Map AEI rows to internal rows by reversing vertically.
+            // AEI convention (new): rows are ordered north->south (top to bottom).
+            // Internal board uses row 0 = top (rank 8) .. row 7 = bottom (rank 1).
+            // Map AEI rows directly to internal rows.
             for (var r = 0; r < 8; r++)
             {
-                rows[7 - r] = flat.Substring(r * 8, 8).Replace(' ', '.');
+                rows[r] = flat.Substring(r * 8, 8).Replace(' ', '.');
             }
 
             return new BoardState(rows, side);
