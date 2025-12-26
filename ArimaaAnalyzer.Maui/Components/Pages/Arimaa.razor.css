@@ -1,7 +1,7 @@
 ﻿.arimaa-page {
   display: grid;
   /* Make the aside flexible so it can grow on wide screens and fit more mini boards */
-  grid-template-columns: 1fr clamp(280px, 34vw, 640px); /* main area + flexible side pane */
+  grid-template-columns: 1fr clamp(280px, 50vw, 1200px); /* main area + more flexible side pane to allow additional columns */
   gap: 16px;
   align-items: start;
 }

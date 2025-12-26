@@ -87,13 +87,19 @@ a, .btn-link { color: #006bb7; }
 /* Main content area that scrolls if needed, but contains the board */
 .content {
     padding-top: 1rem;
+    /* Ensure small, consistent horizontal gutters only */
+    padding-left: 0px;
+    padding-right: 0px;
     flex: 1 1 auto;
-    min-height: 0;    /* ← ADD THIS! Critical for flex children to shrink */
+    min-height: 0;    /* Critical for flex children to shrink */
     overflow: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    /* Stretch children to full available width so page grids can expand */
+    align-items: stretch;       /* was: center */
+    justify-content: flex-start;/* was: center */
+    /* Let nested grids flex without overflow clipping */
+    min-width: 0;
 }
 
 h1:focus {
