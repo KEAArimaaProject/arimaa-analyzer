@@ -50,113 +50,23 @@ public class AnalysisServiceTests
                         "isready, setoption, setposition, go (expects bestmove)")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_goldToPlay()
     {
+        var aei = $"setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
         
-        Console.WriteLine("Test best move 1");
-        
-        if (!File.Exists(ExePath))
-        {
-            // Can't truly mark as Skipped here without adding a new package.
-            // Gracefully skip by returning early, but log a helpful message.
-            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. " +
-                              "Place sharp2015.exe there to run this test.");
-            false.Should().Be(true);
-        }
-
-        await using var svc = new AnalysisService();
-        try
-        {
-            // Start the engine with the 'aei' argument
-            // (matches Python helper) and the service will also send 'aei' over stdin
-            await svc.StartAsync(ExePath, arguments: "aei");
-
-            // Ensure engine is ready
-            await svc.IsReadyAsync();
-
-            // Start a new game first (some engines reset options on newgame)
-            await svc.NewGameAsync();
-
-            // Send setposition EXACTLY as in the working Python example to avoid formatting mismatches
-            await svc.SendAsync("setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"");
-
-            // Now set per-move time AFTER setting up the position, matching Python order
-            await svc.SetOptionAsync("tcmove", "2");
-
-            // Ready check after setting position and options
-            await svc.IsReadyAsync();
-
-            // Ask engine to move; capture output until bestmove
-            var (best, ponder, 
-                log) = await svc.GoAsync(string.Empty);
-
-            best.Should().NotBeNullOrWhiteSpace(
-                "engine should return a bestmove sequence");
-
-            Console.WriteLine("Test best move");
-            
-            // Validate our parsing matches the engine's raw line by reconstructing expected sequence
-            best.Should().MatchRegex(
-                @"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
-        }
-        finally
-        {
-            await svc.QuitAsync();
-        }
+        await RunSharp2015AeiSmokeAsync(
+            aeistring: aei,
+            skipNote: string.Empty,
+            bestMoveRegex: @"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
     }
     
     [Fact(DisplayName = "Sharp2015 AEI smoke test from the silver perspective.")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_silverToPlay()
     {
-        //Ee2n Ee3n Ee4n Ee5n
-        Console.WriteLine("Test best move 1");
+        var aei = $"setposition s \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
         
-        if (!File.Exists(ExePath))
-        {
-            // Can't truly mark as Skipped here without adding a new package.
-            // Gracefully skip by returning early, but log a helpful message.
-            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. " +
-                              "Place sharp2015.exe there to run this test. Silver to play");
-            false.Should().Be(true);
-        }
-
-        await using var svc = new AnalysisService();
-        try
-        {
-            // Start the engine with the 'aei' argument
-            // (matches Python helper) and the service will also send 'aei' over stdin
-            await svc.StartAsync(ExePath, arguments: "aei");
-
-            // Ensure engine is ready
-            await svc.IsReadyAsync();
-
-            // Start a new game first (some engines reset options on newgame)
-            await svc.NewGameAsync();
-
-            // Send setposition EXACTLY as in the working Python example to avoid formatting mismatches
-            await svc.SendAsync("setposition s \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"");
-
-            // Now set per-move time AFTER setting up the position, matching Python order
-            await svc.SetOptionAsync("tcmove", "2");
-
-            // Ready check after setting position and options
-            await svc.IsReadyAsync();
-
-            // Ask engine to move; capture output until bestmove
-            var (best, ponder, 
-                log) = await svc.GoAsync(string.Empty);
-
-            best.Should().NotBeNullOrWhiteSpace(
-                "engine should return a bestmove sequence");
-
-            Console.WriteLine("Test best move");
-            
-            // Validate our parsing matches the engine's raw line by reconstructing expected sequence
-            best.Should().MatchRegex(
-                @"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
-        }
-        finally
-        {
-            await svc.QuitAsync();
-        }
+        await RunSharp2015AeiSmokeAsync(
+            aeistring: aei,
+            skipNote: "Silver to play",
+            bestMoveRegex: @"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
     }
     
 
@@ -239,4 +149,37 @@ public class AnalysisServiceTests
         }
     }
 
+    private static async Task RunSharp2015AeiSmokeAsync(
+        string aeistring, 
+        string skipNote, 
+        string bestMoveRegex)
+    {
+        if (!File.Exists(ExePath))
+        {
+            // Can't truly mark as Skipped here without adding a new package.
+            // Gracefully skip by returning early, but log a helpful message.
+            var note = string.IsNullOrWhiteSpace(skipNote) ? string.Empty : $" {skipNote}";
+            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. Place sharp2015.exe there to run this test.{note}");
+            false.Should().Be(true);
+        }
+
+        await using var svc = new AnalysisService();
+        try
+        {
+            await svc.StartAsync(ExePath, arguments: "aei");
+            await svc.IsReadyAsync();
+            await svc.NewGameAsync();
+            await svc.SendAsync(aeistring);
+            await svc.SetOptionAsync("tcmove", "2");
+            await svc.IsReadyAsync();
+            var (best, _, _) = await svc.GoAsync(string.Empty);
+
+            best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
+            best.Should().MatchRegex(bestMoveRegex);
+        }
+        finally
+        {
+            await svc.QuitAsync();
+        }
+    }
 }
