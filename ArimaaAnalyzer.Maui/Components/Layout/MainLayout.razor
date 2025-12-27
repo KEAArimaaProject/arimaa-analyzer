@@ -1,8 +1,16 @@
 ﻿@inherits LayoutComponentBase
 @using ArimaaAnalyzer.Maui.Components
+@using ArimaaAnalyzer.Maui.Services
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using System.Linq
+@using System.Collections.Generic
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject ArimaaGameService Game
+@inject AnalysisService Analysis
 @implements IDisposable
 
 <div class="page">
@@ -14,7 +22,7 @@
             @if (IsOnArimaaPage)
             {
                 
-                <button class="analyze-position" @onclick="AnalyzePosition">
+                <button class="analyze-position" @onclick="AnalyzePosition" disabled="@_analysisInProgress">
                     Analyze Position
                 </button>
                 <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
@@ -35,9 +43,70 @@
 @code {
     private readonly ArimaaBoardSettings _sharedSettings = ArimaaBoardSettings.PlayableLarge;
 
-    private void AnalyzePosition()
+    private bool _analysisInProgress;
+
+    private async Task AnalyzePosition()
     {
-        Console.WriteLine("Test AnalyzePosition");
+        if (_analysisInProgress) return;
+        _analysisInProgress = true;
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: invoked')");
+            var isOnArimaa = IsOnArimaaPage;
+            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: IsOnArimaaPage=' + {System.Text.Json.JsonSerializer.Serialize(isOnArimaa)})");
+            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: Nav.Uri=' + {System.Text.Json.JsonSerializer.Serialize(Nav?.Uri ?? "null")})");
+
+            if (Game is null)
+            {
+                await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition: Game service is null (DI not available).')");
+                return;
+            }
+            if (Game.State is null)
+            {
+                await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition: Game.State is null.')");
+                return;
+            }
+            // Take the root directly from the active GameState's CurrentNode
+            var root = Game?.State?.CurrentNode;
+            if (root is null)
+            {
+                await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition: No CurrentNode available in game state.')");
+                return;
+            }
+
+            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: calling BuildGameTurnTreeAsync(depth=3) with CurrentNode')");
+            var generatedRoot = await Analysis.BuildGameTurnTreeAsync(root, searchDepth: 3);
+
+            // Build a simple string from the generated main-line children chain
+            var parts = new List<string>();
+            GameTurn? node = generatedRoot;
+            var nodeIndex = 0;
+            while (node is not null)
+            {
+                if (node.Moves is { Count: > 0 })
+                {
+                    parts.Add(string.Join(' ', node.Moves));
+                    await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: node['+{nodeIndex}+'] moves=' + {System.Text.Json.JsonSerializer.Serialize(string.Join(" ", node.Moves))})");
+                }
+                node = node.Children.FirstOrDefault();
+                nodeIndex++;
+            }
+            var movesText = string.Join("\n", parts);
+            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: collected '+{parts.Count}+' lines; injecting into #aiMovesInput')");
+
+            // Replace the textarea content with id="aiMovesInput"
+            var js = $"(function(){{var el=document.getElementById('aiMovesInput'); if(el) el.value={System.Text.Json.JsonSerializer.Serialize(movesText)};}})()";
+            await JS.InvokeVoidAsync("eval", js);
+            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: textarea updated.')");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("eval", $"console.error('AnalyzePosition failed: '+ {System.Text.Json.JsonSerializer.Serialize(ex.Message)})");
+        }
+        finally
+        {
+            _analysisInProgress = false;
+        }
     }
     
     private bool IsOnArimaaPage =>

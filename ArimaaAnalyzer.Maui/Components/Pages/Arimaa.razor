@@ -9,8 +9,12 @@
 <div class="arimaa-page">
     <!-- Main game area -->
     <section class="main-area" aria-label="Main game">
-        <ArimaaBoard Game="DemoGame" BoardSettings="PageBoardSettings" />
-        <GameTurnChildren Game="DemoGame" />
+        <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" />
+        <GameTurnChildren Game="Game" />
+        <div class="ai-moves">
+            <label for="aiMovesInput">AI moves</label>
+            <textarea id="aiMovesInput">AI moves</textarea>
+        </div>
     </section>
     
     <!-- Analysis/side section with smaller boards. Will appear to the left on wide layouts,
@@ -22,7 +26,7 @@
         <div class="mini-boards-grid" @ref="_miniGridRef">
             @for (var i = 0; i < _miniBoardCount; i++)
             {
-                <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Tiny" />
+                <ArimaaBoard Game="Game" BoardSettings="@ArimaaBoardSettings.Tiny" />
             }
         </div>
     </aside>
@@ -30,20 +34,9 @@
 </div>
 
 @code {
-    // Demo game service for manual testing, initialized from a GameTurn tree root.
-    private ArimaaGameService DemoGame { get; } = CreateDemo();
-
-    private static ArimaaGameService CreateDemo()
-    {
-        
-        
-        var root = NotationService.ExtractTurnsWithMoves(Game_base)!;
-        var gamestate = new GameState(root);
-        var service = new ArimaaGameService(gamestate);
-        service.Load(root); // ensure CurrentNode is set and AEI loaded
-        service.ShowOuterUi = true; // show navigation buttons
-        return service;
-    }
+    // Use the DI-provided singleton game service so the Analyze button sees the same state.
+    [Inject]
+    private ArimaaGameService Game { get; set; } = default!;
 
     // Board settings are provided by MainLayout via CascadingValue, so
     // this page consumes them without owning the instance.
@@ -62,6 +55,21 @@
     {
         if (firstRender)
         {
+            try
+            {
+                // Initialize the shared Game service with the demo tree so MainLayout can access CurrentNode
+                var root = NotationService.ExtractTurnsWithMoves(Game_base)!;
+                if (Game?.State?.CurrentNode is null)
+                {
+                    Game.Load(root);
+                    Game.ShowOuterUi = true;
+                }
+                await JS.InvokeVoidAsync("eval", "console.log('Arimaa page initialized: shared Game loaded with demo root.')");
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("eval", $"console.error('Arimaa page init failed: '+{System.Text.Json.JsonSerializer.Serialize(ex.ToString())})");
+            }
             _dotNetRef = DotNetObjectReference.Create(this);
             _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/miniBoards.js");
             // Dimensions should match the CSS mini tile sizing in Arimaa.razor.css

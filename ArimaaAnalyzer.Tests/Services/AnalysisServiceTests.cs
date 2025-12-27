@@ -48,7 +48,7 @@ public class AnalysisServiceTests
 
     [Fact(DisplayName = "Sharp2015 AEI smoke test: handshake, " +
                         "isready, setoption, setposition, go (expects bestmove)")]
-    public async Task Sharp2015_Aei_EndToEnd_SmokeTest()
+    public async Task Sharp2015_Aei_EndToEnd_SmokeTest_goldToPlay()
     {
         
         Console.WriteLine("Test best move 1");
@@ -102,14 +102,76 @@ public class AnalysisServiceTests
             await svc.QuitAsync();
         }
     }
+    
+    [Fact(DisplayName = "Sharp2015 AEI smoke test from the silver perspective.")]
+    public async Task Sharp2015_Aei_EndToEnd_SmokeTest_silverToPlay()
+    {
+        //Ee2n Ee3n Ee4n Ee5n
+        Console.WriteLine("Test best move 1");
+        
+        if (!File.Exists(ExePath))
+        {
+            // Can't truly mark as Skipped here without adding a new package.
+            // Gracefully skip by returning early, but log a helpful message.
+            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. " +
+                              "Place sharp2015.exe there to run this test. Silver to play");
+            false.Should().Be(true);
+        }
+
+        await using var svc = new AnalysisService();
+        try
+        {
+            // Start the engine with the 'aei' argument
+            // (matches Python helper) and the service will also send 'aei' over stdin
+            await svc.StartAsync(ExePath, arguments: "aei");
+
+            // Ensure engine is ready
+            await svc.IsReadyAsync();
+
+            // Start a new game first (some engines reset options on newgame)
+            await svc.NewGameAsync();
+
+            // Send setposition EXACTLY as in the working Python example to avoid formatting mismatches
+            await svc.SendAsync("setposition s \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"");
+
+            // Now set per-move time AFTER setting up the position, matching Python order
+            await svc.SetOptionAsync("tcmove", "2");
+
+            // Ready check after setting position and options
+            await svc.IsReadyAsync();
+
+            // Ask engine to move; capture output until bestmove
+            var (best, ponder, 
+                log) = await svc.GoAsync(string.Empty);
+
+            best.Should().NotBeNullOrWhiteSpace(
+                "engine should return a bestmove sequence");
+
+            Console.WriteLine("Test best move");
+            
+            // Validate our parsing matches the engine's raw line by reconstructing expected sequence
+            best.Should().MatchRegex(
+                @"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
+        }
+        finally
+        {
+            await svc.QuitAsync();
+        }
+    }
+    
 
     [Fact(DisplayName = "BuildGameTurnTreeAsync throws on invalid args")]
     public async Task BuildGameTurnTreeAsync_InvalidArgs()
     {
         await using var svc = new AnalysisService();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => svc.BuildGameTurnTreeAsync("", 1));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.BuildGameTurnTreeAsync("setposition g \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"", 0));
+        // null position node
+        await Assert.ThrowsAsync<ArgumentNullException>(() => svc.BuildGameTurnTreeAsync(null!, 1));
+
+        // depth <= 0
+        var dummyAei = "setposition g \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"";
+        var dummyNode = new GameTurn(dummyAei, dummyAei, "0", Sides.Gold, Array.Empty<string>());
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.BuildGameTurnTreeAsync(dummyNode, 0));
     }
 
     [Fact(DisplayName = "BuildGameTurnTreeAsync builds a chain of requested depth when engine is available")]
@@ -129,24 +191,47 @@ public class AnalysisServiceTests
 
             // Use the same AEI position as the smoke test
             var aei = "setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
-            int depth = 2;
+            int depth = 4;
 
-            var root = await svc.BuildGameTurnTreeAsync(aei, depth);
+            var startNode = new GameTurn(aei, aei, "0", Sides.Gold, Array.Empty<string>());
+            var root = await svc.BuildGameTurnTreeAsync(startNode, depth);
 
-            // Verify chain length equals depth
-            int count = 0;
-            var node = root;
-            while (node is not null)
-            {
-                count++;
-                // minimal validations
-                node.Moves.Should().NotBeNull();
-                node.Moves.Count.Should().BeGreaterThan(0);
-                node.AEIstring.Should().NotBeNullOrWhiteSpace();
-                node.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
-                node = node.Children.FirstOrDefault();
-            }
-            count.Should().Be(depth);
+            root.Moves.Should().NotBeNull();
+            root.Moves.Count.Should().BeGreaterThan(0);
+            root.AEIstring.Should().NotBeNullOrWhiteSpace();
+            root.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            root.AEIstring.ToCharArray()[12].Should().Be('s');
+            var rootmoves = string.Join(", ", root.Moves);
+           
+            
+            var child1 = root.Children.FirstOrDefault();
+            child1.Moves.Should().NotBeNull();
+            child1.Moves.Count.Should().BeGreaterThan(0);
+            child1.AEIstring.Should().NotBeNullOrWhiteSpace();
+            child1.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            child1.AEIstring.ToCharArray()[12].Should().Be('g');
+            var child1moves = string.Join(", ", child1.Moves);
+            
+            
+            var child2 = child1.Children.FirstOrDefault();
+            child2.Moves.Should().NotBeNull();
+            child2.Moves.Count.Should().BeGreaterThan(0);
+            child2.AEIstring.Should().NotBeNullOrWhiteSpace();
+            child2.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            child2.AEIstring.ToCharArray()[12].Should().Be('s');
+            var child2moves = string.Join(", ", child2.Moves);
+            
+            
+            var child3 = child2.Children.FirstOrDefault();
+            child3.Moves.Should().NotBeNull();
+            child3.Moves.Count.Should().BeGreaterThan(0);
+            child3.AEIstring.Should().NotBeNullOrWhiteSpace();
+            child3.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            child3.AEIstring.ToCharArray()[12].Should().Be('g');
+            var child3moves = string.Join(", ", child3.Moves);
+            
+            
+            child3.Children.Should().BeEmpty();
         }
         finally
         {

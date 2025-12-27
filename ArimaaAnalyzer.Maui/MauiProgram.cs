@@ -37,6 +37,9 @@ public static class MauiProgram
             return new ArimaaGameService(state);
         });
 
+        // AI analysis service controlling the AEI engine
+        builder.Services.AddSingleton<AnalysisService>();
+
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();

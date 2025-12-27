@@ -318,13 +318,13 @@ public class AnalysisService : IAsyncDisposable
     /// Builds a linear main-line GameTurn tree by repeatedly asking the AEI engine for a best move.
     /// The first returned node is the first move generated from the provided AEI position.
     /// </summary>
-    /// <param name="aei">AEI position string, for example: <c>setposition g "..."</c>.</param>
+    /// <param name="positionNode">A GameTurn representing the starting position; its <see cref="GameTurn.AEIstring"/> will be used.</param>
     /// <param name="searchDepth">Number of consecutive turns to generate. Must be greater than 0.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The root GameTurn node of the generated chain (depth nodes long).</returns>
-    public async Task<GameTurn> BuildGameTurnTreeAsync(string aei, int searchDepth, CancellationToken ct = default)
+    public async Task<GameTurn> BuildGameTurnTreeAsync(GameTurn positionNode, int searchDepth, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(aei)) throw new ArgumentNullException(nameof(aei));
+        if (positionNode is null) throw new ArgumentNullException(nameof(positionNode));
         if (searchDepth <= 0) throw new ArgumentOutOfRangeException(nameof(searchDepth), "searchDepth must be > 0");
 
         // Start engine if necessary (attempt to auto-resolve bundled path)
@@ -334,6 +334,7 @@ public class AnalysisService : IAsyncDisposable
             await StartAsync(exePath, arguments: "aei", ct: ct).ConfigureAwait(false);
         }
 
+        var aei = positionNode.AEIstring;
         await NewGameAsync(ct).ConfigureAwait(false);
         await SendAsync(aei, ct).ConfigureAwait(false);
         // Keep searches quick to avoid long test runs; ignore if engine doesn't support tcmove
@@ -343,7 +344,10 @@ public class AnalysisService : IAsyncDisposable
         GameTurn? root = null;
         GameTurn? tail = null;
         string currentAei = aei;
+        // Derive a numeric move number if possible; default to 1
         int moveNumber = 1;
+        if (int.TryParse(positionNode.MoveNumber, out var parsed))
+            moveNumber = parsed + 1;
 
         for (int i = 0; i < searchDepth; i++)
         {
