@@ -59,16 +59,21 @@ public class AnalysisServiceTests
     }
     
     [Fact( 
-        DisplayName = "Sharp2015 AEI smoke test from the silver perspective.", 
-        Skip = "This test is temporarily disabled because sharp2015 can't make silver moves" )]
+        DisplayName = "Sharp2015 AEI smoke test from the silver perspective.")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_silverToPlay()
     {
-        var aei = $"setposition s \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+        var aei = $"setposition s \"rrrrrrrrecdmhdch                                HCDMRDCHERRRRRRR\"";
+
+        var test2 = NotationService.AeiToBoard(aei);
+
+        var test3 = "";
         
         await RunSharp2015AeiSmokeAsync(
             aeistring: aei,
             skipNote: "Silver to play",
             bestMoveRegex: @"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
+
+        var test = "";
     }
     
 

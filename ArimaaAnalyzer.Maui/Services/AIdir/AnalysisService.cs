@@ -266,7 +266,10 @@ public class AnalysisService : IAsyncDisposable
         string optionValue, 
         CancellationToken ct = default)
     {
-        await SendAsync(aeiPosition, ct).ConfigureAwait(false);
+        //the AI can only make gold moves, so if it silver to move, the board must be flipped:
+        var AEIflipped = AeiPerspectiveService.ensureMoverAtBottom(aeiPosition);
+        
+        await SendAsync(AEIflipped, ct).ConfigureAwait(false);
         await SetOptionAsync(optionName, optionValue, ct).ConfigureAwait(false);
         await IsReadyAsync(ct).ConfigureAwait(false);
 
