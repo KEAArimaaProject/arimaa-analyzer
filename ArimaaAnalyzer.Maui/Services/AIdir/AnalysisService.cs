@@ -350,16 +350,12 @@ public class AnalysisService : IAsyncDisposable
             await StartAsync(exePath, arguments: "aei", ct: ct).ConfigureAwait(false);
         }
 
-        var aei = positionNode.AEIstring;
         await NewGameAsync(ct).ConfigureAwait(false);
-        await SendAsync(aei, ct).ConfigureAwait(false);
-        // Keep searches quick to avoid long test runs; ignore if engine doesn't support tcmove
-        try { await SetOptionAsync("tcmove", "2", ct).ConfigureAwait(false); } catch { }
-        await IsReadyAsync(ct).ConfigureAwait(false);
 
         GameTurn? root = null;
         GameTurn? tail = null;
-        string currentAei = aei;
+        string currentAei = positionNode.AEIstring;
+        
         // Derive a numeric move number if possible; default to 1
         int moveNumber = 1;
         if (int.TryParse(positionNode.MoveNumber, out var parsed))
@@ -367,7 +363,9 @@ public class AnalysisService : IAsyncDisposable
 
         for (int i = 0; i < searchDepth; i++)
         {
-            var (bestMove, _, _) = await GoAsync(string.Empty, ct).ConfigureAwait(false);
+            // Use GetBestMoveAsync to handle position, options, and getting the move
+            var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", "2", ct).ConfigureAwait(false);
+            
             var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var side = ParseSideFromAei(currentAei);
 
@@ -389,11 +387,8 @@ public class AnalysisService : IAsyncDisposable
             }
             tail = node;
 
-            // Advance AEI and re-position engine for the next iteration
+            // Advance AEI for the next iteration
             currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
-            await SendAsync(currentAei, ct).ConfigureAwait(false);
-            await IsReadyAsync(ct).ConfigureAwait(false);
-
             moveNumber++;
         }
 
