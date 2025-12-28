@@ -257,6 +257,22 @@ public class AnalysisService : IAsyncDisposable
         Cleanup();
     }
 
+    /// <summary>
+    /// Sets the position and an engine option, then returns the search results.
+    /// </summary>
+    public async Task<(string bestMove, string? ponder, IReadOnlyList<string> log)> GetBestMoveAsync(
+        string aeiPosition, 
+        string optionName, 
+        string optionValue, 
+        CancellationToken ct = default)
+    {
+        await SendAsync(aeiPosition, ct).ConfigureAwait(false);
+        await SetOptionAsync(optionName, optionValue, ct).ConfigureAwait(false);
+        await IsReadyAsync(ct).ConfigureAwait(false);
+
+        return await GoAsync(string.Empty, ct).ConfigureAwait(false);
+    }
+
     public async Task SendAsync(string command, CancellationToken ct = default)
     {
         if (_stdin is null) throw new InvalidOperationException("Engine stdin not available.");

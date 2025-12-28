@@ -171,10 +171,7 @@ public class AnalysisServiceTests
             await svc.StartAsync(ExePath, arguments: "aei");
             await svc.IsReadyAsync();
             await svc.NewGameAsync();
-            await svc.SendAsync(aeistring);
-            await svc.SetOptionAsync("tcmove", "2");
-            await svc.IsReadyAsync();
-            var (best, _, _) = await svc.GoAsync(string.Empty);
+            var (best, ponder, log) = await svc.GetBestMoveAsync(aeistring, "tcmove", "2");
 
             best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
             best.Should().MatchRegex(bestMoveRegex);
