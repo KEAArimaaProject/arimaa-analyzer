@@ -111,6 +111,7 @@ public class AnalysisServiceTests
 
             // Use the same AEI position as the smoke test
             var aei = "setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+            var notflippedBoard = NotationService.AeiToBoard(aei);
             int depth = 4;
 
             var startNode = new GameTurn(aei, aei, "0", Sides.Gold, Array.Empty<string>());
@@ -121,8 +122,8 @@ public class AnalysisServiceTests
             root.AEIstring.Should().NotBeNullOrWhiteSpace();
             root.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
             root.AEIstring.ToCharArray()[12].Should().Be('s');
-            var rootmoves = string.Join(", ", root.Moves);
-           
+            var rootmoves = string.Join(" ", root.Moves);
+            rootmoves.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
             
             var child1 = root.Children.FirstOrDefault();
             child1.Moves.Should().NotBeNull();
@@ -130,8 +131,8 @@ public class AnalysisServiceTests
             child1.AEIstring.Should().NotBeNullOrWhiteSpace();
             child1.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
             child1.AEIstring.ToCharArray()[12].Should().Be('g');
-            var child1moves = string.Join(", ", child1.Moves);
-            
+            var child1moves = string.Join(" ", child1.Moves);
+            child1moves.Should().MatchRegex(@"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
             
             var child2 = child1.Children.FirstOrDefault();
             child2.Moves.Should().NotBeNull();
@@ -139,8 +140,8 @@ public class AnalysisServiceTests
             child2.AEIstring.Should().NotBeNullOrWhiteSpace();
             child2.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
             child2.AEIstring.ToCharArray()[12].Should().Be('s');
-            var child2moves = string.Join(", ", child2.Moves);
-            
+            var child2moves = string.Join(" ", child2.Moves);
+            child2moves.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
             
             var child3 = child2.Children.FirstOrDefault();
             child3.Moves.Should().NotBeNull();
@@ -148,8 +149,8 @@ public class AnalysisServiceTests
             child3.AEIstring.Should().NotBeNullOrWhiteSpace();
             child3.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
             child3.AEIstring.ToCharArray()[12].Should().Be('g');
-            var child3moves = string.Join(", ", child3.Moves);
-            
+            var child3moves = string.Join(" ", child3.Moves);
+            child3moves.Should().MatchRegex(@"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
             
             child3.Children.Should().BeEmpty();
         }
