@@ -52,10 +52,12 @@ public class AnalysisServiceTests
     {
         var aei = $"setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
         
-        await RunSharp2015AeiSmokeAsync(
+        var move = await RunSharp2015AeiSmokeAsync(
             aeistring: aei,
-            skipNote: string.Empty,
-            bestMoveRegex: @"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
+            skipNote: string.Empty);
+
+        move.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
+        move.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
     }
     
     [Fact( 
@@ -63,15 +65,15 @@ public class AnalysisServiceTests
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_silverToPlay()
     {
         var aei = $"setposition s \"rrrrrrrrecdmhdch                                HCDMRDCHERRRRRRR\"";
-
-        var test2 = NotationService.AeiToBoard(aei);
-
+        
         var test3 = "";
         
-        await RunSharp2015AeiSmokeAsync(
+        var move = await RunSharp2015AeiSmokeAsync(
             aeistring: aei,
-            skipNote: "Silver to play",
-            bestMoveRegex: @"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
+            skipNote: "Silver to play");
+
+        move.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
+        move.Should().MatchRegex(@"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
 
         var test = "";
     }
@@ -156,10 +158,9 @@ public class AnalysisServiceTests
         }
     }
 
-    private static async Task RunSharp2015AeiSmokeAsync(
+    private static async Task<string> RunSharp2015AeiSmokeAsync(
         string aeistring, 
-        string skipNote, 
-        string bestMoveRegex)
+        string skipNote)
     {
         if (!File.Exists(ExePath))
         {
@@ -168,6 +169,7 @@ public class AnalysisServiceTests
             var note = string.IsNullOrWhiteSpace(skipNote) ? string.Empty : $" {skipNote}";
             Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. Place sharp2015.exe there to run this test.{note}");
             false.Should().Be(true);
+            return string.Empty;
         }
 
         await using var svc = new AnalysisService();
@@ -177,9 +179,7 @@ public class AnalysisServiceTests
             await svc.IsReadyAsync();
             await svc.NewGameAsync();
             var (best, ponder, log) = await svc.GetBestMoveAsync(aeistring, "tcmove", "2");
-
-            best.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
-            best.Should().MatchRegex(bestMoveRegex);
+            return best;
         }
         finally
         {

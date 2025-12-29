@@ -269,11 +269,15 @@ public class AnalysisService : IAsyncDisposable
         //the AI can only make gold moves, so if it silver to move, the board must be flipped:
         var AEIflipped = AeiPerspectiveService.ensureMoverAtBottom(aeiPosition);
         
+        var notflippedBoard = NotationService.AeiToBoard(aeiPosition);
+        var flippedBoard = NotationService.AeiToBoard(AEIflipped);
+        
         await SendAsync(AEIflipped, ct).ConfigureAwait(false);
         await SetOptionAsync(optionName, optionValue, ct).ConfigureAwait(false);
         await IsReadyAsync(ct).ConfigureAwait(false);
 
-        return await GoAsync(string.Empty, ct).ConfigureAwait(false);
+        var resultmoves = await GoAsync(string.Empty, ct).ConfigureAwait(false);
+        return resultmoves;
     }
 
     public async Task SendAsync(string command, CancellationToken ct = default)

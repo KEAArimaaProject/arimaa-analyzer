@@ -63,7 +63,35 @@ public static class AeiPerspectiveService
 
         // Silver to move: flip vertically so silver is at the bottom.
         var flipped = FlipVertical(flat);
-        return $"setposition g \"{flipped}\"";
+        var swappedcaps = SwapCase(flipped);
+        var finalAEI = $"setposition g \"{swappedcaps}\"";
+        return finalAEI;
+    }
+
+    /// <summary>
+    /// Returns a copy of the provided AEI string with letter casing inverted.
+    /// Uppercase letters become lowercase and vice versa; non-letters are unchanged.
+    /// </summary>
+    /// <param name="aei">Any AEI-related string.</param>
+    /// <returns>String with inverted letter casing.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="aei"/> is null.</exception>
+    public static string SwapCase(string aei)
+    {
+        if (aei is null) throw new ArgumentNullException(nameof(aei));
+
+        var buffer = aei.ToCharArray();
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            char ch = buffer[i];
+            if (char.IsLetter(ch))
+            {
+                buffer[i] = char.IsUpper(ch)
+                    ? char.ToLowerInvariant(ch)
+                    : char.ToUpperInvariant(ch);
+            }
+        }
+
+        return new string(buffer);
     }
 
     private static string FlipVertical(string flat)
