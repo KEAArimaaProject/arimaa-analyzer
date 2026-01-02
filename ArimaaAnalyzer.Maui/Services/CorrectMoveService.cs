@@ -40,6 +40,99 @@ public static class CorrectMoveService
     }
 
     /// <summary>
+    /// Determines whether the given AEI position is already in a terminal (win) state
+    /// according to official Arimaa rules detectable from a static position:
+    /// - Goal: a rabbit has reached the far home rank (Gold rabbit on row 0; Silver rabbit on row 7)
+    /// - Elimination: one side has no rabbits remaining
+    /// - Immobilization: side to move has no legal move
+    /// Returns true if any of the above conditions is met.
+    /// </summary>
+    /// <param name="aei">AEI position string in the form: setposition g|s "...64 chars..."</param>
+    /// <returns>True if the position is a win for either side; otherwise false.</returns>
+    public static bool HasWinCondition(string aei)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) return false;
+
+        // Parse board
+        string[] board;
+        try
+        {
+            board = NotationService.AeiToBoard(aei);
+        }
+        catch
+        {
+            return false;
+        }
+
+        // Extract side to move ('g' or 's')
+        Sides sideToMove;
+        {
+            var idx = aei.IndexOf("setposition", StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return false;
+            var tail = aei.Substring(idx + "setposition".Length).TrimStart();
+            if (string.IsNullOrEmpty(tail)) return false;
+            char sideCh = char.ToLowerInvariant(tail[0]);
+            sideToMove = sideCh switch
+            {
+                'g' => Sides.Gold,
+                's' => Sides.Silver,
+                _ => Sides.Gold // default, but format should be valid
+            };
+        }
+
+        // Check goal condition: any Gold rabbit on top row (r==0) or Silver rabbit on bottom row (r==7)
+        for (int c = 0; c < 8; c++)
+        {
+            if (board[0][c] == 'R') return true;   // Gold goal
+            if (board[7][c] == 'r') return true;   // Silver goal
+        }
+
+        // Count rabbits for elimination condition
+        int goldRabbits = 0, silverRabbits = 0;
+        for (int r = 0; r < 8; r++)
+        {
+            for (int c = 0; c < 8; c++)
+            {
+                char ch = board[r][c];
+                if (ch == ' ') continue;
+                if (ToUpper(ch) == 'R')
+                {
+                    if (IsGold(ch)) goldRabbits++; else silverRabbits++;
+                }
+            }
+        }
+        if (goldRabbits == 0 || silverRabbits == 0) return true; // elimination
+
+        // Immobilization: if side to move has no legal moves.
+        // Build a transient GameState and use our generators to probe at least one move.
+        try
+        {
+            var gs = new GameState(aei);
+            var bs = BoardState.From(gs, sideToMove);
+
+            // Any slide?
+            foreach (var _ in GenerateSlides(bs))
+            {
+                return false; // has at least one legal move -> not terminal yet
+            }
+
+            // Any push/pull?
+            foreach (var _ in GeneratePushPull(bs))
+            {
+                return false;
+            }
+
+            // No legal moves found
+            return true;
+        }
+        catch
+        {
+            // If parsing fails, be conservative: not a terminal position
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Try to compute a legal sequence (1..4 steps) for the side to move in <paramref name="before"/>
     /// that transforms <paramref name="before"/> into <paramref name="after"/>. Returns
     /// (officialNotation, resultingAei) or ("error", "error") on failure.

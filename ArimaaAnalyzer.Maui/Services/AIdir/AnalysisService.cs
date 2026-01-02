@@ -377,7 +377,9 @@ public class AnalysisService : IAsyncDisposable
         if (int.TryParse(positionNode.MoveNumber, out var parsed))
             moveNumber = parsed + 1;
 
-        for (int i = 0; i < searchDepth; i++)
+        var endcondition = false;
+        var loopnumber = 0;
+        while (endcondition == false && loopnumber < searchDepth)
         {
             // Use GetBestMoveAsync to handle position, options, and getting the move
             var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", "2", ct).ConfigureAwait(false);
@@ -405,7 +407,9 @@ public class AnalysisService : IAsyncDisposable
 
             // Advance AEI for the next iteration
             currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
+            endcondition = CorrectMoveService.HasWinCondition(currentAei);
             moveNumber++;
+            loopnumber++;
         }
 
         return root!;

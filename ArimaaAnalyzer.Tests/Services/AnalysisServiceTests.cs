@@ -50,14 +50,18 @@ public class AnalysisServiceTests
                         "isready, setoption, setposition, go (expects bestmove)")]
     public async Task Sharp2015_Aei_EndToEnd_SmokeTest_goldToPlay()
     {
-        var aei = $"setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+        //var aei = $"setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+        
+        var aei = "setposition g \" MrrrrrrrE  mcdh        R H                      DC  CDH   RRRRR\"";
+            
+        var notflippedBoard = NotationService.AeiToBoard(aei);
         
         var move = await RunSharp2015AeiSmokeAsync(
             aeistring: aei,
             skipNote: string.Empty);
 
         move.Should().NotBeNullOrWhiteSpace("engine should return a bestmove sequence");
-        move.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Z][a-z]\d[a-z]){3}$");
+        move.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Za-z][a-z]\d[a-z]){3}$");
     }
     
     [Fact( 
@@ -94,6 +98,64 @@ public class AnalysisServiceTests
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.BuildGameTurnTreeAsync(dummyNode, 0));
     }
 
+    [Fact(DisplayName = "BuildGameTurnTreeAsync builds a chain of requested depth - test imanent goal")]
+    public async Task BuildGameTurnTreeAsync_Chain_immanentgoal()
+    {
+        if (!File.Exists(ExePath))
+        {
+            Console.WriteLine($"[SKIP] Engine executable not found at '{ExePath}'. Place sharp2015.exe there to run this test.");
+            false.Should().BeTrue();
+        }
+
+        await using var svc = new AnalysisService();
+        try
+        {
+            // Start engine
+            await svc.StartAsync(ExePath, arguments: "aei");
+
+            // Use the same AEI position as the smoke test
+            var aei = "setposition g \" MrrrrrrrE  mcdh        R H                      DC  CDH   RRRRR\"";
+            
+            var notflippedBoard = NotationService.AeiToBoard(aei);
+            int depth = 4;
+
+            var startNode = new GameTurn(aei, aei, "0", Sides.Gold, Array.Empty<string>());
+            var root = await svc.BuildGameTurnTreeAsync(startNode, depth);
+
+            root.Moves.Should().NotBeNull();
+            root.Moves.Count.Should().BeGreaterThan(0);
+            root.AEIstring.Should().NotBeNullOrWhiteSpace();
+            root.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            root.AEIstring.ToCharArray()[12].Should().Be('s');
+            var rootmoves = string.Join(" ", root.Moves);
+            rootmoves.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]( [A-Za-z][a-z]\d[a-z]){3}$");
+            
+            var child1 = root.Children.FirstOrDefault();
+            child1.Moves.Should().NotBeNull();
+            child1.Moves.Count.Should().BeGreaterThan(0);
+            child1.AEIstring.Should().NotBeNullOrWhiteSpace();
+            child1.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            child1.AEIstring.ToCharArray()[12].Should().Be('g');
+            var child1moves = string.Join(" ", child1.Moves);
+            child1moves.Should().MatchRegex(@"^[a-z][a-z]\d[a-z]( [a-z][a-z]\d[a-z]){3}$");
+            
+            var child2 = child1.Children.FirstOrDefault();
+            child2.Moves.Should().NotBeNull();
+            child2.Moves.Count.Should().BeGreaterThan(0);
+            child2.AEIstring.Should().NotBeNullOrWhiteSpace();
+            child2.IsMainLine.Should().BeFalse("AI-generated suggestions should not be flagged as main line");
+            child2.AEIstring.ToCharArray()[12].Should().Be('s');
+            var child2moves = string.Join(" ", child2.Moves);
+            child2moves.Should().MatchRegex(@"^[A-Z][a-z]\d[a-z]$");
+            
+            child2.Children.Count.Should().Be(0);
+        }
+        finally
+        {
+            await svc.QuitAsync();
+        }
+    }
+    
     [Fact(DisplayName = "BuildGameTurnTreeAsync builds a chain of requested depth when engine is available")]
     public async Task BuildGameTurnTreeAsync_Chain_WhenEnginePresent()
     {
@@ -109,8 +171,9 @@ public class AnalysisServiceTests
             // Start engine
             await svc.StartAsync(ExePath, arguments: "aei");
 
-            // Use the same AEI position as the smoke test
-            var aei = "setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+            // Arimaa position with gold to move - goal in 3 moves
+            var aei = $"setposition g \"rrrrrrrrhcdmedch                                HCDMEDCHRRRRRRRR\"";
+            
             var notflippedBoard = NotationService.AeiToBoard(aei);
             int depth = 4;
 

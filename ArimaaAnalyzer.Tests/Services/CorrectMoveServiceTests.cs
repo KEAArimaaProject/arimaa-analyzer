@@ -235,6 +235,70 @@ public class CorrectMoveServiceTests
         result.Item1.Should().Be("Ed4e Ee4n Ee5n Ee6w");
     }
 
+    [Fact(DisplayName = "HasWinCondition: Gold goal when a Gold rabbit is on top row (rank 8)")]
+    public void HasWinCondition_Goal_GoldRabbitOnTopRow_ReturnsTrue()
+    {
+        var board = EmptyBoard();
+        // Place a single Gold rabbit on a8 (row 0, col 0)
+        board[0] = ReplaceChar(board[0], 0, 'R');
+        // Also place a Silver rabbit somewhere not on rank 1 to avoid elimination/goal clashes
+        board[4] = ReplaceChar(board[4], 4, 'r');
+
+        var aei = NotationService.BoardToAei(board, Sides.Gold);
+        CorrectMoveService.HasWinCondition(aei).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "HasWinCondition: Silver goal when a Silver rabbit is on bottom row (rank 1)")]
+    public void HasWinCondition_Goal_SilverRabbitOnBottomRow_ReturnsTrue()
+    {
+        var board = EmptyBoard();
+        // Place a single Silver rabbit on h1 (row 7, col 7)
+        board[7] = ReplaceChar(board[7], 7, 'r');
+        // Also place a Gold rabbit somewhere not on rank 8 to avoid immediate gold goal
+        board[4] = ReplaceChar(board[4], 0, 'R');
+
+        var aei = NotationService.BoardToAei(board, Sides.Silver);
+        CorrectMoveService.HasWinCondition(aei).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "HasWinCondition: Elimination when a side has no rabbits")]
+    public void HasWinCondition_Elimination_NoSilverRabbits_ReturnsTrue()
+    {
+        var board = EmptyBoard();
+        // Place only Gold rabbits, no silver rabbits at all
+        board[4] = ReplaceChar(board[4], 0, 'R');
+        board[4] = ReplaceChar(board[4], 2, 'R');
+
+        var aei = NotationService.BoardToAei(board, Sides.Gold);
+        CorrectMoveService.HasWinCondition(aei).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "HasWinCondition: Immobilization when side to move has no legal move")]
+    public void HasWinCondition_Immobilization_SideToMoveHasNoLegalMoves_ReturnsTrue()
+    {
+        var board = EmptyBoard();
+        // Silver to move has a single rabbit at d4 (row 4, col 3), frozen by a Gold Elephant at d5
+        board[4] = ReplaceChar(board[4], 3, 'r'); // d4
+        board[3] = ReplaceChar(board[3], 3, 'E'); // d5 (freezes the rabbit)
+        // Ensure there is at least one Gold rabbit somewhere (not on top row to avoid goal)
+        board[5] = ReplaceChar(board[5], 0, 'R'); // a3
+
+        var aei = NotationService.BoardToAei(board, Sides.Silver);
+        CorrectMoveService.HasWinCondition(aei).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "HasWinCondition: Non-terminal typical mid-board pieces -> false")]
+    public void HasWinCondition_NonTerminal_ReturnsFalse()
+    {
+        var board = EmptyBoard();
+        // Place one Gold rabbit at c4 (row 4, col 2) and one Silver rabbit at f5 (row 3, col 5)
+        board[4] = ReplaceChar(board[4], 2, 'R'); // c4
+        board[3] = ReplaceChar(board[3], 5, 'r'); // f5
+
+        var aei = NotationService.BoardToAei(board, Sides.Gold);
+        CorrectMoveService.HasWinCondition(aei).Should().BeFalse();
+    }
+
     private static string ReplaceChar(string s, int index, char ch)
     {
         var arr = s.ToCharArray();
