@@ -1,5 +1,6 @@
 ﻿@page "/loadgamemanual"
 @using YourApp.Models
+@using ArimaaAnalyzer.Maui.Services
 
 
     <p>Page to load games manually from Arimaa.com</p>
@@ -13,9 +14,17 @@
         <button class="btn btn-primary" @onclick="LoadGame">Load Game</button>
     </div>
 
-    @if (ErrorMessage != null)
+    @if (ErrorMessages?.Count > 0)
     {
-        <div class="alert alert-danger">@ErrorMessage</div>
+        <div class="alert alert-danger">
+            <strong>Validation errors:</strong>
+            <ul>
+                @foreach (var err in ErrorMessages)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        </div>
     }
 
     @if (LoadedGame != null)
@@ -27,13 +36,21 @@
 @code {
     private string? GameNotation { get; set; }
     private ArimaaGameService? LoadedGame { get; set; }
-    private string? ErrorMessage { get; set; }
+    private List<string> ErrorMessages { get; set; } = new();
 
     private void LoadGame()
     {
-        
-        LoadedGame = new ArimaaGameService(GameNotation);
-        
+        ErrorMessages.Clear();
+        LoadedGame = null;
+        var input = GameNotation ?? string.Empty;
+        var result = NotationService.ValidatePastedGame(input);
+        if (!result.IsValid)
+        {
+            ErrorMessages.AddRange(result.Errors);
+            return;
+        }
+
+        LoadedGame = new ArimaaGameService(input);
     }
 
 }
