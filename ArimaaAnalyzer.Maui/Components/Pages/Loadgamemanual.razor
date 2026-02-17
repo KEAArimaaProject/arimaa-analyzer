@@ -1,6 +1,9 @@
 ﻿@page "/loadgamemanual"
-@using YourApp.Models
 @using ArimaaAnalyzer.Maui.Services
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using Microsoft.AspNetCore.Components
+@inject ArimaaGameService Game
+@inject NavigationManager Nav
 
 
     <p>Page to load games manually from Arimaa.com</p>
@@ -27,21 +30,23 @@
         </div>
     }
 
-    @if (LoadedGame != null)
+    @if (LoadedSuccessfully)
     {
-        <h5>Loaded Game (@LoadedGame.Moves.Length moves):</h5>
-        <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@LoadedGame.RawNotation</pre>
+        <div class="alert alert-success">
+            Game loaded successfully. Redirecting to board...
+        </div>
+        <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@GameNotation</pre>
     }
 
 @code {
     private string? GameNotation { get; set; }
-    private ArimaaGameService? LoadedGame { get; set; }
+    private bool LoadedSuccessfully { get; set; }
     private List<string> ErrorMessages { get; set; } = new();
 
     private void LoadGame()
     {
         ErrorMessages.Clear();
-        LoadedGame = null;
+        LoadedSuccessfully = false;
         var input = GameNotation ?? string.Empty;
         var result = NotationService.ValidatePastedGame(input);
         if (!result.IsValid)
@@ -50,7 +55,20 @@
             return;
         }
 
-        LoadedGame = new ArimaaGameService(input);
+        // Use parsed root from validation (fallback to re-parse if absent)
+        var root = result.Root ?? NotationService.ExtractTurnsWithMoves(input);
+        if (root is null)
+        {
+            ErrorMessages.Add("Unable to parse moves from the provided notation.");
+            return;
+        }
+
+        Game.Load(root);
+        Game.ShowOuterUi = true;
+        LoadedSuccessfully = true;
+
+        // Navigate to the main Arimaa page to display the loaded game
+        Nav.NavigateTo("/arimaa");
     }
 
 }
