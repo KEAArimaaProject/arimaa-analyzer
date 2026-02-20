@@ -5,6 +5,12 @@ using ArimaaAnalyzer.Maui.Services.Arimaa;
 namespace ArimaaAnalyzer.Maui.Services;
 public static class NotationService
 {
+    public sealed class GameValidationResult
+    {
+        public bool IsValid { get; init; }
+        public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
+        public GameTurn? Root { get; init; }
+    }
         
     /// <summary>
     /// Converts a parsed Arimaa game up to a specific turn into an AEI position string.
@@ -134,8 +140,10 @@ public static class NotationService
             }
             else
             {
-                individualMoves = movesPart
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                // Split on any whitespace and also on backslashes (\\) which may appear in pasted text
+                var tokenSplitRegex = new Regex(@"[\s\\]+");
+                individualMoves = tokenSplitRegex
+                    .Split(movesPart)
                     .Select(m => m.Trim())
                     .Where(m => !string.IsNullOrEmpty(m))
                     .ToArray();
@@ -151,6 +159,124 @@ public static class NotationService
         }
 
         return root;
+    }
+    
+    /// <summary>
+    /// Validates pasted Arimaa game notation for structural correctness and returns a parsed root if valid.
+    /// Structural validation checks per-line format: "<number><side> <moves>" where side is one of w,b,g,s.
+    /// Newlines are normalized and literal "\n" are supported.
+    /// </summary>
+    public static GameValidationResult ValidatePastedGame(string gameText)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(gameText))
+        {
+            return new GameValidationResult
+            {
+                IsValid = false,
+                Errors = new[] { "Game notation cannot be null or empty." }
+            };
+        }
+
+        string textWithRealNewlines = gameText.Replace("\\n", "\n");
+        textWithRealNewlines = textWithRealNewlines.Replace("\r\n", "\n").Replace("\r", "\n");
+
+        var rawLines = textWithRealNewlines.Split('\n');
+        var headerRegex = new Regex(@"^(\d+)([wbgs])\s+(.+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        // Valid tokens we currently support:
+        // - Setup:   P[a-h][1-8]
+        // - Step:    P[a-h][1-8][nsew]
+        // - Capture: P[a-h][1-8]x
+        // Where P is exactly one piece letter from Arimaa set (case = side): R C D H M E (and lowercase)
+        var pieceSet = new HashSet<char>(new[] { 'r','c','d','h','m','e','R','C','D','H','M','E' });
+        var numberRowSet = new HashSet<char>(new[] { '1','2','3','4','5','6','7','8'});
+        var squareLetterSet = new HashSet<char>(new[] { 'a','b','c','d','e','f','g','h' });
+        var directionsSet = new HashSet<char>(new[] { 'n','s','e','w' });
+        var validTokenRegex = new Regex(@"^[RCDHMErcdhme][a-h][1-8]([nsew]|x)?$", RegexOptions.Compiled);
+        int reportedIndex = 0; // count only non-empty logical lines for messages
+        for (int i = 0; i < rawLines.Length; i++)
+        {
+            var trimmed = (rawLines[i] ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                continue; // skip blank lines quietly
+            }
+            reportedIndex++;
+            var match = headerRegex.Match(trimmed);
+            if (!match.Success)
+            {
+                errors.Add($"Line {reportedIndex}: invalid format -> '{trimmed}'");
+                continue;
+            }
+
+            // Validate side code explicitly
+            var sideCode = match.Groups[2].Value.ToLowerInvariant();
+            if (sideCode is not ("w" or "b" or "g" or "s"))
+            {
+                errors.Add($"Line {reportedIndex}: invalid side code '{match.Groups[2].Value}' (expected w/b/g/s)");
+            }
+            // Ensure there's at least one move token after side
+            var movesPart = match.Groups[3].Value.Trim();
+            if (string.IsNullOrWhiteSpace(movesPart))
+            {
+                errors.Add($"Line {reportedIndex}: no moves found after side code");
+            }
+            else
+            {
+                // Validate each move token - split by whitespace and also treat backslash (\\) as separator
+                var tokenSplitRegex = new Regex(@"[\s\\]+");
+                var tokens = tokenSplitRegex.Split(movesPart).Where(t => !string.IsNullOrWhiteSpace(t));
+                foreach (var token in tokens)
+                {
+                    if (validTokenRegex.IsMatch(token))
+                        continue;
+
+                    // Try to identify the reason for the error
+                    string reason = "";
+                    
+                    if (token.Length >= 2 && !pieceSet.Contains(token[0]))
+                    {
+                        reason = "invalid piece letter (expected RCDHMErcdhme)";
+                    }
+                    else if (token.Length >= 2 && !squareLetterSet.Contains(token[1]))
+                    {
+                        reason = "invalid square letter (expected a-h)";
+                    }
+                    else if (token.Length >= 3 && !numberRowSet.Contains(token[2]))
+                    {
+                        reason = "invalid square number (expected 1-8)";
+                    }
+                    else if (token.Length >= 4 && !directionsSet.Contains(token[3]))
+                    {
+                        reason = "invalid char at index 3, it must be one of nsew";
+                    }
+                    else if (token.Length >= 5 && !('x' == token[3]))
+                    {
+                        reason = "invalid char at index 4, it must be 'x'";
+                    }
+
+                    errors.Add($"Line {reportedIndex}: {reason} -> '{token}'");
+                }
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            return new GameValidationResult { IsValid = false, Errors = errors };
+        }
+
+        // Attempt to parse into a GameTurn tree as final verification
+        var root = ExtractTurnsWithMoves(gameText);
+        if (root is null)
+        {
+            return new GameValidationResult
+            {
+                IsValid = false,
+                Errors = new[] { "No valid turns could be parsed from the notation." }
+            };
+        }
+
+        return new GameValidationResult { IsValid = true, Root = root, Errors = Array.Empty<string>() };
     }
     
     

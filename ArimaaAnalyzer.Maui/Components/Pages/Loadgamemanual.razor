@@ -1,5 +1,9 @@
 ﻿@page "/loadgamemanual"
-@using YourApp.Models
+@using ArimaaAnalyzer.Maui.Services
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using Microsoft.AspNetCore.Components
+@inject ArimaaGameService Game
+@inject NavigationManager Nav
 
 
     <p>Page to load games manually from Arimaa.com</p>
@@ -13,27 +17,58 @@
         <button class="btn btn-primary" @onclick="LoadGame">Load Game</button>
     </div>
 
-    @if (ErrorMessage != null)
+    @if (ErrorMessages?.Count > 0)
     {
-        <div class="alert alert-danger">@ErrorMessage</div>
+        <div class="alert alert-danger">
+            <strong>Validation errors:</strong>
+            <ul>
+                @foreach (var err in ErrorMessages)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        </div>
     }
 
-    @if (LoadedGame != null)
+    @if (LoadedSuccessfully)
     {
-        <h5>Loaded Game (@LoadedGame.Moves.Length moves):</h5>
-        <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@LoadedGame.RawNotation</pre>
+        <div class="alert alert-success">
+            Game loaded successfully. Redirecting to board...
+        </div>
+        <pre class="border p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@GameNotation</pre>
     }
 
 @code {
     private string? GameNotation { get; set; }
-    private ArimaaGameService? LoadedGame { get; set; }
-    private string? ErrorMessage { get; set; }
+    private bool LoadedSuccessfully { get; set; }
+    private List<string> ErrorMessages { get; set; } = new();
 
     private void LoadGame()
     {
-        
-        LoadedGame = new ArimaaGameService(GameNotation);
-        
+        ErrorMessages.Clear();
+        LoadedSuccessfully = false;
+        var input = GameNotation ?? string.Empty;
+        var result = NotationService.ValidatePastedGame(input);
+        if (!result.IsValid)
+        {
+            ErrorMessages.AddRange(result.Errors);
+            return;
+        }
+
+        // Use parsed root from validation (fallback to re-parse if absent)
+        var root = result.Root ?? NotationService.ExtractTurnsWithMoves(input);
+        if (root is null)
+        {
+            ErrorMessages.Add("Unable to parse moves from the provided notation.");
+            return;
+        }
+
+        Game.Load(root);
+        Game.ShowOuterUi = true;
+        LoadedSuccessfully = true;
+
+        // Navigate to the main Arimaa page to display the loaded game
+        Nav.NavigateTo("/arimaa");
     }
 
 }

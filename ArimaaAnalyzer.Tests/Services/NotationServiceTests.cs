@@ -80,6 +80,9 @@ public class NotationServiceTests
     private static string Game_firstMoveAfterSetup = @"1w Ed2 Mb2 Ha2 Hg2 Dd1 De2 Cb1 Cf2 Ra1 Rc1 Re1 Rf1 Rg1 Rh1 Rc2 Rh2\n
 1b ra7 hb7 cc7 hd7 ee7 cf7 mg7 dh7 ra8 rb8 rc8 rd8 de8 rf8 rg8 rh8\n2w Ed2n Ed3n Ed4n Mb2n\n
 2b hb7s ee7s dh7s ee6w\n";
+
+    private static string ValidOpening = @"1w Ra1 Rb1 Rc1 Rd1 Re1 Rf1 Rg1 Rh1 Cc2 Cf2 Da2 Dh2 Hb2 Hg2 Md2 Ee2\\n\n
+                                        1b ra8 rb8 rc8 rd8 re8 rf8 rg8 rh8 cc7 cf7 da7 dh7 hb7 hg7 me7 ed7\\n\n";
     
     [Fact(DisplayName = "NotationService.BoardToAei can convert to a string, and AeiToBoard back again on empty board")]
     public void ConvertToStringAndBack_emptyboard()
@@ -94,6 +97,50 @@ public class NotationServiceTests
         // Use strict ordering: rows must match exactly (detect orientation issues)
         newShapeBoard.Should().Equal(EmptyBoard);
         
+    }
+
+    [Fact(DisplayName = "NotationService.Validate accepts a well-formed short game snippet")]
+    public void Validate_Accepts_ShortSnippet()
+    {
+        var snippet = ValidOpening +
+                      "2w Dh2n Hg2e Cf2e Cg2n\\n\n" +
+                      "2b dh7s me7s ed7s dh6w\\n\n" +
+                      "3w Cc2n Cc3x Rf1n Cg3w Hb2e";
+
+        var result = NotationService.ValidatePastedGame(snippet);
+        result.IsValid.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        result.Root.Should().NotBeNull();
+    }
+    
+    [Fact(DisplayName = "NotationService.Validate rejects empty input")]
+    public void Validate_Rejects_Empty()
+    {
+        var result = NotationService.ValidatePastedGame("");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+    }
+
+    [Theory(DisplayName = "NotationService.Validate reports malformed line for various bad inputs")]
+    [InlineData("2q Dh2n Hg2e Cf2e Cg2n\\n")]       // invalid side code 'q'
+    [InlineData("2w\\n")]                           // no moves after side code
+    [InlineData("2 Dh2n Hg2e Cf2e Cg2n\\n")]        // missing side code
+    [InlineData("Dh2n Hg2e Cf2e Cg2n\\n")]          // missing move number and side
+    [InlineData("2w Dh2n Hg2eCf2e Cg2n\\n")]        // missing space between two moves
+    [InlineData("2w DEh2n Hg2e Cf2e Cg2n\\n")]      // two Pieces letters in succession
+    [InlineData("2w Di2n Hg2e Cf2e Cg2n\\n")]       // invalid square letter
+    [InlineData("2w Dh9n Hg2e Cf2e Cg2n\\n")]       // invalid square number
+    [InlineData("2w Dh2a Hg2e Cf2e Cg2n\\n")]       // fourth letter not a north sounth east west direction
+    [InlineData("2w Dh2na Hg2e Cf2e Cg2n\\n")]       // fifth letter not an 'x' marking capture
+    public void Validate_Reports_MalformedInputs(string suffix)
+    {
+        var bad = ValidOpening + suffix;
+        var result = NotationService.ValidatePastedGame(bad);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().NotBeEmpty();
+        // Error messages should explain what's wrong; allow either 'invalid' or 'no moves' wording
+        var allErrors = string.Join(" | ", result.Errors).ToLowerInvariant();
+        (allErrors.Contains("invalid") || allErrors.Contains("no moves")).Should().BeTrue();
     }
 
     [Fact(DisplayName = "NotationService cleans trap after each step when supporter moves away")]
