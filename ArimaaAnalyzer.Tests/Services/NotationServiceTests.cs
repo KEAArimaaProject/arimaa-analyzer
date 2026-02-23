@@ -5,6 +5,7 @@ using System.IO;
 using FluentAssertions;
 using Xunit;
 using YourApp.Models;
+using ArimaaAnalyzer.Maui.Models;
 
 namespace ArimaaAnalyzer.Tests.Services;
 

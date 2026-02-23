@@ -80,6 +80,8 @@
       <Compile Remove="**\*.cs" />
       <!-- Include only service layer (adjust if you add more shared folders) -->
       <Compile Include="Services\**\*.cs" />
+      <!-- Include shared models used by services/tests -->
+      <Compile Include="Models\**\*.cs" />
       <!-- Ensure no Razor files are considered in the test TFM -->
       <None Remove="**\*.razor" />
       <Content Remove="**\*.razor" />
@@ -97,6 +99,8 @@
       <Compile Remove="**\*.cs" />
       <!-- Include only service layer (adjust if you add more shared folders) -->
       <Compile Include="Services\**\*.cs" />
+      <!-- Include shared models used by services/tests -->
+      <Compile Include="Models\**\*.cs" />
       <!-- Ensure no Razor files are considered in the test TFM -->
       <None Remove="**\*.razor" />
       <Content Remove="**\*.razor" />
@@ -150,6 +154,7 @@
       <Folder Include="Aiexecutables\" />
       <Folder Include="Resources\Pieceicons\" />
   </ItemGroup>
+
 
   <!-- Make the Sharp engine available in MAUI app output (Windows) -->
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">

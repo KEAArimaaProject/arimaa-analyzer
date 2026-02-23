@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using YourApp.Models;
+using ArimaaAnalyzer.Maui.Models;
 using ArimaaAnalyzer.Maui.Services; // for Sides
 
 namespace ArimaaAnalyzer.Maui.Services.Arimaa;

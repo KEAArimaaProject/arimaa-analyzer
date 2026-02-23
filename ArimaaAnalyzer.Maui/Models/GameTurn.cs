@@ -2,7 +2,7 @@
 using System.Collections.ObjectModel;
 using ArimaaAnalyzer.Maui.Services;
 
-namespace ArimaaAnalyzer.Maui.Services;
+namespace ArimaaAnalyzer.Maui.Models;
 
 /// <summary>
 /// Represents a single parsed turn in an Arimaa game as a node in a tree.
