@@ -29,6 +29,201 @@ public class DataConverterTests
     }
 
     [Fact]
+    public void FromTsv_ParsesWindowsLineEndingsInMovelistAndEvents()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","wusername","busername","movelist","events"
+        });
+
+        var movelist = string.Join("\r\n", new[]
+        {
+            "1w Aa1 Bb2 Cc3 Dd4",
+            "1b aa7 bb7 cc7 dd7"
+        });
+        var eventsRaw = string.Join("\r\n", new[]
+        {
+            "1769941000 [Sun Feb  1 10:16:40 2026] b player joining",
+            "1769942000 [Sun Feb  1 10:33:20 2026] game finished with result w g"
+        });
+
+        var line = string.Join('\t', new[] { "5005", "W", "B", movelist, eventsRaw });
+
+        var rec = DataConverter.FromTsv(header, line);
+
+        // AEI lines should preserve original lines (including \r if present),
+        // while move tokens are parsed from trimmed text
+        rec.Turns!.Count.Should().Be(2);
+        rec.Turns![0].AEIstring.Should().Be("1w Aa1 Bb2 Cc3 Dd4\r");
+        rec.Turns![0].Moves.Should().Equal(new[] { "Aa1", "Bb2", "Cc3", "Dd4" });
+
+        rec.EventLines.Should().HaveCount(2);
+        rec.EventLines[0].Should().Contain("b player joining");
+        rec.EventLines[1].Should().Contain("game finished");
+    }
+
+    [Fact]
+    public void FromTsv_TrimsWhitespaceButPreservesOriginalAeiString()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","movelist"
+        });
+
+        // Leading/trailing spaces around the turn line
+        var movelist = "   12w   Aa1   Bb2   Cc3   Dd4   \n 12b  ee7  ff7  gg7  hh7  ";
+        var line = string.Join('\t', new[] { "6006", movelist });
+
+        var rec = DataConverter.FromTsv(header, line);
+        rec.Turns!.Count.Should().Be(2);
+
+        var tW = rec.Turns![0];
+        tW.MoveNumber.Should().Be("12");
+        tW.Side.Should().Be(Sides.Gold);
+        tW.Moves.Should().Equal(new[] { "Aa1", "Bb2", "Cc3", "Dd4" });
+        // AEIstring is the original line segment before trimming
+        tW.AEIstring.Should().Be("   12w   Aa1   Bb2   Cc3   Dd4   ");
+    }
+
+    [Fact]
+    public void FromTsv_BoolVariants_RatedAndCorrupt_AcceptedCases_And_MixedCaseIsNull()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","rated","corrupt"
+        });
+
+        // Accepted lower/upper variants (1/0, true/false, True/False)
+        var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7001", "1", "0" }));
+        rec1.Rated.Should().BeTrue();
+        rec1.Corrupt.Should().BeFalse();
+
+        var rec2 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7002", "true", "false" }));
+        rec2.Rated.Should().BeTrue();
+        rec2.Corrupt.Should().BeFalse();
+
+        var rec3 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7003", "True", "False" }));
+        rec3.Rated.Should().BeTrue();
+        rec3.Corrupt.Should().BeFalse();
+
+        // Mixed case not explicitly supported -> null
+        var rec4 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7004", "TrUe", "FaLsE" }));
+        rec4.Rated.Should().BeNull();
+        rec4.Corrupt.Should().BeNull();
+    }
+
+    [Fact]
+    public void FromTsv_ResultAndTermination_AcceptCaseInsensitive()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","result","termination"
+        });
+
+        var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7101", "W", "G" }));
+        rec1.ResultSide.Should().Be(GameRecord.Side.W);
+        rec1.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
+
+        var rec2 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7102", "b", "R" }));
+        rec2.ResultSide.Should().Be(GameRecord.Side.B);
+        rec2.ResultTermination.Should().Be(GameRecord.GameTermination.Resignation);
+    }
+
+    [Fact]
+    public void FromTsv_EpochZeroNegativeOverflow_YieldNullTimestamps_AndNonNumericPlyCount()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","startts","endts","plycount"
+        });
+
+        var rec0 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7200", "0", "-1", "abc" }));
+        rec0.StartTs.Should().BeNull();
+        rec0.EndTs.Should().BeNull();
+        rec0.PlyCount.Should().BeNull();
+
+        // Overflow/invalid -> null
+        var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7201", "99999999999999999999", "nan", "42" }));
+        rec1.StartTs.Should().BeNull();
+        rec1.EndTs.Should().BeNull();
+        rec1.PlyCount.Should().Be(42);
+    }
+
+    [Fact]
+    public void FromTsv_MalformedTurnHeaders_CurrentBehavior()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","movelist"
+        });
+
+        // Includes: invalid order ("w1"), unexpected suffix ("1x"), missing suffix ("2"), and a valid line ("3b …")
+        var movelist = string.Join('\n', new[]
+        {
+            "w1 Aa1 Bb2",   // last char is '1' -> treated as Silver per current code
+            "1x Cc3 Dd4",   // last char not 'w' -> treated as Silver
+            "2 Ee5",        // last char '2' -> treated as Silver
+            "3b ff7 gg7"    // valid black
+        });
+
+        var line = string.Join('\t', new[] { "7300", movelist });
+        var rec = DataConverter.FromTsv(header, line);
+
+        // '2' header has length < 2 => skipped by current implementation, so only 3 turns are parsed
+        rec.Turns!.Count.Should().Be(3);
+        rec.Turns![0].Side.Should().Be(Sides.Silver);
+        rec.Turns![1].Side.Should().Be(Sides.Silver);
+        rec.Turns![2].Side.Should().Be(Sides.Silver);
+    }
+
+    [Fact]
+    public void FromTsv_HeaderOrderIrrelevant_MapsByName()
+    {
+        // Intentionally permute column order
+        var header = string.Join('\t', new[]
+        {
+            "busername","id","result","wusername","termination","movelist","rated","corrupt"
+        });
+
+        var movelist = "1w Aa1 Bb2 Cc3 Dd4\n1b aa7 bb7 cc7 dd7";
+        var line = string.Join('\t', new[]
+        {
+            "Bob","8800","W","Alice","g", movelist, "true","false"
+        });
+
+        var rec = DataConverter.FromTsv(header, line);
+        rec.Id.Should().Be(8800);
+        rec.WUsername.Should().Be("Alice");
+        rec.BUsername.Should().Be("Bob");
+        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
+        rec.Rated.Should().BeTrue();
+        rec.Corrupt.Should().BeFalse();
+        rec.Turns!.Count.Should().Be(2);
+    }
+
+    [Fact]
+    public void FromTsv_EmptyToNull_ForOptionalTextFields_AndPostalParsing()
+    {
+        var header = string.Join('\t', new[]
+        {
+            "id","event","site","timecontrol","postal"
+        });
+
+        var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "9001", "", " ", "  ", "123" }));
+        rec1.Event.Should().BeNull();
+        rec1.Site.Should().BeNull();
+        rec1.TimeControl.Should().BeNull();
+        rec1.Postal.Should().Be(123);
+
+        var rec2 = DataConverter.FromTsv(header, string.Join('\t', new[] { "9002", "Open", "ServerA", "60|3", "abc" }));
+        rec2.Event.Should().Be("Open");
+        rec2.Site.Should().Be("ServerA");
+        rec2.TimeControl.Should().Be("60|3");
+        rec2.Postal.Should().BeNull();
+    }
+
+    [Fact]
     public void FromTsv_Parses_testGame_BasicFields()
     {
         // Header mirroring the sample file
@@ -116,41 +311,14 @@ public class DataConverterTests
 
         var rec = DataConverter.FromTsv(header, line);
 
+        // Narrowed to avoid duplication with
+        // - FromTsv_Parses_testGame_BasicFields (field spot-checks)
+        // - FromTsv_Parses_testGame_Movelist_And_Events (turns/events integrity)
+        // This test now only ensures the full, real TSV row parses end-to-end.
         rec.Id.Should().Be(669123);
-        rec.WPlayerId.Should().Be(63152);
-        rec.BPlayerId.Should().Be(16866);
-        rec.WUsername.Should().Be("bot_dolores_v1");
-        rec.BUsername.Should().Be("browni3141");
-        rec.WCountry.Should().Be("US");
-        rec.BCountry.Should().Be("US");
-        rec.WRating.Should().Be(2630);
-        rec.BRating.Should().Be(2565);
-        rec.WRatingK.Should().Be(30);
-        rec.BRatingK.Should().Be(30);
-        rec.WType.Should().Be(GameRecord.PlayerType.Bot);
-        rec.BType.Should().Be(GameRecord.PlayerType.Human);
-
-        rec.StartTs!.Value.ToUnixTimeSeconds().Should().Be(1769942402);
-        rec.EndTs!.Value.ToUnixTimeSeconds().Should().Be(1769944188);
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
-        rec.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
-        rec.PlyCount.Should().Be(54);
-        rec.Mode.Should().Be("IGS");
-        rec.Rated.Should().BeTrue();
-        rec.Corrupt.Should().BeFalse();
-
-        // Movelist integrity
         rec.MoveListRaw.Should().NotBeNullOrWhiteSpace();
-        rec.Turns.Should().NotBeNull();
-        var moveLines = rec.MoveListRaw!.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        rec.Turns!.Count.Should().Be(moveLines.Length);
-        rec.Turns![0].AEIstring.Should().Be(moveLines[0]);
-        rec.Turns![^1].AEIstring.Should().Be(moveLines[^1]);
-
-        // Events
         rec.EventsRaw.Should().NotBeNullOrWhiteSpace();
-        rec.EventLines.Should().NotBeEmpty();
-        rec.EventLines[^1].Should().Contain("game finished with result w g");
+        rec.Turns.Should().NotBeNull();
     }
 
     [Fact]
