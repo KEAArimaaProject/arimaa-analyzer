@@ -82,6 +82,8 @@
       <Compile Include="Services\**\*.cs" />
       <!-- Include shared models used by services/tests -->
       <Compile Include="Models\**\*.cs" />
+      <!-- Include data access code used by tests (e.g., DataConverter) -->
+      <Compile Include="DataAccess\**\*.cs" />
       <!-- Ensure no Razor files are considered in the test TFM -->
       <None Remove="**\*.razor" />
       <Content Remove="**\*.razor" />
@@ -101,6 +103,8 @@
       <Compile Include="Services\**\*.cs" />
       <!-- Include shared models used by services/tests -->
       <Compile Include="Models\**\*.cs" />
+      <!-- Include data access code used by tests (e.g., DataConverter) -->
+      <Compile Include="DataAccess\**\*.cs" />
       <!-- Ensure no Razor files are considered in the test TFM -->
       <None Remove="**\*.razor" />
       <Content Remove="**\*.razor" />

@@ -51,8 +51,12 @@ public class GameRecord
 
     // Moves and events/logs
     public string? MoveListRaw { get; init; }
-    public IReadOnlyList<string> Moves =>
-        string.IsNullOrEmpty(MoveListRaw) ? Array.Empty<string>() : MoveListRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    
+    /// <summary>
+    /// Parsed turns derived from <see cref="MoveListRaw"/> by the data converter.
+    /// If not set by the converter, this will be null.
+    /// </summary>
+    public IReadOnlyList<GameTurn>? Turns { get; init; }
 
     public string? EventsRaw { get; init; }
     public IReadOnlyList<string> EventLines =>

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using ArimaaAnalyzer.Maui.Models;
+using ArimaaAnalyzer.Maui.Services;
 
 namespace ArimaaAnalyzer.Maui.DataAccess;
 
@@ -68,7 +70,8 @@ public static class DataConverter
             Corrupt = TryBoolN(Get("corrupt")),
 
             MoveListRaw = Get("movelist"),
-            EventsRaw = Get("events")
+            EventsRaw = Get("events"),
+            Turns = ParseTurns(Get("movelist"))
         };
 
         // Local helper functions
@@ -109,5 +112,36 @@ public static class DataConverter
             _ => null
         };
         static string? EmptyToNull(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
+        static IReadOnlyList<GameTurn> ParseTurns(string raw)
+        {
+            var result = new List<GameTurn>();
+            if (string.IsNullOrWhiteSpace(raw)) return result;
+
+            var lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var originalLine in lines)
+            {
+                var line = originalLine.Trim();
+                if (line.Length == 0) continue;
+
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) continue;
+
+                var header = parts[0]; // e.g., "1w" or "12b"
+                if (header.Length < 2)
+                    continue;
+
+                char sideCh = char.ToLowerInvariant(header[^1]);
+                Sides side = sideCh == 'w' ? Sides.Gold : Sides.Silver;
+                var moveNumber = header.Substring(0, header.Length - 1);
+
+                var moves = new List<string>();
+                for (int i = 1; i < parts.Length; i++) moves.Add(parts[i]);
+
+                // Use updatedAEIstring = original AEI line to avoid recomputation dependency
+                var turn = new GameTurn(string.Empty, originalLine, moveNumber, side, moves);
+                result.Add(turn);
+            }
+            return result;
+        }
     }
 }
