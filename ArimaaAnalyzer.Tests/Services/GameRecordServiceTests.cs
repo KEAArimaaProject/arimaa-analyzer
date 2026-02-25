@@ -92,4 +92,247 @@ public class GameRecordServiceTests
         // Depending on line splitting, subsequent turn headers may remain in the same AEI line
         // and be treated as tokens. We avoid strict assertions on subsequent turns here.
     }
+
+    private static GameRecord Rec(
+        long id,
+        string? wUser = null,
+        string? bUser = null,
+        int? wRating = null,
+        int? bRating = null,
+        DateTimeOffset? start = null,
+        DateTimeOffset? end = null,
+        GameRecord.GameTermination? term = null,
+        string? eventsRaw = null,
+        bool? rated = null,
+        int? postal = null,
+        string? timeCtrl = null)
+        => new GameRecord
+        {
+            Id = id,
+            WUsername = wUser,
+            BUsername = bUser,
+            WRating = wRating,
+            BRating = bRating,
+            StartTs = start,
+            EndTs = end,
+            ResultTermination = term,
+            EventsRaw = eventsRaw,
+            Rated = rated,
+            Postal = postal,
+            TimeControl = timeCtrl
+        };
+
+    private static GameRecordService.GameRecordFilterOptions Opt(
+        string? user = null,
+        (int Min, int Max)? hi = null,
+        (int Min, int Max)? lo = null,
+        DateTimeOffset? earliest = null,
+        DateTimeOffset? latest = null,
+        ISet<GameRecord.GameTermination>? wins = null,
+        ISet<string>? eventsSet = null,
+        bool? rated = null,
+        int? postal = null,
+        ISet<string>? timeCtrls = null)
+        => new GameRecordService.GameRecordFilterOptions
+        {
+            UsernameContains = user,
+            RatingHighRange = hi,
+            RatingLowRange = lo,
+            EarliestTime = earliest,
+            LatestTime = latest,
+            WinConditions = wins,
+            EventsRawSet = eventsSet,
+            Rated = rated,
+            Postal = postal,
+            TimeControls = timeCtrls
+        };
+
+    [Fact]
+    public void Filter_UserNameContains_MatchesWhiteOrBlack_CaseInsensitive()
+    {
+        var src = new[]
+        {
+            Rec(1, wUser: "Alice", bUser: "Bob"),
+            Rec(2, wUser: "carol", bUser: "dave"),
+            Rec(3, wUser: "x", bUser: "y")
+        };
+
+        var opt = Opt(user: "AL");
+        var res = GameRecordService.Filter(src, opt).ToList();
+
+        res.Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L });
+
+        opt = Opt(user: "AV");
+        res = GameRecordService.Filter(src, opt).ToList();
+        res.Select(r => r.Id).Should().BeEquivalentTo(new[] { 2L });
+    }
+
+    [Fact]
+    public void Filter_RatingRanges_RequireBothRatings_AndInclusive()
+    {
+        var src = new[]
+        {
+            // hi=1800 lo=1500 -> in both ranges
+            Rec(1, wRating: 1500, bRating: 1800),
+            // hi=1600 lo=1200 -> low below range
+            Rec(2, wRating: 1600, bRating: 1200),
+            // missing rating -> excluded when any range provided
+            Rec(3, wRating: 1700, bRating: null),
+            // boundary case hi=1700 lo=1300
+            Rec(4, wRating: 1700, bRating: 1300)
+        };
+
+        var hi = (Min: 1700, Max: 1800);
+        var lo = (Min: 1300, Max: 1500);
+        var opt = Opt(hi: hi, lo: lo);
+
+        var res = GameRecordService.Filter(src, opt).Select(r => r.Id).ToList();
+        res.Should().BeEquivalentTo(new[] { 1L, 4L });
+    }
+
+    [Fact]
+    public void Filter_TimeBounds_UsesEndTsOtherwiseStartTs_Inclusive()
+    {
+        var t0 = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var t1 = t0.AddDays(1);
+        var t2 = t0.AddDays(2);
+        var t3 = t0.AddDays(3);
+        var src = new[]
+        {
+            // Uses EndTs when present
+            Rec(1, start: t0, end: t1),
+            // No EndTs, uses StartTs
+            Rec(2, start: t2, end: null),
+            // Outside upper bound
+            Rec(3, start: t3, end: null),
+            // No timestamps -> excluded when time filter present
+            Rec(4)
+        };
+
+        var opt = Opt(earliest: t1, latest: t2);
+        var res = GameRecordService.Filter(src, opt).Select(r => r.Id).ToList();
+        // Record 1 has EndTs=t1 (on boundary, include). Record 2 has StartTs=t2 (on boundary, include)
+        res.Should().BeEquivalentTo(new[] { 1L, 2L });
+    }
+
+    [Fact]
+    public void Filter_WinConditions_MatchesProvidedSet()
+    {
+        var src = new[]
+        {
+            Rec(1, term: GameRecord.GameTermination.Elimination),
+            Rec(2, term: GameRecord.GameTermination.Goal),
+            Rec(3, term: GameRecord.GameTermination.Timeout),
+            Rec(4, term: null)
+        };
+
+        var set = new HashSet<GameRecord.GameTermination>
+        {
+            GameRecord.GameTermination.Goal,
+            GameRecord.GameTermination.Elimination
+        };
+        var opt = Opt(wins: set);
+        var res = GameRecordService.Filter(src, opt).Select(r => r.Id).ToList();
+        res.Should().BeEquivalentTo(new[] { 1L, 2L });
+    }
+
+    [Fact]
+    public void Filter_EventsRawSet_ExactMatch()
+    {
+        var src = new[]
+        {
+            Rec(1, eventsRaw: "A\nB"),
+            Rec(2, eventsRaw: "C\nD"),
+            Rec(3, eventsRaw: null)
+        };
+        var set = new HashSet<string> { "C\nD" };
+        var opt = Opt(eventsSet: set);
+        var res = GameRecordService.Filter(src, opt).Select(r => r.Id).ToList();
+        res.Should().BeEquivalentTo(new[] { 2L });
+    }
+
+    [Fact]
+    public void Filter_Rated_TriState_Behavior()
+    {
+        var src = new[]
+        {
+            Rec(1, rated: true),
+            Rec(2, rated: false),
+            Rec(3, rated: null)
+        };
+
+        // rated only
+        var opt = Opt(rated: true);
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L });
+
+        // unrated only
+        opt = Opt(rated: false);
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 2L });
+
+        // null -> both (no filter) — ensure leaving null returns all
+        opt = Opt();
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L, 2L, 3L });
+    }
+
+    [Fact]
+    public void Filter_Postal_TriState_Behavior()
+    {
+        var src = new[]
+        {
+            Rec(1, postal: 1),
+            Rec(2, postal: 0),
+            Rec(3, postal: null)
+        };
+
+        // postal only
+        var opt = Opt(postal: 1);
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L });
+
+        // non-postal only
+        opt = Opt(postal: 0);
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 2L });
+
+        // null -> both (no filter) — ensure leaving null returns all
+        opt = Opt();
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L, 2L, 3L });
+    }
+
+    [Fact]
+    public void Filter_TimeControls_ExactMatchSet()
+    {
+        var src = new[]
+        {
+            Rec(1, timeCtrl: "2/2/100/10/8"),
+            Rec(2, timeCtrl: "5/0/100/10/8"),
+            Rec(3, timeCtrl: null)
+        };
+
+        var set = new HashSet<string> { "5/0/100/10/8" };
+        var opt = Opt(timeCtrls: set);
+        GameRecordService.Filter(src, opt).Select(r => r.Id).Should().BeEquivalentTo(new[] { 2L });
+    }
+
+    [Theory]
+    [InlineData("1000-1500", 1000, 1500)]
+    [InlineData("  900 - 1200  ", 900, 1200)]
+    public void TryParseRatingRange_Valid(string input, int min, int max)
+    {
+        var res = GameRecordService.TryParseRatingRange(input);
+        res.Should().NotBeNull();
+        res!.Value.Min.Should().Be(min);
+        res!.Value.Max.Should().Be(max);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("abc-def")]
+    [InlineData("1000-")]
+    [InlineData("-1500")]
+    [InlineData("1600-1500")] // min > max
+    public void TryParseRatingRange_Invalid(string? input)
+    {
+        var res = GameRecordService.TryParseRatingRange(input);
+        res.Should().BeNull();
+    }
 }
