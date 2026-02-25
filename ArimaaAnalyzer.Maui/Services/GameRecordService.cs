@@ -1,20 +1,135 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using ArimaaAnalyzer.Maui.DataAccess;
 using ArimaaAnalyzer.Maui.Models;
 
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+using Microsoft.Maui.Storage;
+#endif
+
 namespace ArimaaAnalyzer.Maui.Services;
 
-/// <summary>
-/// Service for loading <see cref="GameRecord"/> items from the sample TSV data file
-/// located at ArimaaAnalyzer.Maui/DataAccess/allgames202602.txt.
-/// </summary>
 public static class GameRecordService
 {
+    private const string DataFileName = "allgames202602.txt";
+
+
+    // ────────────────────────────────────────────────
+    // Platform-specific helpers – all #if lives here
+    // ────────────────────────────────────────────────
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+    private static async Task<Stream?> TryOpenMauiAssetAsync()
+    {
+        // Let exceptions bubble to the caller so UI can surface meaningful errors
+        return await FileSystem.Current.OpenAppPackageFileAsync(DataFileName);
+    }
+#else
+    private static Task<Stream?> TryOpenMauiAssetAsync()
+    {
+        // Return completed task with null – no async work needed in fallback
+        return Task.FromResult<Stream?>(null);
+    }
+#endif
+
+
+    private static Stream? TryOpenFallbackFile()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        return null; // Never used on MAUI platforms
+#else
+        // In test/desktop environments, resolve the repo DataAccess path via helper
+        string path = GetDataFilePath();
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Fallback data file not found at '{path}'.", path);
+        }
+
+        try
+        {
+            return File.OpenRead(path);
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Failed to open fallback data file at '{path}'.", ex);
+        }
+#endif
+    }
+
+
+    // ────────────────────────────────────────────────
+    // Public API – clean, no #if directives here
+    // ────────────────────────────────────────────────
+    public static async Task<List<GameRecord>> LoadAllAsync()
+    {
+        var result = new List<GameRecord>();
+
+        try
+        {
+            Stream? stream = await TryOpenMauiAssetAsync();
+
+            // On non-MAUI platforms TryOpenMauiAssetAsync returns null; attempt fallback file
+            if (stream == null)
+            {
+                stream = TryOpenFallbackFile();
+            }
+
+            if (stream == null)
+                throw new FileNotFoundException(
+                    $"Unable to locate data file '{DataFileName}' in app package or fallback path.");
+
+            // ────────────────────────────────────────────────
+            // Correct combined using pattern
+            // ────────────────────────────────────────────────
+            await using var _ = stream;                   // dispose stream asynchronously
+            using var reader = new StreamReader(stream);  // dispose reader synchronously
+
+            string? header = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(header))
+                throw new InvalidDataException($"Data file '{DataFileName}' is empty or missing header line.");
+
+            string? line;
+            int malformedCount = 0;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                try
+                {
+                    var rec = DataConverter.FromTsv(header, line);
+                    result.Add(rec);
+                }
+                catch (Exception)
+                {
+                    // Count malformed lines but continue reading to avoid losing the whole dataset
+                    malformedCount++;
+                }
+            }
+            if (malformedCount > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: {malformedCount} malformed data line(s) were skipped while reading '{DataFileName}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Re-throw with context so UI can surface a clear message
+            throw new InvalidOperationException($"Error while loading game records from '{DataFileName}'.", ex);
+        }
+
+        return result;
+    }
+
+
+    // Optional: synchronous wrapper (avoid calling from UI thread)
+    public static List<GameRecord> LoadAll()
+    {
+        return LoadAllAsync().GetAwaiter().GetResult();
+    }
+    
     /// <summary>
     /// Options used to filter <see cref="GameRecord"/> items for the future search menu.
     /// Provide only the criteria you want to restrict by; any null/empty criteria are ignored.
@@ -82,38 +197,6 @@ public static class GameRecordService
             "..", "..", "..", "..",
             "ArimaaAnalyzer.Maui", "DataAccess", "allgames202602.txt");
         return Path.GetFullPath(path);
-    }
-
-    /// <summary>
-    /// Loads and parses all game records from the TSV data file.
-    /// Returns an empty list if the file is missing or empty.
-    /// </summary>
-    public static List<GameRecord> LoadAll()
-    {
-        var file = GetDataFilePath();
-        var result = new List<GameRecord>();
-        if (!File.Exists(file)) return result;
-
-        using var reader = new StreamReader(file);
-        var header = reader.ReadLine();
-        if (string.IsNullOrEmpty(header)) return result;
-
-        while (!reader.EndOfStream)
-        {
-            var line = reader.ReadLine();
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            try
-            {
-                var rec = DataConverter.FromTsv(header!, line!);
-                result.Add(rec);
-            }
-            catch
-            {
-                // Ignore malformed lines; continue loading the rest
-            }
-        }
-
-        return result;
     }
 
     /// <summary>

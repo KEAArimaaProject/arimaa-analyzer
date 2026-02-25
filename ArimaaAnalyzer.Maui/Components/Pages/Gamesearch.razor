@@ -2,6 +2,7 @@
 @using ArimaaAnalyzer.Maui.Models
 @using ArimaaAnalyzer.Maui.Components
 @using ArimaaAnalyzer.Maui.Services
+@using Microsoft.AspNetCore.Components
 
 <h1>Gamesearch</h1>
 
@@ -9,24 +10,63 @@
     <div class="gs-left">
         <div class="gs-card">
             <GameSearchMenu OnSearch="HandleSearch" />
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
         </div>
     </div>
     <div class="gs-right">
         <div class="gs-card">
-            <GameRecordList Items="_games" PageSize="5" />
+            @if (_loading)
+            {
+                <div>Loading games…</div>
+            }
+            else
+            {
+                <GameRecordList Items="_games" PageSize="5" />
+            }
         </div>
     </div>
     
 </div>
 
 @code {
-    private List<GameRecord>? _games = GameRecordService.LoadAll();
+    private List<GameRecord> _games = new();
+    private bool _loading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            _loading = true;
+            _games = await GameRecordService.LoadAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load game records: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
 
     private int HandleSearch(GameRecordService.GameRecordFilterOptions options)
     {
-        const int MaxResults = 100;
-        _games = GameRecordService.LoadAndFilter(options, MaxResults);
-        // No need to call StateHasChanged here; Blazor will re-render after the event by default.
-        return _games?.Count ?? 0;
+        try
+        {
+            _errorMessage = null;
+            const int MaxResults = 100;
+            _games = GameRecordService.LoadAndFilter(options, MaxResults);
+            return _games.Count;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Search failed: {ex.GetBaseException().Message}";
+            return 0;
+        }
     }
 }
