@@ -1,0 +1,73 @@
+﻿@using ArimaaAnalyzer.Maui.Models
+@using Microsoft.AspNetCore.Components
+
+<div class="gr-list">
+    <div class="gr-toolbar">
+        <span class="gr-title">Games (@(Items?.Count() ?? 0))</span>
+    </div>
+
+    @if (Items is null)
+    {
+        <div class="gr-empty">No data</div>
+    }
+    else if (!Items.Any())
+    {
+        <div class="gr-empty">No games to show</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table table-sm table-hover">
+                <thead>
+                <tr>
+                    <th>Start</th>
+                    <th>Result</th>
+                    <th class="wcol">White</th>
+                    <th class="wcol rating">W ⬆</th>
+                    <th class="bcol">Black</th>
+                    <th class="bcol rating">B ⬆</th>
+                    <th>Time</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var g in Items!)
+                {
+                    <tr>
+                        <td>@FormatDate(g.StartTs)</td>
+                        <td class="result">@FormatSide(g.ResultSide)</td>
+                        <td class="wcol name" title="@g.WUsername">@NullSafe(g.WUsername)</td>
+                        <td class="wcol rating">@FormatInt(g.WRating)</td>
+                        <td class="bcol name" title="@g.BUsername">@NullSafe(g.BUsername)</td>
+                        <td class="bcol rating">@FormatInt(g.BRating)</td>
+                        <td class="timectrl" title="@g.TimeControl">@NullSafe(g.TimeControl)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IEnumerable<GameRecord>? Items { get; set; }
+
+    private static string NullSafe(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;
+
+    private static string FormatInt(int? v) => v.HasValue ? v.Value.ToString() : "—";
+
+    private static string FormatSide(GameRecord.Side? side)
+        => side switch
+        {
+            GameRecord.Side.W => "W",
+            GameRecord.Side.B => "B",
+            _ => "—"
+        };
+
+    private static string FormatDate(DateTimeOffset? dto)
+    {
+        if (dto is null) return "—";
+        var local = dto.Value.ToLocalTime();
+        return local.ToString("yyyy-MM-dd HH:mm");
+    }
+}

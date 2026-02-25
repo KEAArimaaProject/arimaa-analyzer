@@ -1,0 +1,113 @@
+﻿.gr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gr-toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.gr-title {
+  font-weight: 600;
+}
+
+.gr-empty {
+  padding: 12px 8px;
+  color: #666;
+}
+
+.table-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+}
+
+/* Base table styling independent of Bootstrap */
+.gr-list table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+.gr-list thead th {
+  position: sticky;
+  top: 0;
+  background: #f6f7f9;
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.gr-list tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+
+.gr-list tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Columns */
+.gr-list th.result, .gr-list td.result {
+  text-align: center;
+  width: 64px;
+}
+
+.gr-list th.rating, .gr-list td.rating {
+  text-align: right;
+  width: 72px;
+  color: #333;
+}
+
+.gr-list th.timectrl, .gr-list td.timectrl {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gr-list .name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Side accents */
+.gr-list .wcol {
+  --col: 210, 90%, 96%;
+  --bd: 210, 16%, 82%;
+}
+
+.gr-list .bcol {
+  --col: 30, 90%, 96%;
+  --bd: 30, 16%, 76%;
+}
+
+.gr-list td.wcol.name {
+  background: hsl(var(--col));
+  border-left: 3px solid hsl(var(--bd));
+}
+
+.gr-list td.bcol.name {
+  background: hsl(var(--col));
+  border-left: 3px solid hsl(var(--bd));
+}
+
+/* Compact on narrow screens */
+@media (max-width: 520px) {
+  .gr-list thead th:nth-child(4), /* W rating */
+  .gr-list thead th:nth-child(6), /* B rating */
+  .gr-list tbody td:nth-child(4),
+  .gr-list tbody td:nth-child(6) {
+    display: none;
+  }
+  .gr-list tbody td, .gr-list thead th {
+    padding: 6px 8px;
+  }
+}
