@@ -2,7 +2,7 @@
 .gs-menu {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px; /* tighter vertical rhythm */
 }
 
 .gs-header {
@@ -11,26 +11,27 @@
 }
 
 .gs-search-btn {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 8px;
+  height: 32px;             /* was 36 */
+  padding: 0 10px;          /* was 0 14 */
+  border-radius: 6px;       /* was 8 */
   border: 1px solid rgba(0,0,0,0.2);
   background: #0d6efd;
   color: #fff;
   font-weight: 600;
+  font-size: 0.95rem;       /* slightly smaller */
 }
 
 /* Fields grid */
 .gs-fields {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 10px 12px;
+  grid-template-columns: repeat(2, minmax(140px, 1fr)); /* default to 2 cols to fit sidebar */
+  gap: 8px 10px; /* tighter gaps */
 }
 
 .gs-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px; /* reduce label-to-input spacing */
 }
 
 .gs-field.full {
@@ -38,15 +39,17 @@
 }
 
 .gs-field label {
-  font-size: 0.9rem;
+  font-size: 0.85rem; /* was 0.9 */
   color: #444;
+  line-height: 1.2;   /* compact line height */
 }
 
 .gs-input {
-  height: 36px;
-  padding: 6px 10px;
+  height: 32px;                 /* was 36 */
+  padding: 4px 8px;             /* was 6 10 */
   border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 6px;
+  border-radius: 4px;           /* was 6 */
+  font-size: 0.95rem;           /* slightly smaller */
 }
 
 .gs-error {
@@ -64,27 +67,28 @@
 
 .msel-btn {
   width: 100%;
-  height: 36px;
+  height: 32px;                 /* was 36 */
   text-align: left;
-  padding: 6px 10px;
+  padding: 4px 8px;             /* was 6 10 */
   border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 6px;
+  border-radius: 4px;           /* was 6 */
   background: #fff;
+  font-size: 0.95rem;
 }
 
 .msel-panel {
   position: absolute;
   z-index: 20;
   display: none;
-  margin-top: 6px;
-  min-width: 220px;
-  max-height: 260px;
+  margin-top: 4px;              /* was 6 */
+  min-width: 200px;             /* was 220 */
+  max-height: 220px;            /* was 260 */
   overflow: auto;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-  padding: 6px;
+  border-radius: 6px;           /* was 8 */
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14); /* slightly smaller shadow */
+  padding: 4px;                 /* was 6 */
 }
 
 .msel-panel.open { display: block; }
@@ -92,9 +96,10 @@
 .msel-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 6px;               /* was 8 */
+  padding: 4px 6px;       /* was 6 8 */
+  border-radius: 4px;     /* was 6 */
+  font-size: 0.95rem;
 }
 
 .msel-item:hover {
@@ -102,15 +107,15 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (min-width: 680px) {
   .gs-fields {
-    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    grid-template-columns: repeat(3, minmax(130px, 1fr));
   }
 }
 
 @media (max-width: 720px) {
   .gs-fields {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
 }
 
