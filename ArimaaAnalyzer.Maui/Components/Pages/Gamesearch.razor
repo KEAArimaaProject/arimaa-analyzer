@@ -8,7 +8,7 @@
 <div class="gamesearch-layout">
     <div class="gs-left">
         <div class="gs-card">
-            <GameSearchMenu />
+            <GameSearchMenu OnSearch="HandleSearch" />
         </div>
     </div>
     <div class="gs-right">
@@ -21,4 +21,12 @@
 
 @code {
     private List<GameRecord>? _games = GameRecordService.LoadAll();
+
+    private int HandleSearch(GameRecordService.GameRecordFilterOptions options)
+    {
+        const int MaxResults = 100;
+        _games = GameRecordService.LoadAndFilter(options, MaxResults);
+        // No need to call StateHasChanged here; Blazor will re-render after the event by default.
+        return _games?.Count ?? 0;
+    }
 }

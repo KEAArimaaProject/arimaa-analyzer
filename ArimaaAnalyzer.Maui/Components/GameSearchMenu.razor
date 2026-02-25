@@ -4,10 +4,12 @@
 @* no explicit Blazor usings required in this self-contained UI *@
 @using ArimaaAnalyzer.Maui.Models
 @using ArimaaAnalyzer.Maui.Services
+@using Microsoft.AspNetCore.Components
 
 <div class="gs-menu">
     <div class="gs-header">
-        <button class="gs-search-btn" @onclick="OnClickSearch">Search</button>
+        <button class="gs-search-btn" @onclick="OnClickSearch" disabled="@_isSearching">Search</button>
+        <span class="gs-status">@_status</span>
     </div>
 
     <div class="gs-fields">
@@ -64,7 +66,7 @@
                     @foreach (var it in _eventChecks)
                     {
                         <label class="msel-item">
-                            <input type="checkbox" @bind-value="it.Checked" />
+                            <input type="checkbox" @bind="it.Checked" />
                             @it.Label
                         </label>
                     }
@@ -81,7 +83,7 @@
                     @foreach (var it in _ratedChecks)
                     {
                         <label class="msel-item">
-                            <input type="checkbox" @bind-value="it.Checked" />
+                            <input type="checkbox" @bind="it.Checked" />
                             @it.Label
                         </label>
                     }
@@ -98,7 +100,7 @@
                     @foreach (var it in _postalChecks)
                     {
                         <label class="msel-item">
-                            <input type="checkbox" @bind-value="it.Checked" />
+                            <input type="checkbox" @bind="it.Checked" />
                             @it.Label
                         </label>
                     }
@@ -115,7 +117,7 @@
                     @foreach (var it in _timeCtrlChecks)
                     {
                         <label class="msel-item">
-                            <input type="checkbox" @bind-value="it.Checked" />
+                            <input type="checkbox" @bind="it.Checked" />
                             @it.Label
                         </label>
                     }
@@ -140,6 +142,8 @@
     private DateTime? _earliestLocal; // HTML datetime-local value
     private DateTime? _latestLocal;   // HTML datetime-local value
     private string? _error;
+    private string _status = "Idle";
+    private bool _isSearching = false;
 
     // Win conditions
     private readonly GameRecord.GameTermination[] _allWinConditions = Enum.GetValues<GameRecord.GameTermination>();
@@ -208,9 +212,14 @@
     private void ToggleRated(string id, bool on) { /* not used */ }
     private void TogglePostal(string id, bool on) { /* not used */ }
 
-    private Task OnClickSearch()
+    [Parameter]
+    public Func<GameRecordService.GameRecordFilterOptions, int>? OnSearch { get; set; }
+
+    private async Task OnClickSearch()
     {
         _error = null;
+        _status = "Searching...";
+        _isSearching = true;
         var opts = new GameRecordService.GameRecordFilterOptions
         {
             UsernameContains = string.IsNullOrWhiteSpace(_username) ? null : _username!.Trim(),
@@ -229,15 +238,40 @@
         if (!string.IsNullOrWhiteSpace(_ratingHigh) && opts.RatingHighRange is null)
         {
             _error = "Rating high must be in the form min-max";
-            return Task.CompletedTask;
+            _status = $"Error: {_error}";
+            _isSearching = false;
+            return;
         }
         if (!string.IsNullOrWhiteSpace(_ratingLow) && opts.RatingLowRange is null)
         {
             _error = "Rating low must be in the form min-max";
-            return Task.CompletedTask;
+            _status = $"Error: {_error}";
+            _isSearching = false;
+            return;
         }
-        // Future: raise event to parent. For now, UI only.
-        return Task.CompletedTask;
+        // Raise event to parent to perform search and display results
+        try
+        {
+            if (OnSearch is not null)
+            {
+                var count = OnSearch.Invoke(opts);
+                var suffix = count == 1 ? string.Empty : "s";
+                _status = $"Done: {count} game{suffix}";
+            }
+            else
+            {
+                _status = "Ready";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _status = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSearching = false;
+        }
     }
 
     private static DateTimeOffset? ParseLocalDateTime(DateTime? dt)

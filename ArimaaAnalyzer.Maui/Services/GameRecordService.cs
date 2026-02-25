@@ -225,11 +225,23 @@ public static class GameRecordService
 
     /// <summary>
     /// Loads all records and applies <see cref="Filter(IEnumerable{GameRecord}, GameRecordFilterOptions)"/>.
+    /// Returns all matches without a cap.
     /// </summary>
     public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options)
     {
         var all = LoadAll();
         return Filter(all, options).ToList();
+    }
+
+    /// <summary>
+    /// Loads all records, applies filters, and returns up to <paramref name="maxResults"/> items.
+    /// If no criteria are provided, this returns the first <paramref name="maxResults"/> games.
+    /// </summary>
+    public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options, int maxResults)
+    {
+        if (maxResults <= 0) return new List<GameRecord>();
+        var all = LoadAll();
+        return Filter(all, options).Take(maxResults).ToList();
     }
 
     /// <summary>
@@ -265,11 +277,21 @@ public static class GameRecordService
     }
 
     /// <summary>
-    /// Async variant of <see cref="LoadAndFilter"/> with cancellation support.
+    /// Async variant of <see cref="LoadAndFilter(GameRecordFilterOptions)"/> with cancellation support.
     /// </summary>
     public static async Task<List<GameRecord>> LoadAndFilterAsync(GameRecordFilterOptions options, CancellationToken cancellationToken = default)
     {
         var all = await LoadAllAsync(cancellationToken);
         return Filter(all, options).ToList();
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="LoadAndFilter(GameRecordFilterOptions, int)"/> with cancellation support.
+    /// </summary>
+    public static async Task<List<GameRecord>> LoadAndFilterAsync(GameRecordFilterOptions options, int maxResults, CancellationToken cancellationToken = default)
+    {
+        if (maxResults <= 0) return new List<GameRecord>();
+        var all = await LoadAllAsync(cancellationToken);
+        return Filter(all, options).Take(maxResults).ToList();
     }
 }
