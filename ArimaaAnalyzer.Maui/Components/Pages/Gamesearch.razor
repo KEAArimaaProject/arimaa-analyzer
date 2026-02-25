@@ -61,6 +61,10 @@
             _errorMessage = null;
             const int MaxResults = 100;
             _games = GameRecordService.LoadAndFilter(options, MaxResults);
+            // Force a re-render so child components (e.g., GameRecordList title/count)
+            // immediately reflect the new filtered list even though this callback
+            // originates from a child component delegate.
+            StateHasChanged();
             return _games.Count;
         }
         catch (Exception ex)

@@ -14,6 +14,10 @@ namespace ArimaaAnalyzer.Maui.Services;
 public static class GameRecordService
 {
     private const string DataFileName = "allgames202602.txt";
+    
+    // Basic in-memory cache to avoid re-reading the data file on every search
+    private static readonly object _cacheLock = new();
+    private static List<GameRecord>? _allCache;
 
 
     // ────────────────────────────────────────────────
@@ -120,6 +124,12 @@ public static class GameRecordService
             throw new InvalidOperationException($"Error while loading game records from '{DataFileName}'.", ex);
         }
 
+        // Populate cache so subsequent searches can reuse the loaded list without I/O
+        lock (_cacheLock)
+        {
+            _allCache = result;
+        }
+
         return result;
     }
 
@@ -127,7 +137,13 @@ public static class GameRecordService
     // Optional: synchronous wrapper (avoid calling from UI thread)
     public static List<GameRecord> LoadAll()
     {
-        return LoadAllAsync().GetAwaiter().GetResult();
+        var list = LoadAllAsync().GetAwaiter().GetResult();
+        // Cache already set in async, but ensure it's available in any case
+        lock (_cacheLock)
+        {
+            _allCache = list;
+        }
+        return list;
     }
     
     /// <summary>
@@ -312,8 +328,20 @@ public static class GameRecordService
     /// </summary>
     public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options)
     {
-        var all = LoadAll();
-        return Filter(all, options).ToList();
+        // Prefer cached data (populated by initial page load) to avoid blocking I/O on UI thread
+        List<GameRecord> all;
+        lock (_cacheLock)
+        {
+            all = _allCache ?? new List<GameRecord>();
+        }
+
+        if (all.Count == 0)
+        {
+            // Fallback: load synchronously (avoid calling from UI thread if possible)
+            all = LoadAll();
+        }
+
+        return Filter(all, options ?? new GameRecordFilterOptions()).ToList();
     }
 
     /// <summary>
@@ -323,8 +351,21 @@ public static class GameRecordService
     public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options, int maxResults)
     {
         if (maxResults <= 0) return new List<GameRecord>();
-        var all = LoadAll();
-        return Filter(all, options).Take(maxResults).ToList();
+        // Use cached list when available to keep search snappy
+        List<GameRecord> all;
+        lock (_cacheLock)
+        {
+            all = _allCache ?? new List<GameRecord>();
+        }
+
+        if (all.Count == 0)
+        {
+            all = LoadAll();
+        }
+
+        return Filter(all, options ?? new GameRecordFilterOptions())
+            .Take(maxResults)
+            .ToList();
     }
 
     /// <summary>
