@@ -1,0 +1,289 @@
+﻿@using System
+@using System.Linq
+@using System.Collections.Generic
+@* no explicit Blazor usings required in this self-contained UI *@
+@using ArimaaAnalyzer.Maui.Models
+@using ArimaaAnalyzer.Maui.Services
+
+<div class="gs-menu">
+    <div class="gs-header">
+        <button class="gs-search-btn" @onclick="OnClickSearch">Search</button>
+    </div>
+
+    <div class="gs-fields">
+        <!-- Username substring -->
+        <div class="gs-field">
+            <label for="f-username">Username contains</label>
+            <input id="f-username" type="text" class="gs-input" @bind-value="_username" @bind-value:event="oninput" placeholder="e.g. alice" />
+        </div>
+
+        <!-- Rating ranges -->
+        <div class="gs-field">
+            <label for="f-rating-high">Rating high (min-max)</label>
+            <input id="f-rating-high" type="text" class="gs-input" @bind-value="_ratingHigh" @bind-value:event="oninput" placeholder="e.g. 2000-2600" />
+        </div>
+        <div class="gs-field">
+            <label for="f-rating-low">Rating low (min-max)</label>
+            <input id="f-rating-low" type="text" class="gs-input" @bind-value="_ratingLow" @bind-value:event="oninput" placeholder="e.g. 1200-2000" />
+        </div>
+
+        <!-- Time bounds -->
+        <div class="gs-field">
+            <label for="f-earliest">Earliest time</label>
+            <input id="f-earliest" type="datetime-local" class="gs-input" @bind-value="_earliestLocal" />
+        </div>
+        <div class="gs-field">
+            <label for="f-latest">Latest time</label>
+            <input id="f-latest" type="datetime-local" class="gs-input" @bind-value="_latestLocal" />
+        </div>
+
+        <!-- Win conditions multi-select -->
+        <div class="gs-field full">
+            <label>Win conditions</label>
+            <div class="msel">
+                <button type="button" class="msel-btn" @onclick="(() => openWin = !openWin)">@BuildCaption(_winConditions.Count, "Any")</button>
+                <div class="msel-panel @(openWin ? "open" : null)">
+                    @foreach (var term in _allWinConditions)
+                    {
+                        var checkedNow = _winConditions.Contains(term);
+                        <label class="msel-item">
+                            <input type="checkbox" checked="@checkedNow" @onchange="(e => ToggleWinCondition(term.ToString(), (bool)e.Value!))" />
+                            @term.ToString()
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- EventsRaw multi-select -->
+        <div class="gs-field full">
+            <label>Events</label>
+            <div class="msel">
+                <button type="button" class="msel-btn" @onclick="(() => openEvents = !openEvents)">@BuildCaption(_eventChecks.Count(i => i.Checked), "Any")</button>
+                <div class="msel-panel @(openEvents ? "open" : null)">
+                    @foreach (var it in _eventChecks)
+                    {
+                        <label class="msel-item">
+                            <input type="checkbox" @bind-value="it.Checked" />
+                            @it.Label
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Rated / Unrated checklist -->
+        <div class="gs-field">
+            <label>Rated</label>
+            <div class="msel">
+                <button type="button" class="msel-btn" @onclick="(() => openRated = !openRated)">@BuildRatedCaption()</button>
+                <div class="msel-panel @(openRated ? "open" : null)">
+                    @foreach (var it in _ratedChecks)
+                    {
+                        <label class="msel-item">
+                            <input type="checkbox" @bind-value="it.Checked" />
+                            @it.Label
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Postal checklist -->
+        <div class="gs-field">
+            <label>Postal</label>
+            <div class="msel">
+                <button type="button" class="msel-btn" @onclick="(() => openPostal = !openPostal)">@BuildPostalCaption()</button>
+                <div class="msel-panel @(openPostal ? "open" : null)">
+                    @foreach (var it in _postalChecks)
+                    {
+                        <label class="msel-item">
+                            <input type="checkbox" @bind-value="it.Checked" />
+                            @it.Label
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- TimeControl multi-select -->
+        <div class="gs-field full">
+            <label>Time control</label>
+            <div class="msel">
+                <button type="button" class="msel-btn" @onclick="(() => openTimeCtrl = !openTimeCtrl)">@BuildCaption(_timeCtrlChecks.Count(i => i.Checked), "Any")</button>
+                <div class="msel-panel @(openTimeCtrl ? "open" : null)">
+                    @foreach (var it in _timeCtrlChecks)
+                    {
+                        <label class="msel-item">
+                            <input type="checkbox" @bind-value="it.Checked" />
+                            @it.Label
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="gs-error">@_error</div>
+    }
+</div>
+
+@code {
+    // In this initial version, options are local state only (no parameters yet).
+
+    // Local state
+    private string? _username;
+    private string? _ratingHigh;
+    private string? _ratingLow;
+    private DateTime? _earliestLocal; // HTML datetime-local value
+    private DateTime? _latestLocal;   // HTML datetime-local value
+    private string? _error;
+
+    // Win conditions
+    private readonly GameRecord.GameTermination[] _allWinConditions = Enum.GetValues<GameRecord.GameTermination>();
+    private readonly HashSet<GameRecord.GameTermination> _winConditions = new();
+
+    // Checklist helpers
+    private List<CheckItem> _eventChecks = new();
+    private List<CheckItem> _timeCtrlChecks = new();
+
+    // Rated: two checkboxes (Rated, Unrated)
+    private List<CheckItem> _ratedChecks = new()
+    {
+        new CheckItem { Id = "rated", Label = "Rated", Checked = true },
+        new CheckItem { Id = "unrated", Label = "Unrated", Checked = true }
+    };
+
+    // Postal: two checkboxes (Postal, Non-postal)
+    private List<CheckItem> _postalChecks = new()
+    {
+        new CheckItem { Id = "postal", Label = "Postal", Checked = true },
+        new CheckItem { Id = "nonpostal", Label = "Non-postal", Checked = true }
+    };
+
+    private string BuildCaption(int selectedCount, string emptyLabel)
+        => selectedCount == 0 ? emptyLabel : $"{selectedCount} selected";
+
+    private string BuildRatedCaption()
+    {
+        var r = _ratedChecks.First(c => c.Id == "rated").Checked;
+        var u = _ratedChecks.First(c => c.Id == "unrated").Checked;
+        return (r, u) switch
+        {
+            (true, true) => "Both",
+            (true, false) => "Rated",
+            (false, true) => "Unrated",
+            _ => "None"
+        };
+    }
+
+    private string BuildPostalCaption()
+    {
+        var p = _postalChecks.First(c => c.Id == "postal").Checked;
+        var n = _postalChecks.First(c => c.Id == "nonpostal").Checked;
+        return (p, n) switch
+        {
+            (true, true) => "Both",
+            (true, false) => "Postal",
+            (false, true) => "Non-postal",
+            _ => "None"
+        };
+    }
+
+    // Open/close flags for dropdowns
+    private bool openWin, openEvents, openRated, openPostal, openTimeCtrl;
+
+    private void ToggleWinCondition(string id, bool on)
+    {
+        if (Enum.TryParse<GameRecord.GameTermination>(id, out var term))
+        {
+            if (on) _winConditions.Add(term); else _winConditions.Remove(term);
+        }
+    }
+
+    private void ToggleEvent(string id, bool on) { /* not used in simple binding version */ }
+    private void ToggleTimeCtrl(string id, bool on) { /* not used */ }
+    private void ToggleRated(string id, bool on) { /* not used */ }
+    private void TogglePostal(string id, bool on) { /* not used */ }
+
+    private Task OnClickSearch()
+    {
+        _error = null;
+        var opts = new GameRecordService.GameRecordFilterOptions
+        {
+            UsernameContains = string.IsNullOrWhiteSpace(_username) ? null : _username!.Trim(),
+            RatingHighRange = GameRecordService.TryParseRatingRange(_ratingHigh),
+            RatingLowRange = GameRecordService.TryParseRatingRange(_ratingLow),
+            EarliestTime = ParseLocalDateTime(_earliestLocal),
+            LatestTime = ParseLocalDateTime(_latestLocal),
+            WinConditions = _winConditions.Count > 0 ? new HashSet<GameRecord.GameTermination>(_winConditions) : null,
+            EventsRawSet = BuildStringSet(_eventChecks),
+            Rated = BuildRatedFlag(),
+            Postal = BuildPostalFlag(),
+            TimeControls = BuildStringSet(_timeCtrlChecks)
+        };
+
+        // Basic validation: if a rating text is provided but invalid, show message
+        if (!string.IsNullOrWhiteSpace(_ratingHigh) && opts.RatingHighRange is null)
+        {
+            _error = "Rating high must be in the form min-max";
+            return Task.CompletedTask;
+        }
+        if (!string.IsNullOrWhiteSpace(_ratingLow) && opts.RatingLowRange is null)
+        {
+            _error = "Rating low must be in the form min-max";
+            return Task.CompletedTask;
+        }
+        // Future: raise event to parent. For now, UI only.
+        return Task.CompletedTask;
+    }
+
+    private static DateTimeOffset? ParseLocalDateTime(DateTime? dt)
+    {
+        if (dt is null) return null;
+        // Treat the provided local date/time as local kind and convert to offset
+        var local = DateTime.SpecifyKind(dt.Value, DateTimeKind.Local);
+        return new DateTimeOffset(local);
+    }
+
+    private static ISet<string>? BuildStringSet(List<CheckItem> items)
+    {
+        var selected = items.Where(i => i.Checked).Select(i => i.Id).ToHashSet();
+        return selected.Count > 0 ? selected : null;
+    }
+
+    private bool? BuildRatedFlag()
+    {
+        var r = _ratedChecks.First(c => c.Id == "rated").Checked;
+        var u = _ratedChecks.First(c => c.Id == "unrated").Checked;
+        return (r, u) switch
+        {
+            (true, true) => (bool?)null, // both
+            (true, false) => true,
+            (false, true) => false,
+            _ => null // none -> treat as both (no restriction)
+        };
+    }
+
+    private int? BuildPostalFlag()
+    {
+        var p = _postalChecks.First(c => c.Id == "postal").Checked;
+        var n = _postalChecks.First(c => c.Id == "nonpostal").Checked;
+        return (p, n) switch
+        {
+            (true, true) => (int?)null, // both
+            (true, false) => 1,
+            (false, true) => 0,
+            _ => null // none -> both
+        };
+    }
+
+    private class CheckItem
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public bool Checked { get; set; }
+    }
+}

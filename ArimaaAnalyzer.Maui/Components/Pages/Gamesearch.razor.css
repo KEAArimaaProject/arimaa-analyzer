@@ -1,0 +1,29 @@
+﻿/* Layout container for the Gamesearch page */
+.gamesearch-layout {
+  display: grid;
+  grid-template-columns: 1fr; /* stack on narrow screens */
+  gap: 16px;
+}
+
+/* On wider screens, place menu on the left and list on the right */
+@media (min-width: 900px) {
+  .gamesearch-layout {
+    grid-template-columns: minmax(260px, 360px) 1fr;
+    align-items: start;
+  }
+}
+
+/* Optional: make the left menu panel sticky for easier browsing on desktop */
+@media (min-width: 1200px) {
+  .gamesearch-layout .gs-left {
+    position: sticky;
+    top: 10px;
+    align-self: start;
+  }
+}
+
+/* Ensure inner panels stretch nicely */
+.gamesearch-layout .gs-left,
+.gamesearch-layout .gs-right {
+  min-width: 0; /* allow tables to shrink within grid */
+}
