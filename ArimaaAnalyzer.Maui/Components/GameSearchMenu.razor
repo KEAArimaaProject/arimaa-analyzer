@@ -15,8 +15,13 @@
     <div class="gs-fields">
         <!-- Username substring -->
         <div class="gs-field">
-            <label for="f-username">Username contains</label>
-            <input id="f-username" type="text" class="gs-input" @bind-value="_username" @bind-value:event="oninput" placeholder="e.g. alice" />
+            <label for="f-username">Gold username contains</label>
+            <input id="f-username" type="text" class="gs-input" @bind-value="_whiteusername" @bind-value:event="oninput" placeholder="e.g. alice" />
+        </div>
+        
+        <div class="gs-field">
+            <label for="f-username">Silver username contains</label>
+            <input id="f-username" type="text" class="gs-input" @bind-value="_blackusername" @bind-value:event="oninput" placeholder="e.g. bob" />
         </div>
 
         <!-- Rating ranges -->
@@ -136,7 +141,8 @@
     // In this initial version, options are local state only (no parameters yet).
 
     // Local state
-    private string? _username;
+    private string? _whiteusername;
+    private string? _blackusername;
     private string? _ratingHigh;
     private string? _ratingLow;
     private DateTime? _earliestLocal; // HTML datetime-local value
@@ -222,7 +228,8 @@
         _isSearching = true;
         var opts = new GameRecordService.GameRecordFilterOptions
         {
-            UsernameContains = string.IsNullOrWhiteSpace(_username) ? null : _username!.Trim(),
+            WUsernameContains = string.IsNullOrWhiteSpace(_whiteusername) ? null : _whiteusername!.Trim(),
+            BUsernameContains = string.IsNullOrWhiteSpace(_blackusername) ? null : _blackusername!.Trim(),
             RatingHighRange = GameRecordService.TryParseRatingRange(_ratingHigh),
             RatingLowRange = GameRecordService.TryParseRatingRange(_ratingLow),
             EarliestTime = ParseLocalDateTime(_earliestLocal),

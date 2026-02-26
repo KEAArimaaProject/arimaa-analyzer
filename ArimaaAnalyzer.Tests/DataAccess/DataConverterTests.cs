@@ -12,10 +12,11 @@ namespace ArimaaAnalyzer.Tests.DataAccess;
 
 public class DataConverterTests
 {
-    private static readonly string DataFilePath =
-        Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            "ArimaaAnalyzer.Maui", "DataAccess", "allgames202602.txt");
+    private static string DataFilePath = DataConverter.rawDataFilePath;
+    //private static readonly string DataFilePath =
+     //   Path.Combine(AppContext.BaseDirectory,
+     //       "..", "..", "..", "..",
+     //       "ArimaaAnalyzer.Maui", "DataAccess", "allgames202602.txt");
 
     private static (string header, List<string> lines) LoadSample()
     {

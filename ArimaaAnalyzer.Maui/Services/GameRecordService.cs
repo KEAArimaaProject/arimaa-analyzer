@@ -45,7 +45,7 @@ public static class GameRecordService
         return null; // Never used on MAUI platforms
 #else
         // In test/desktop environments, resolve the repo DataAccess path via helper
-        string path = GetDataFilePath();
+        string path = DataConverter.GetDataFilePath();
 
         if (!File.Exists(path))
         {
@@ -153,10 +153,15 @@ public static class GameRecordService
     public sealed class GameRecordFilterOptions
     {
         /// <summary>
-        /// Case-insensitive substring to match against <see cref="GameRecord.WUsername"/> or <see cref="GameRecord.BUsername"/>.
+        /// Case-insensitive substring to match against <see cref="GameRecord.WUsername"/>.
         /// </summary>
-        public string? UsernameContains { get; init; }
+        public string? WUsernameContains { get; init; }
 
+        /// <summary>
+        /// Case-insensitive substring to match against <see cref="GameRecord.BUsername"/>.
+        /// </summary>
+        public string? BUsernameContains { get; init; }
+        
         /// <summary>
         /// Range for the higher rating of the two players (inclusive). Tuple is (min, max).
         /// If specified, both player ratings must be present.
@@ -206,15 +211,6 @@ public static class GameRecordService
         public ISet<string>? TimeControls { get; init; }
     }
 
-    private static string GetDataFilePath()
-    {
-        // Resolve the file relative to the test/app base directory to work in IDE and test runs
-        var path = Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            "ArimaaAnalyzer.Maui", "DataAccess", "allgames202602.txt");
-        return Path.GetFullPath(path);
-    }
-
     /// <summary>
     /// Parse a rating range from a string formatted as "min-max". Whitespace is allowed.
     /// Returns null if the string is null/empty/invalid or min&gt;max.
@@ -239,12 +235,20 @@ public static class GameRecordService
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (options == null) throw new ArgumentNullException(nameof(options));
 
-        // Username substring (case-insensitive)
-        if (!string.IsNullOrWhiteSpace(options.UsernameContains))
+        // WUsername substring (case-insensitive)
+        if (!string.IsNullOrWhiteSpace(options.WUsernameContains))
         {
-            var needle = options.UsernameContains.Trim();
+            var needle = options.WUsernameContains.Trim();
             source = source.Where(r =>
-                (!string.IsNullOrEmpty(r.WUsername) && r.WUsername!.Contains(needle, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(r.WUsername) && r.WUsername!.Contains(needle, StringComparison.OrdinalIgnoreCase)) 
+            );
+        }
+        
+        // BUsername substring (case-insensitive)
+        if (!string.IsNullOrWhiteSpace(options.BUsernameContains))
+        {
+            var needle = options.BUsernameContains.Trim();
+            source = source.Where(r =>
                 (!string.IsNullOrEmpty(r.BUsername) && r.BUsername!.Contains(needle, StringComparison.OrdinalIgnoreCase))
             );
         }
@@ -373,7 +377,7 @@ public static class GameRecordService
     /// </summary>
     public static async Task<List<GameRecord>> LoadAllAsync(CancellationToken cancellationToken = default)
     {
-        var file = GetDataFilePath();
+        var file = DataConverter.GetDataFilePath();
         var result = new List<GameRecord>();
         if (!File.Exists(file)) return result;
 

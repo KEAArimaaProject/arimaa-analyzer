@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using ArimaaAnalyzer.Maui.DataAccess;
 using ArimaaAnalyzer.Maui.Models;
 using ArimaaAnalyzer.Maui.Services;
 using FluentAssertions;
@@ -10,15 +11,11 @@ namespace ArimaaAnalyzer.Tests.Services;
 
 public class GameRecordServiceTests
 {
-    private static readonly string DataFilePath = Path.Combine(
-        AppContext.BaseDirectory,
-        "..", "..", "..", "..",
-        "ArimaaAnalyzer.Maui", "DataAccess", "allgames202602.txt");
-
+    
     [Fact]
     public void LoadAll_Returns_NonEmpty_And_CountMatchesFileLines()
     {
-        var fullPath = Path.GetFullPath(DataFilePath);
+        var fullPath = DataConverter.GetDataFilePath();
         File.Exists(fullPath).Should().BeTrue($"Sample data file not found: {fullPath}");
 
         // Count non-empty lines minus header
@@ -123,7 +120,8 @@ public class GameRecordServiceTests
         };
 
     private static GameRecordService.GameRecordFilterOptions Opt(
-        string? user = null,
+        string? gold_user = null,
+        string? silver_user = null,
         (int Min, int Max)? hi = null,
         (int Min, int Max)? lo = null,
         DateTimeOffset? earliest = null,
@@ -135,7 +133,8 @@ public class GameRecordServiceTests
         ISet<string>? timeCtrls = null)
         => new GameRecordService.GameRecordFilterOptions
         {
-            UsernameContains = user,
+            WUsernameContains = gold_user,
+            BUsernameContains = silver_user,
             RatingHighRange = hi,
             RatingLowRange = lo,
             EarliestTime = earliest,
@@ -157,12 +156,12 @@ public class GameRecordServiceTests
             Rec(3, wUser: "x", bUser: "y")
         };
 
-        var opt = Opt(user: "AL");
+        var opt = Opt(gold_user: "AL");
         var res = GameRecordService.Filter(src, opt).ToList();
 
         res.Select(r => r.Id).Should().BeEquivalentTo(new[] { 1L });
 
-        opt = Opt(user: "AV");
+        opt = Opt(silver_user: "AV");
         res = GameRecordService.Filter(src, opt).ToList();
         res.Select(r => r.Id).Should().BeEquivalentTo(new[] { 2L });
     }

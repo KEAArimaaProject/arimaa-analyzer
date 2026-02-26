@@ -11,6 +11,17 @@ namespace ArimaaAnalyzer.Maui.DataAccess;
 /// </summary>
 public static class DataConverter
 {
+    
+    public static string rawDataFilePath =
+        Path.Combine(AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "ArimaaAnalyzer.Maui", "Resources", "Raw", "allgames202602.txt");
+    
+    public static string GetDataFilePath()
+    {
+        return Path.GetFullPath(rawDataFilePath);
+    }
+    
     /// <summary>
     /// Parse a TSV header + line into a <see cref="GameRecord"/>.
     /// Unknown/missing fields are left null.
