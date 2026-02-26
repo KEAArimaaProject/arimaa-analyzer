@@ -12,7 +12,8 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 0; /* Critical: allows children to shrink */
-    overflow: hidden; /* Prevent overflow from children */
+    /* Do not create a scroll context here; let the window handle scrolling */
+    overflow: visible;
 }
 
 .top-row {
@@ -57,13 +58,14 @@ main {
     text-overflow: ellipsis;
 }
 
-/* Article content area: fills remaining space and constrains children */
+/* Article content area: fills remaining space; scrolling is handled by the window */
 article {
     flex: 1 1 auto;
     min-height: 0;       /* ← This is critical! */
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;    /* Changed from 'auto' to 'hidden' for the board */
+    /* Allow children to size naturally; no inner scrollbars here */
+    overflow: visible;
 }
 
