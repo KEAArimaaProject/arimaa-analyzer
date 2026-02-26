@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Keep a sensible, constant width on wide screens while remaining responsive */
+  width: 920px;         /* chosen constant width for desktop */
+  max-width: 100%;      /* don’t overflow on small screens */
+  box-sizing: border-box;
 }
 
 .gr-toolbar {
@@ -15,10 +19,22 @@
 }
 
 .gr-pager {
-  display: flex;
+  /* Keep Prev and Next in fixed positions regardless of how many page items render */
+  display: grid;
+  /* Prev | Page strip (flexes) | Next | Fixed-width Range */
+  grid-template-columns: auto 1fr auto var(--pg-range-w, 18ch);
   align-items: center;
+  column-gap: 8px;
+  width: 100%;
+}
+
+/* The middle strip that holds page numbers/ellipses */
+.gr-pager .pg-strip {
+  min-width: 0;                /* allow it to shrink in the grid area */
+  display: flex;
+  flex-wrap: wrap;             /* wrap to new lines on narrow screens */
+  justify-content: center;     /* center page numbers within the reserved space */
   gap: 6px;
-  flex-wrap: nowrap;
 }
 
 .gr-pager .pg-btn {
@@ -52,9 +68,18 @@
   margin-left: 8px;
   color: #666;
   font-size: 0.9em;
+  /* Keep the range from pushing layout; let it wrap within its fixed area */
+  white-space: normal;
+  word-break: break-word;
+  text-align: right;
+  justify-self: end;
 }
 
 @media (max-width: 520px) {
+  /* On very small screens, drop the fixed range column entirely */
+  .gr-pager {
+    grid-template-columns: auto 1fr auto;
+  }
   .gr-pager .pg-range {
     display: none;
   }
@@ -66,7 +91,8 @@
 }
 
 .table-wrap {
-  overflow: auto;
+  /* Let rows expand vertically; avoid inner scrollbars */
+  overflow: visible;
   -webkit-overflow-scrolling: touch;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 6px;
@@ -75,6 +101,7 @@
 /* Base table styling independent of Bootstrap */
 .gr-list table {
   width: 100%;
+  table-layout: fixed;   /* keep overall table width constant */
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.95rem;
@@ -88,12 +115,16 @@
   font-weight: 600;
   padding: 8px 10px;
   border-bottom: 1px solid rgba(0,0,0,0.08);
+  white-space: normal;    /* allow headers to wrap if needed */
+  word-break: break-word;
 }
 
 .gr-list tbody td {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
-  white-space: nowrap;
+  /* Allow content to wrap vertically instead of forcing wider columns */
+  white-space: normal;
+  word-break: break-word;
 }
 
 .gr-list tbody tr:hover {
@@ -113,15 +144,13 @@
 }
 
 .gr-list th.timectrl, .gr-list td.timectrl {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Let time control wrap to multiple lines when space is tight */
+  max-width: none;
 }
 
 .gr-list .name {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Allow long usernames to wrap and grow row height */
+  max-width: none;
 }
 
 /* Side accents */

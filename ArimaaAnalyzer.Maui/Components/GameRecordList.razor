@@ -11,19 +11,21 @@
             <nav class="gr-pager" role="navigation" aria-label="Pagination">
                 <button class="pg-btn prev" @onclick="GoPrev" disabled="@IsFirstPage" aria-label="Previous page">‹</button>
 
-                @foreach (var it in BuildPageItems())
-                {
-                    if (it.IsEllipsis)
+                <span class="pg-strip">
+                    @foreach (var it in BuildPageItems())
                     {
-                        <span class="pg-ellipsis">…</span>
+                        if (it.IsEllipsis)
+                        {
+                            <span class="pg-ellipsis">…</span>
+                        }
+                        else
+                        {
+                            <button class="pg-btn @(it.Number == CurrentPage ? "active" : null)"
+                                    aria-current="@(it.Number == CurrentPage ? "page" : null)"
+                                    @onclick="(() => GoPage(it.Number))">@it.Number</button>
+                        }
                     }
-                    else
-                    {
-                        <button class="pg-btn @(it.Number == CurrentPage ? "active" : null)"
-                                aria-current="@(it.Number == CurrentPage ? "page" : null)"
-                                @onclick="(() => GoPage(it.Number))">@it.Number</button>
-                    }
-                }
+                </span>
 
                 <button class="pg-btn next" @onclick="GoNext" disabled="@IsLastPage" aria-label="Next page">›</button>
 
