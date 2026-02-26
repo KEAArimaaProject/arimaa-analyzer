@@ -18,6 +18,9 @@ public static class GameRecordService
     // Basic in-memory cache to avoid re-reading the data file on every search
     private static readonly object _cacheLock = new();
     private static List<GameRecord>? _allCache;
+    
+    // Expanding cache of distinct time controls gathered from all read GameRecord items
+    private static readonly HashSet<string> _timeControlCache = new(StringComparer.OrdinalIgnoreCase);
 
 
     // ────────────────────────────────────────────────
@@ -128,6 +131,14 @@ public static class GameRecordService
         lock (_cacheLock)
         {
             _allCache = result;
+            // Expand (never overwrite) the distinct time controls cache
+            foreach (var tc in result)
+            {
+                if (!string.IsNullOrWhiteSpace(tc.TimeControl))
+                {
+                    _timeControlCache.Add(tc.TimeControl!.Trim());
+                }
+            }
         }
 
         return result;
@@ -142,8 +153,30 @@ public static class GameRecordService
         lock (_cacheLock)
         {
             _allCache = list;
+            foreach (var tc in list)
+            {
+                if (!string.IsNullOrWhiteSpace(tc.TimeControl))
+                {
+                    _timeControlCache.Add(tc.TimeControl!.Trim());
+                }
+            }
         }
         return list;
+    }
+
+    /// <summary>
+    /// Returns the current distinct set of time control values that have been observed so far.
+    /// This cache only ever expands; it is never cleared or overwritten by subsequent loads.
+    /// </summary>
+    public static IReadOnlyCollection<string> GetDistinctTimeControls()
+    {
+        lock (_cacheLock)
+        {
+            // Return a snapshot (sorted for stable UI)
+            var list = new List<string>(_timeControlCache);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list;
+        }
     }
     
     /// <summary>

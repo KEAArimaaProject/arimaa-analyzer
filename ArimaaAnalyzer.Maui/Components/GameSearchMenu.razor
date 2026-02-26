@@ -327,4 +327,41 @@
         public string Label { get; set; } = string.Empty;
         public bool Checked { get; set; }
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Populate TimeControl checklist from the expanding cache in the service.
+        // If nothing is cached yet, attempt to load data once to seed the cache.
+        var tcs = GameRecordService.GetDistinctTimeControls();
+        if (tcs == null || tcs.Count == 0)
+        {
+            try
+            {
+                await GameRecordService.LoadAllAsync();
+                tcs = GameRecordService.GetDistinctTimeControls();
+            }
+            catch
+            {
+                // Ignore here; the page hosting the menu will surface load errors.
+            }
+        }
+
+        if (tcs != null && tcs.Count > 0)
+        {
+            // Build items only once; do not duplicate if reinitialized.
+            if (_timeCtrlChecks.Count == 0)
+            {
+                foreach (var tc in tcs)
+                {
+                    if (string.IsNullOrWhiteSpace(tc)) continue;
+                    _timeCtrlChecks.Add(new CheckItem
+                    {
+                        Id = tc,
+                        Label = tc,
+                        Checked = false // unchecked means "Any" (no restriction)
+                    });
+                }
+            }
+        }
+    }
 }
