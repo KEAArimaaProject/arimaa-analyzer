@@ -6,6 +6,9 @@
   width: 920px;         /* chosen constant width for desktop */
   max-width: 100%;      /* don’t overflow on small screens */
   box-sizing: border-box;
+  /* Keep the game list in a lower stacking layer than floating panels (dropdowns) */
+  position: relative;
+  z-index: 0;
 }
 
 .gr-toolbar {
@@ -96,6 +99,9 @@
   -webkit-overflow-scrolling: touch;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 6px;
+  /* Ensure this wrapper doesn't create a higher stacking context */
+  position: relative;
+  z-index: 0;
 }
 
 /* Base table styling independent of Bootstrap */
@@ -117,6 +123,15 @@
   border-bottom: 1px solid rgba(0,0,0,0.08);
   white-space: normal;    /* allow headers to wrap if needed */
   word-break: break-word;
+  /* Explicitly keep sticky header below floating dropdowns from the left panel */
+  z-index: 0;
+}
+
+/* Guard: in some browsers the sticky row may form its own stacking context.
+   Ensure the entire table stays below popouts from the search menu. */
+.gr-list table, .gr-list thead, .gr-list tbody {
+  position: relative;
+  z-index: 0;
 }
 
 .gr-list tbody td {

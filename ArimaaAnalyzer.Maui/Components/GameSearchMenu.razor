@@ -48,8 +48,8 @@
         <div class="gs-field full">
             <label>Win conditions</label>
             <div class="msel">
-                <button type="button" class="msel-btn" @onclick="(() => openWin = !openWin)">@BuildCaption(_winConditions.Count, "Any")</button>
-                <div class="msel-panel @(openWin ? "open" : null)">
+                <button type="button" class="msel-btn" @onclick="(() => TogglePanel(Panel.Win))">@BuildCaption(_winConditions.Count, "Any")</button>
+                <div class="msel-panel @(_openPanel == Panel.Win ? "open" : null)">
                     @foreach (var term in _allWinConditions)
                     {
                         var checkedNow = _winConditions.Contains(term);
@@ -66,8 +66,8 @@
         <div class="gs-field full">
             <label>Events</label>
             <div class="msel">
-                <button type="button" class="msel-btn" @onclick="(() => openEvents = !openEvents)">@BuildCaption(_eventChecks.Count(i => i.Checked), "Any")</button>
-                <div class="msel-panel @(openEvents ? "open" : null)">
+                <button type="button" class="msel-btn" @onclick="(() => TogglePanel(Panel.Events))">@BuildCaption(_eventChecks.Count(i => i.Checked), "Any")</button>
+                <div class="msel-panel @(_openPanel == Panel.Events ? "open" : null)">
                     @foreach (var it in _eventChecks)
                     {
                         <label class="msel-item">
@@ -83,8 +83,8 @@
         <div class="gs-field">
             <label>Rated</label>
             <div class="msel">
-                <button type="button" class="msel-btn" @onclick="(() => openRated = !openRated)">@BuildRatedCaption()</button>
-                <div class="msel-panel @(openRated ? "open" : null)">
+                <button type="button" class="msel-btn" @onclick="(() => TogglePanel(Panel.Rated))">@BuildRatedCaption()</button>
+                <div class="msel-panel @(_openPanel == Panel.Rated ? "open" : null)">
                     @foreach (var it in _ratedChecks)
                     {
                         <label class="msel-item">
@@ -100,8 +100,8 @@
         <div class="gs-field">
             <label>Postal</label>
             <div class="msel">
-                <button type="button" class="msel-btn" @onclick="(() => openPostal = !openPostal)">@BuildPostalCaption()</button>
-                <div class="msel-panel @(openPostal ? "open" : null)">
+                <button type="button" class="msel-btn" @onclick="(() => TogglePanel(Panel.Postal))">@BuildPostalCaption()</button>
+                <div class="msel-panel @(_openPanel == Panel.Postal ? "open" : null)">
                     @foreach (var it in _postalChecks)
                     {
                         <label class="msel-item">
@@ -117,8 +117,8 @@
         <div class="gs-field full">
             <label>Time control</label>
             <div class="msel">
-                <button type="button" class="msel-btn" @onclick="(() => openTimeCtrl = !openTimeCtrl)">@BuildCaption(_timeCtrlChecks.Count(i => i.Checked), "Any")</button>
-                <div class="msel-panel @(openTimeCtrl ? "open" : null)">
+                <button type="button" class="msel-btn" @onclick="(() => TogglePanel(Panel.TimeCtrl))">@BuildCaption(_timeCtrlChecks.Count(i => i.Checked), "Any")</button>
+                <div class="msel-panel @(_openPanel == Panel.TimeCtrl ? "open" : null)">
                     @foreach (var it in _timeCtrlChecks)
                     {
                         <label class="msel-item">
@@ -202,8 +202,15 @@
         };
     }
 
-    // Open/close flags for dropdowns
-    private bool openWin, openEvents, openRated, openPostal, openTimeCtrl;
+    // Panels control: only one open at a time
+    private enum Panel { None, Win, Events, Rated, Postal, TimeCtrl }
+    private Panel _openPanel = Panel.None;
+
+    private void TogglePanel(Panel p)
+    {
+        _openPanel = _openPanel == p ? Panel.None : p;
+        StateHasChanged();
+    }
 
     private void ToggleWinCondition(string id, bool on)
     {

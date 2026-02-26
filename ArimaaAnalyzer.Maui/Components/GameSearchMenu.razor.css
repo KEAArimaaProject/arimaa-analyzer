@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px; /* tighter vertical rhythm */
+  position: relative; /* create stacking context above siblings like GameRecordList */
+  z-index: 1000;      /* ensure menu content can overlay following components */
 }
 
 .gs-header {
@@ -78,7 +80,7 @@
 
 .msel-panel {
   position: absolute;
-  z-index: 20;
+  z-index: 10000;            /* float above surrounding content */
   display: none;
   margin-top: 4px;              /* was 6 */
   min-width: 200px;             /* was 220 */

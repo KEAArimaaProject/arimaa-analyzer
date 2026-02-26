@@ -29,15 +29,30 @@
   min-width: 0; /* allow tables to shrink within grid */
 }
 
+/* Stacking priority: ensure left panel (menu) overlays right panel (list) on overlap */
+.gamesearch-layout .gs-left {
+  position: relative; /* create stacking context */
+  z-index: 10;        /* higher priority: menu should appear above list */
+}
+
+.gamesearch-layout .gs-right {
+  position: relative; /* create stacking context */
+  z-index: 1;         /* lower priority: list should be below menu */
+}
+
 /* Invisible card boxes around each component to prevent overlap */
 .gamesearch-layout .gs-card {
   position: relative;         /* create a new stacking context */
-  z-index: 0;                 /* baseline stacking */
+  z-index: 0;                 /* baseline stacking (overridden below for left/right) */
   padding: 8px;               /* breathing room so popouts don't touch edges */
   border: 1px solid transparent; /* invisible box as requested */
   background: transparent;    /* keep it invisible */
   box-sizing: border-box;     
 }
+
+/* Ensure the left menu card (with dropdowns) can overlay the right list card */
+.gamesearch-layout .gs-left .gs-card { z-index: 2; }
+.gamesearch-layout .gs-right .gs-card { z-index: 1; }
 
 /* Ensure page can scroll when stacked (most environments already allow this) */
 .gamesearch-layout {
