@@ -56,7 +56,7 @@ public class GameRecordServiceTests
         rec.Postal.Should().Be(0);
         rec.StartTs!.Value.ToUnixTimeSeconds().Should().Be(1770151943);
         rec.EndTs!.Value.ToUnixTimeSeconds().Should().Be(1770152354);
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Timeout);
         rec.PlyCount.Should().Be(3);
         rec.Mode.Should().Be("IGS");

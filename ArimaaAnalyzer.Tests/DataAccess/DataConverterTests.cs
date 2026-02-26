@@ -122,11 +122,11 @@ public class DataConverterTests
         });
 
         var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7101", "W", "G" }));
-        rec1.ResultSide.Should().Be(GameRecord.Side.W);
+        rec1.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec1.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
 
         var rec2 = DataConverter.FromTsv(header, string.Join('\t', new[] { "7102", "b", "R" }));
-        rec2.ResultSide.Should().Be(GameRecord.Side.B);
+        rec2.ResultSide.Should().Be(GameRecord.Side.Silver);
         rec2.ResultTermination.Should().Be(GameRecord.GameTermination.Resignation);
     }
 
@@ -196,7 +196,7 @@ public class DataConverterTests
         rec.Id.Should().Be(8800);
         rec.WUsername.Should().Be("Alice");
         rec.BUsername.Should().Be("Bob");
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
         rec.Rated.Should().BeTrue();
         rec.Corrupt.Should().BeFalse();
@@ -257,7 +257,7 @@ public class DataConverterTests
 
         rec.StartTs!.Value.ToUnixTimeSeconds().Should().Be(1769942402);
         rec.EndTs!.Value.ToUnixTimeSeconds().Should().Be(1769944188);
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
         rec.PlyCount.Should().Be(54);
         rec.Mode.Should().Be("IGS");
@@ -347,7 +347,7 @@ public class DataConverterTests
         rec.MoveListRaw.Should().BeEmpty();
         rec.Turns.Should().NotBeNull();
         rec.Turns!.Count.Should().Be(0);
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Goal);
         rec.Rated.Should().BeFalse();
         rec.Corrupt.Should().BeTrue();
@@ -375,7 +375,7 @@ public class DataConverterTests
         var rec = DataConverter.FromTsv(header, line);
         rec.Id.Should().Be(2002);
         rec.PlyCount.Should().Be(8);
-        rec.ResultSide.Should().Be(GameRecord.Side.B);
+        rec.ResultSide.Should().Be(GameRecord.Side.Silver);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Elimination);
         rec.Rated.Should().BeTrue();
         rec.Corrupt.Should().BeFalse();
@@ -412,7 +412,7 @@ public class DataConverterTests
         rec.Id.Should().Be(3003);
         rec.WUsername.Should().Be("Alice");
         rec.BUsername.Should().Be("Bob");
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Resignation);
         rec.Rated.Should().BeTrue();
         rec.Corrupt.Should().BeFalse();
@@ -556,7 +556,7 @@ public class DataConverterTests
         rec.BPlayerId.Should().BeNull();
         rec.WType.Should().Be(GameRecord.PlayerType.Human);
         rec.BType.Should().Be(GameRecord.PlayerType.Bot);
-        rec.ResultSide.Should().Be(GameRecord.Side.W);
+        rec.ResultSide.Should().Be(GameRecord.Side.Gold);
         rec.ResultTermination.Should().Be(GameRecord.GameTermination.Resignation);
         rec.Rated.Should().BeTrue();
         rec.Corrupt.Should().BeFalse();
@@ -576,8 +576,8 @@ public class DataConverterTests
     private static GameRecord.Side? ParseSide(string s)
         => s?.Trim().ToLowerInvariant() switch
         {
-            "w" => GameRecord.Side.W,
-            "b" => GameRecord.Side.B,
+            "w" => GameRecord.Side.Gold,
+            "b" => GameRecord.Side.Silver,
             _ => null
         };
 

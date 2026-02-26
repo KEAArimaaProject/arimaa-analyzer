@@ -63,7 +63,7 @@ public class GameRecord
         string.IsNullOrEmpty(EventsRaw) ? Array.Empty<string>() : EventsRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
     public enum PlayerType { Human, Bot }
-    public enum Side { W, B }
+    public enum Side { Gold, Silver }
     public enum GameTermination
     {
         /// <summary>Resignation</summary>

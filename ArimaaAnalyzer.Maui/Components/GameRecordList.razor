@@ -50,10 +50,10 @@
                 <tr>
                     <th>Start</th>
                     <th>Result</th>
-                    <th class="wcol">White</th>
-                    <th class="wcol rating">W ⬆</th>
-                    <th class="bcol">Black</th>
-                    <th class="bcol rating">B ⬆</th>
+                    <th class="wcol">Gold</th>
+                    <th class="wcol rating">Rating</th>
+                    <th class="bcol">Silver</th>
+                    <th class="bcol rating">Rating</th>
                     <th>Time</th>
                 </tr>
                 </thead>
@@ -189,8 +189,8 @@
     private static string FormatSide(GameRecord.Side? side)
         => side switch
         {
-            GameRecord.Side.W => "W",
-            GameRecord.Side.B => "B",
+            GameRecord.Side.Gold => "Gold",
+            GameRecord.Side.Silver => "Silver",
             _ => "—"
         };
 

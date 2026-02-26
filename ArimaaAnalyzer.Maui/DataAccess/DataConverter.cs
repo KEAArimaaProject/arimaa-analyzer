@@ -109,8 +109,8 @@ public static class DataConverter
         };
         static GameRecord.Side? ParseSide(string s) => s?.Trim().ToLowerInvariant() switch
         {
-            "w" => GameRecord.Side.W,
-            "b" => GameRecord.Side.B,
+            "w" => GameRecord.Side.Gold,
+            "b" => GameRecord.Side.Silver,
             _ => null
         };
         static GameRecord.GameTermination? ParseTermination(string s) => s?.Trim().ToLowerInvariant() switch
