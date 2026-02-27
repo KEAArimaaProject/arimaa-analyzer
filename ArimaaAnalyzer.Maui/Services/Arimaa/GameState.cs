@@ -1,5 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-using YourApp.Models;
+using ArimaaAnalyzer.Maui.Models;
 
 namespace ArimaaAnalyzer.Maui.Services.Arimaa;
 

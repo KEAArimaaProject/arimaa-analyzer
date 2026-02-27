@@ -1,0 +1,204 @@
+﻿@using ArimaaAnalyzer.Maui.Models
+@using Microsoft.AspNetCore.Components
+@using System.Linq
+
+<div class="gr-list">
+    <div class="gr-toolbar">
+        <span class="gr-title">Games (@TotalCount)</span>
+
+        @if (TotalPages > 1)
+        {
+            <nav class="gr-pager" role="navigation" aria-label="Pagination">
+                <button class="pg-btn prev" @onclick="GoPrev" disabled="@IsFirstPage" aria-label="Previous page">‹</button>
+
+                <span class="pg-strip">
+                    @foreach (var it in BuildPageItems())
+                    {
+                        if (it.IsEllipsis)
+                        {
+                            <span class="pg-ellipsis">…</span>
+                        }
+                        else
+                        {
+                            <button class="pg-btn @(it.Number == CurrentPage ? "active" : null)"
+                                    aria-current="@(it.Number == CurrentPage ? "page" : null)"
+                                    @onclick="(() => GoPage(it.Number))">@it.Number</button>
+                        }
+                    }
+                </span>
+
+                <button class="pg-btn next" @onclick="GoNext" disabled="@IsLastPage" aria-label="Next page">›</button>
+
+                <span class="pg-range">@PageFrom–@PageTo of @TotalCount</span>
+            </nav>
+        }
+    </div>
+
+    @if (Items is null)
+    {
+        <div class="gr-empty">No data</div>
+    }
+    else if (TotalCount == 0)
+    {
+        <div class="gr-empty">No games to show</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="table table-sm table-hover">
+                <thead>
+                <tr>
+                    <th>Start</th>
+                    <th class="result">Win</th>
+                    <th class="wcol">Gold</th>
+                    <th class="wcol rating">Rating</th>
+                    <th class="bcol">Silver</th>
+                    <th class="bcol rating">Rating</th>
+                    <th>Time</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var g in PagedItems)
+                {
+                    <tr class="gr-row"
+                        role="button"
+                        tabindex="0"
+                        title="Click to load this game on the main board"
+                        @onclick="(() => OnSelect.InvokeAsync(g))">
+                        <td>@FormatDate(g.StartTs)</td>
+                        <td class="result">@FormatSide(g.ResultSide)</td>
+                        <td class="wcol name" title="@g.WUsername">@NullSafe(g.WUsername)</td>
+                        <td class="wcol rating">@FormatInt(g.WRating)</td>
+                        <td class="bcol name" title="@g.BUsername">@NullSafe(g.BUsername)</td>
+                        <td class="bcol rating">@FormatInt(g.BRating)</td>
+                        <td class="timectrl" title="@g.TimeControl">@NullSafe(g.TimeControl)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private IEnumerable<GameRecord>? _items;
+
+    [Parameter]
+    public IEnumerable<GameRecord>? Items
+    {
+        get => _items;
+        set
+        {
+            _items = value;
+            ClampPage();
+        }
+    }
+
+    [Parameter]
+    public EventCallback<GameRecord> OnSelect { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 5;
+
+    private int CurrentPage { get; set; } = 1;
+
+    private int TotalCount => Items?.Count() ?? 0;
+    private int TotalPages => TotalCount == 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize));
+    private bool IsFirstPage => CurrentPage <= 1;
+    private bool IsLastPage => CurrentPage >= Math.Max(1, TotalPages);
+
+    private IEnumerable<GameRecord> PagedItems
+        => (Items ?? Array.Empty<GameRecord>())
+            .Skip((Math.Max(1, CurrentPage) - 1) * Math.Max(1, PageSize))
+            .Take(Math.Max(1, PageSize));
+
+    private int PageFrom => TotalCount == 0 ? 0 : ((CurrentPage - 1) * PageSize) + 1;
+    private int PageTo => Math.Min(CurrentPage * PageSize, TotalCount);
+
+    private void ClampPage()
+    {
+        // Ensure sensible page size
+        if (PageSize <= 0) PageSize = 5;
+
+        CurrentPage = 1;
+    }
+
+    private void GoPrev()
+    {
+        if (!IsFirstPage)
+        {
+            CurrentPage--;
+        }
+    }
+
+    private void GoNext()
+    {
+        if (!IsLastPage)
+        {
+            CurrentPage++;
+        }
+    }
+
+    private void GoPage(int n)
+    {
+        if (n >= 1 && n <= TotalPages)
+        {
+            CurrentPage = n;
+        }
+    }
+
+    private readonly record struct PageItem(int Number, bool IsEllipsis)
+    {
+        public static PageItem Ellipsis => new(0, true);
+    }
+
+    private IEnumerable<PageItem> BuildPageItems()
+    {
+        // Show up to 7 numeric buttons with ellipses: 1 … (window) … N
+        const int window = 1; // numbers to show on each side of current
+        var n = TotalPages;
+        if (n <= 7)
+        {
+            for (int i = 1; i <= n; i++) yield return new PageItem(i, false);
+            yield break;
+        }
+
+        // Always show first
+        yield return new PageItem(1, false);
+
+        // Left ellipsis
+        if (CurrentPage > 2 + window)
+            yield return PageItem.Ellipsis;
+
+        // Middle window
+        var start = Math.Max(2, CurrentPage - window);
+        var end = Math.Min(n - 1, CurrentPage + window);
+        for (int i = start; i <= end; i++) yield return new PageItem(i, false);
+
+        // Right ellipsis
+        if (CurrentPage < n - 1 - window)
+            yield return PageItem.Ellipsis;
+
+        // Always show last
+        yield return new PageItem(n, false);
+    }
+
+    private static string NullSafe(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;
+
+    private static string FormatInt(int? v) => v.HasValue ? v.Value.ToString() : "—";
+
+    private static string FormatSide(GameRecord.Side? side)
+        => side switch
+        {
+            GameRecord.Side.Gold => "Gold",
+            GameRecord.Side.Silver => "Silver",
+            _ => "—"
+        };
+
+    private static string FormatDate(DateTimeOffset? dto)
+    {
+        if (dto is null) return "—";
+        var local = dto.Value.ToLocalTime();
+        return local.ToString("yyyy-MM-dd HH:mm");
+    }
+}

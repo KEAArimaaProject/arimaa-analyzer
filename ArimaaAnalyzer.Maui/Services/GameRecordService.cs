@@ -1,0 +1,482 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using ArimaaAnalyzer.Maui.DataAccess;
+using ArimaaAnalyzer.Maui.Models;
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+using Microsoft.Maui.Storage;
+#endif
+
+namespace ArimaaAnalyzer.Maui.Services;
+
+public static class GameRecordService
+{
+    private const string DataFileName = "allgames202602.txt";
+    
+    // Basic in-memory cache to avoid re-reading the data file on every search
+    private static readonly object _cacheLock = new();
+    private static List<GameRecord>? _allCache;
+    
+    // Expanding cache of distinct time controls gathered from all read GameRecord items
+    private static readonly HashSet<string> _timeControlCache = new(StringComparer.OrdinalIgnoreCase);
+    // Expanding cache of distinct OrdEvent blobs gathered from all read GameRecord items
+    private static readonly HashSet<string> _eventCache = new(StringComparer.OrdinalIgnoreCase);
+
+
+    // ────────────────────────────────────────────────
+    // Platform-specific helpers – all #if lives here
+    // ────────────────────────────────────────────────
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+    private static async Task<Stream?> TryOpenMauiAssetAsync()
+    {
+        // Let exceptions bubble to the caller so UI can surface meaningful errors
+        return await FileSystem.Current.OpenAppPackageFileAsync(DataFileName);
+    }
+#else
+    private static Task<Stream?> TryOpenMauiAssetAsync()
+    {
+        // Return completed task with null – no async work needed in fallback
+        return Task.FromResult<Stream?>(null);
+    }
+#endif
+
+
+    private static Stream? TryOpenFallbackFile()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        return null; // Never used on MAUI platforms
+#else
+        // In test/desktop environments, resolve the repo DataAccess path via helper
+        string path = DataConverter.GetDataFilePath();
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Fallback data file not found at '{path}'.", path);
+        }
+
+        try
+        {
+            return File.OpenRead(path);
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Failed to open fallback data file at '{path}'.", ex);
+        }
+#endif
+    }
+
+
+    // ────────────────────────────────────────────────
+    // Public API – clean, no #if directives here
+    // ────────────────────────────────────────────────
+    public static async Task<List<GameRecord>> LoadAllAsync()
+    {
+        var result = new List<GameRecord>();
+
+        try
+        {
+            Stream? stream = await TryOpenMauiAssetAsync();
+
+            // On non-MAUI platforms TryOpenMauiAssetAsync returns null; attempt fallback file
+            if (stream == null)
+            {
+                stream = TryOpenFallbackFile();
+            }
+
+            if (stream == null)
+                throw new FileNotFoundException(
+                    $"Unable to locate data file '{DataFileName}' in app package or fallback path.");
+
+            // ────────────────────────────────────────────────
+            // Correct combined using pattern
+            // ────────────────────────────────────────────────
+            await using var _ = stream;                   // dispose stream asynchronously
+            using var reader = new StreamReader(stream);  // dispose reader synchronously
+
+            string? header = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(header))
+                throw new InvalidDataException($"Data file '{DataFileName}' is empty or missing header line.");
+
+            string? line;
+            int malformedCount = 0;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                try
+                {
+                    var rec = DataConverter.FromTsv(header, line);
+                    result.Add(rec);
+                }
+                catch (Exception)
+                {
+                    // Count malformed lines but continue reading to avoid losing the whole dataset
+                    malformedCount++;
+                }
+            }
+            if (malformedCount > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: {malformedCount} malformed data line(s) were skipped while reading '{DataFileName}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Re-throw with context so UI can surface a clear message
+            throw new InvalidOperationException($"Error while loading game records from '{DataFileName}'.", ex);
+        }
+
+        // Populate cache so subsequent searches can reuse the loaded list without I/O
+        lock (_cacheLock)
+        {
+            _allCache = result;
+            // Expand (never overwrite) the distinct time controls cache
+            foreach (var tc in result)
+            {
+                if (!string.IsNullOrWhiteSpace(tc.TimeControl))
+                {
+                    _timeControlCache.Add(tc.TimeControl!.Trim());
+                }
+                if (!string.IsNullOrWhiteSpace(tc.OrdEvent))
+                {
+                    _eventCache.Add(tc.OrdEvent!.Trim());
+                }
+            }
+        }
+
+        return result;
+    }
+
+
+    // Optional: synchronous wrapper (avoid calling from UI thread)
+    public static List<GameRecord> LoadAll()
+    {
+        var list = LoadAllAsync().GetAwaiter().GetResult();
+        // Cache already set in async, but ensure it's available in any case
+        lock (_cacheLock)
+        {
+            _allCache = list;
+            foreach (var tc in list)
+            {
+                if (!string.IsNullOrWhiteSpace(tc.TimeControl))
+                {
+                    _timeControlCache.Add(tc.TimeControl!.Trim());
+                }
+                if (!string.IsNullOrWhiteSpace(tc.OrdEvent))
+                {
+                    _eventCache.Add(tc.OrdEvent!.Trim());
+                }
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Returns the current distinct set of time control values that have been observed so far.
+    /// This cache only ever expands; it is never cleared or overwritten by subsequent loads.
+    /// </summary>
+    public static IReadOnlyCollection<string> GetDistinctTimeControls()
+    {
+        lock (_cacheLock)
+        {
+            // Return a snapshot (sorted for stable UI)
+            var list = new List<string>(_timeControlCache);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list;
+        }
+    }
+
+    /// <summary>
+    /// Returns the current distinct set of raw event strings observed so far.
+    /// This cache only ever expands; it is never cleared or overwritten by subsequent loads.
+    /// </summary>
+    public static IReadOnlyCollection<string> GetDistinctEvents()
+    {
+        lock (_cacheLock)
+        {
+            var list = new List<string>(_eventCache);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list;
+        }
+    }
+    
+    /// <summary>
+    /// Options used to filter <see cref="GameRecord"/> items for the future search menu.
+    /// Provide only the criteria you want to restrict by; any null/empty criteria are ignored.
+    /// </summary>
+    public sealed class GameRecordFilterOptions
+    {
+        /// <summary>
+        /// Case-insensitive substring to match against <see cref="GameRecord.WUsername"/>.
+        /// </summary>
+        public string? WUsernameContains { get; init; }
+
+        /// <summary>
+        /// Case-insensitive substring to match against <see cref="GameRecord.BUsername"/>.
+        /// </summary>
+        public string? BUsernameContains { get; init; }
+        
+        /// <summary>
+        /// Range for the higher rating of the two players (inclusive). Tuple is (min, max).
+        /// If specified, both player ratings must be present.
+        /// </summary>
+        public (int Min, int Max)? RatingHighRange { get; init; }
+
+        /// <summary>
+        /// Range for the lower rating of the two players (inclusive). Tuple is (min, max).
+        /// If specified, both player ratings must be present.
+        /// </summary>
+        public (int Min, int Max)? RatingLowRange { get; init; }
+
+        /// <summary>
+        /// Earliest timestamp bound (inclusive). Uses EndTs if available; otherwise StartTs.
+        /// </summary>
+        public DateTimeOffset? EarliestTime { get; init; }
+
+        /// <summary>
+        /// Latest timestamp bound (inclusive). Uses EndTs if available; otherwise StartTs.
+        /// </summary>
+        public DateTimeOffset? LatestTime { get; init; }
+
+        /// <summary>
+        /// Acceptable win conditions (terminations). If provided, only games whose
+        /// <see cref="GameRecord.ResultTermination"/> is in the set are returned.
+        /// </summary>
+        public ISet<GameRecord.GameTermination>? WinConditions { get; init; }
+
+        /// <summary>
+        /// Acceptable raw event blobs (exact match against <see cref="GameRecord.EventsRaw"/>).
+        /// </summary>
+        public ISet<string>? EventsRawSet { get; init; }
+
+        /// <summary>
+        /// Rated flag: true = only rated, false = only unrated, null = both.
+        /// </summary>
+        public bool? Rated { get; init; }
+
+        /// <summary>
+        /// Postal option: 1 = only postal, 0 = only non-postal, null = both.
+        /// </summary>
+        public int? Postal { get; init; }
+
+        /// <summary>
+        /// Acceptable time control strings (exact match against <see cref="GameRecord.TimeControl"/>).
+        /// </summary>
+        public ISet<string>? TimeControls { get; init; }
+    }
+
+    /// <summary>
+    /// Parse a rating range from a string formatted as "min-max". Whitespace is allowed.
+    /// Returns null if the string is null/empty/invalid or min&gt;max.
+    /// </summary>
+    public static (int Min, int Max)? TryParseRatingRange(string? range)
+    {
+        if (string.IsNullOrWhiteSpace(range)) return null;
+        var parts = range.Split('-', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2) return null;
+        if (!int.TryParse(parts[0], out var min)) return null;
+        if (!int.TryParse(parts[1], out var max)) return null;
+        if (min > max) return null;
+        return (min, max);
+    }
+
+    /// <summary>
+    /// Filters the given <paramref name="source"/> sequence using the provided <paramref name="options"/>.
+    /// Any null/empty criteria are ignored. All provided criteria are combined with logical AND.
+    /// </summary>
+    public static IEnumerable<GameRecord> Filter(IEnumerable<GameRecord> source, GameRecordFilterOptions options)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (options == null) throw new ArgumentNullException(nameof(options));
+
+        // WUsername substring (case-insensitive)
+        if (!string.IsNullOrWhiteSpace(options.WUsernameContains))
+        {
+            var needle = options.WUsernameContains.Trim();
+            source = source.Where(r =>
+                (!string.IsNullOrEmpty(r.WUsername) && r.WUsername!.Contains(needle, StringComparison.OrdinalIgnoreCase)) 
+            );
+        }
+        
+        // BUsername substring (case-insensitive)
+        if (!string.IsNullOrWhiteSpace(options.BUsernameContains))
+        {
+            var needle = options.BUsernameContains.Trim();
+            source = source.Where(r =>
+                (!string.IsNullOrEmpty(r.BUsername) && r.BUsername!.Contains(needle, StringComparison.OrdinalIgnoreCase))
+            );
+        }
+
+        // Rating ranges: require both ratings to be present if either range is specified
+        if (options.RatingHighRange.HasValue || options.RatingLowRange.HasValue)
+        {
+            source = source.Where(r =>
+            {
+                if (!r.WRating.HasValue || !r.BRating.HasValue) return false;
+                var hi = Math.Max(r.WRating.Value, r.BRating.Value);
+                var lo = Math.Min(r.WRating.Value, r.BRating.Value);
+
+                if (options.RatingHighRange.HasValue)
+                {
+                    var (minH, maxH) = options.RatingHighRange.Value;
+                    if (hi < minH || hi > maxH) return false;
+                }
+                if (options.RatingLowRange.HasValue)
+                {
+                    var (minL, maxL) = options.RatingLowRange.Value;
+                    if (lo < minL || lo > maxL) return false;
+                }
+                return true;
+            });
+        }
+
+        // Time bounds: use EndTs if available, otherwise StartTs. Require timestamp to be within [Earliest, Latest].
+        if (options.EarliestTime.HasValue || options.LatestTime.HasValue)
+        {
+            var earliest = options.EarliestTime;
+            var latest = options.LatestTime;
+            source = source.Where(r =>
+            {
+                var ts = r.EndTs ?? r.StartTs; // prefer EndTs when present
+                if (!ts.HasValue) return false;
+                if (earliest.HasValue && ts.Value < earliest.Value) return false;
+                if (latest.HasValue && ts.Value > latest.Value) return false;
+                return true;
+            });
+        }
+
+        // Win conditions
+        if (options.WinConditions is { Count: > 0 })
+        {
+            source = source.Where(r => r.ResultTermination.HasValue && options.WinConditions.Contains(r.ResultTermination.Value));
+        }
+
+        // EventsRaw exact match set
+        if (options.EventsRawSet is { Count: > 0 })
+        {
+            source = source.Where(r => r.OrdEvent != null && options.EventsRawSet.Contains(r.OrdEvent));
+        }
+
+        // Rated flag
+        if (options.Rated.HasValue)
+        {
+            var wantRated = options.Rated.Value;
+            source = source.Where(r => r.Rated.HasValue && r.Rated.Value == wantRated);
+        }
+
+        // Postal option
+        if (options.Postal.HasValue)
+        {
+            var wantPostal = options.Postal.Value;
+            source = source.Where(r => r.Postal.HasValue && r.Postal.Value == wantPostal);
+        }
+
+        // Time control set
+        if (options.TimeControls is { Count: > 0 })
+        {
+            source = source.Where(r => r.TimeControl != null && options.TimeControls.Contains(r.TimeControl));
+        }
+
+        return source;
+    }
+
+    /// <summary>
+    /// Loads all records and applies <see cref="Filter(IEnumerable{GameRecord}, GameRecordFilterOptions)"/>.
+    /// Returns all matches without a cap.
+    /// </summary>
+    public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options)
+    {
+        // Prefer cached data (populated by initial page load) to avoid blocking I/O on UI thread
+        List<GameRecord> all;
+        lock (_cacheLock)
+        {
+            all = _allCache ?? new List<GameRecord>();
+        }
+
+        if (all.Count == 0)
+        {
+            // Fallback: load synchronously (avoid calling from UI thread if possible)
+            all = LoadAll();
+        }
+
+        return Filter(all, options ?? new GameRecordFilterOptions()).ToList();
+    }
+
+    /// <summary>
+    /// Loads all records, applies filters, and returns up to <paramref name="maxResults"/> items.
+    /// If no criteria are provided, this returns the first <paramref name="maxResults"/> games.
+    /// </summary>
+    public static List<GameRecord> LoadAndFilter(GameRecordFilterOptions options, int maxResults)
+    {
+        if (maxResults <= 0) return new List<GameRecord>();
+        // Use cached list when available to keep search snappy
+        List<GameRecord> all;
+        lock (_cacheLock)
+        {
+            all = _allCache ?? new List<GameRecord>();
+        }
+
+        if (all.Count == 0)
+        {
+            all = LoadAll();
+        }
+
+        return Filter(all, options ?? new GameRecordFilterOptions())
+            .Take(maxResults)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="LoadAll"/> with cancellation support.
+    /// </summary>
+    public static async Task<List<GameRecord>> LoadAllAsync(CancellationToken cancellationToken = default)
+    {
+        var file = DataConverter.GetDataFilePath();
+        var result = new List<GameRecord>();
+        if (!File.Exists(file)) return result;
+
+        using var reader = new StreamReader(file);
+        var header = await reader.ReadLineAsync();
+        if (string.IsNullOrEmpty(header)) return result;
+
+        while (!reader.EndOfStream)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            try
+            {
+                var rec = DataConverter.FromTsv(header!, line!);
+                result.Add(rec);
+            }
+            catch
+            {
+                // Ignore malformed lines; continue loading the rest
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="LoadAndFilter(GameRecordFilterOptions)"/> with cancellation support.
+    /// </summary>
+    public static async Task<List<GameRecord>> LoadAndFilterAsync(GameRecordFilterOptions options, CancellationToken cancellationToken = default)
+    {
+        var all = await LoadAllAsync(cancellationToken);
+        return Filter(all, options).ToList();
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="LoadAndFilter(GameRecordFilterOptions, int)"/> with cancellation support.
+    /// </summary>
+    public static async Task<List<GameRecord>> LoadAndFilterAsync(GameRecordFilterOptions options, int maxResults, CancellationToken cancellationToken = default)
+    {
+        if (maxResults <= 0) return new List<GameRecord>();
+        var all = await LoadAllAsync(cancellationToken);
+        return Filter(all, options).Take(maxResults).ToList();
+    }
+}

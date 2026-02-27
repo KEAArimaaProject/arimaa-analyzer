@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using ArimaaAnalyzer.Maui.Services.Arimaa;
+using ArimaaAnalyzer.Maui.Models;
 
 namespace ArimaaAnalyzer.Maui.Services;
 public static class NotationService

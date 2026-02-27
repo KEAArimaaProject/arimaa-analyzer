@@ -1,0 +1,203 @@
+﻿.gr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Keep a sensible, constant width on wide screens while remaining responsive */
+  width: 920px;         /* chosen constant width for desktop */
+  max-width: 100%;      /* don’t overflow on small screens */
+  box-sizing: border-box;
+  /* Keep the game list in a lower stacking layer than floating panels (dropdowns) */
+  position: relative;
+  z-index: 0;
+}
+
+.gr-toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.gr-title {
+  font-weight: 600;
+}
+
+.gr-pager {
+  /* Keep Prev and Next in fixed positions regardless of how many page items render */
+  display: grid;
+  /* Prev | Page strip (flexes) | Next | Fixed-width Range */
+  grid-template-columns: auto 1fr auto var(--pg-range-w, 18ch);
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+}
+
+/* The middle strip that holds page numbers/ellipses */
+.gr-pager .pg-strip {
+  min-width: 0;                /* allow it to shrink in the grid area */
+  display: flex;
+  flex-wrap: wrap;             /* wrap to new lines on narrow screens */
+  justify-content: center;     /* center page numbers within the reserved space */
+  gap: 6px;
+}
+
+.gr-pager .pg-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-weight: 500;
+}
+
+.gr-pager .pg-btn.active {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+
+.gr-pager .pg-btn:disabled {
+  opacity: 0.5;
+}
+
+.gr-pager .pg-ellipsis {
+  padding: 0 4px;
+  color: #666;
+  user-select: none;
+}
+
+.gr-pager .pg-range {
+  margin-left: 8px;
+  color: #666;
+  font-size: 0.9em;
+  /* Keep the range from pushing layout; let it wrap within its fixed area */
+  white-space: normal;
+  word-break: break-word;
+  text-align: right;
+  justify-self: end;
+}
+
+@media (max-width: 520px) {
+  /* On very small screens, drop the fixed range column entirely */
+  .gr-pager {
+    grid-template-columns: auto 1fr auto;
+  }
+  .gr-pager .pg-range {
+    display: none;
+  }
+}
+
+.gr-empty {
+  padding: 12px 8px;
+  color: #666;
+}
+
+.table-wrap {
+  /* Let rows expand vertically; avoid inner scrollbars */
+  overflow: visible;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  /* Ensure this wrapper doesn't create a higher stacking context */
+  position: relative;
+  z-index: 0;
+}
+
+/* Base table styling independent of Bootstrap */
+.gr-list table {
+  width: 100%;
+  table-layout: fixed;   /* keep overall table width constant */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+.gr-list thead th {
+  position: sticky;
+  top: 0;
+  background: #f6f7f9;
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  white-space: normal;    /* allow headers to wrap if needed */
+  word-break: break-word;
+  /* Explicitly keep sticky header below floating dropdowns from the left panel */
+  z-index: 0;
+}
+
+/* Guard: in some browsers the sticky row may form its own stacking context.
+   Ensure the entire table stays below popouts from the search menu. */
+.gr-list table, .gr-list thead, .gr-list tbody {
+  position: relative;
+  z-index: 0;
+}
+
+.gr-list tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  /* Allow content to wrap vertically instead of forcing wider columns */
+  white-space: normal;
+  word-break: break-word;
+}
+
+.gr-list tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Columns */
+.gr-list th.result, .gr-list td.result {
+  text-align: center;
+  width: 64px;
+}
+
+.gr-list th.rating, .gr-list td.rating {
+  text-align: right;
+  width: 72px;
+  color: #333;
+}
+
+.gr-list th.timectrl, .gr-list td.timectrl {
+  /* Let time control wrap to multiple lines when space is tight */
+  max-width: none;
+}
+
+.gr-list .name {
+  /* Allow long usernames to wrap and grow row height */
+  max-width: none;
+}
+
+/* Side accents */
+.gr-list .wcol {
+  --col: 210, 90%, 96%;
+  --bd: 210, 16%, 82%;
+}
+
+.gr-list .bcol {
+  --col: 30, 90%, 96%;
+  --bd: 30, 16%, 76%;
+}
+
+.gr-list td.wcol.name {
+  background: hsl(var(--col));
+  border-left: 3px solid hsl(var(--bd));
+}
+
+.gr-list td.bcol.name {
+  background: hsl(var(--col));
+  border-left: 3px solid hsl(var(--bd));
+}
+
+/* Compact on narrow screens */
+@media (max-width: 520px) {
+  .gr-list thead th:nth-child(4), /* W rating */
+  .gr-list thead th:nth-child(6), /* B rating */
+  .gr-list tbody td:nth-child(4),
+  .gr-list tbody td:nth-child(6) {
+    display: none;
+  }
+  .gr-list tbody td, .gr-list thead th {
+    padding: 6px 8px;
+  }
+}

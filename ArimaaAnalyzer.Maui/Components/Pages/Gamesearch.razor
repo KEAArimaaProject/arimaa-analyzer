@@ -1,0 +1,112 @@
+﻿@page "/gamesearch"
+@using ArimaaAnalyzer.Maui.Models
+@using ArimaaAnalyzer.Maui.Components
+@using ArimaaAnalyzer.Maui.Services
+@using Microsoft.AspNetCore.Components
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using System.Linq
+
+<h1>Gamesearch</h1>
+
+<div class="gamesearch-layout">
+    <div class="gs-left">
+        <div class="gs-card">
+            <GameSearchMenu OnSearch="HandleSearch" />
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+        </div>
+    </div>
+    <div class="gs-right">
+        <div class="gs-card">
+            @if (_loading)
+            {
+                <div>Loading games…</div>
+            }
+            else
+            {
+                <GameRecordList Items="_games" PageSize="5" OnSelect="HandleSelect" />
+            }
+        </div>
+    </div>
+    
+</div>
+
+@code {
+    private List<GameRecord> _games = new();
+    private bool _loading = true;
+    private string? _errorMessage;
+    [Inject] private ArimaaGameService Game { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            _loading = true;
+            _games = await GameRecordService.LoadAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load game records: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private int HandleSearch(GameRecordService.GameRecordFilterOptions options)
+    {
+        try
+        {
+            _errorMessage = null;
+            const int MaxResults = 100;
+            _games = GameRecordService.LoadAndFilter(options, MaxResults);
+            // Force a re-render so child components (e.g., GameRecordList title/count)
+            // immediately reflect the new filtered list even though this callback
+            // originates from a child component delegate.
+            StateHasChanged();
+            return _games.Count;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Search failed: {ex.GetBaseException().Message}";
+            return 0;
+        }
+    }
+
+    private void HandleSelect(GameRecord record)
+    {
+        try
+        {
+            _errorMessage = null;
+            // Remember the selected record so header can show its metadata
+            Game.SetSelectedRecord(record);
+            // Prefer the raw movelist text; fall back to concatenating parsed turn AEI lines
+            var text = record.MoveListRaw;
+            if (string.IsNullOrWhiteSpace(text) && record.Turns is { Count: > 0 })
+            {
+                text = string.Join('\n', record.Turns.Select(t => t.AEIstring));
+            }
+
+            var root = string.IsNullOrWhiteSpace(text) ? null : NotationService.ExtractTurnsWithMoves(text!);
+            if (root is null)
+            {
+                _errorMessage = "Unable to parse the selected game's move list.";
+                return;
+            }
+
+            Game.Load(root);
+            Game.ShowOuterUi = true;
+            // Navigate to the main Arimaa board page so the user sees the loaded game
+            Nav.NavigateTo("/arimaa");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load game: {ex.GetBaseException().Message}";
+        }
+    }
+}

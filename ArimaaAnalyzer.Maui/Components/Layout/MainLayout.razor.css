@@ -12,7 +12,8 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 0; /* Critical: allows children to shrink */
-    overflow: hidden; /* Prevent overflow from children */
+    /* Do not create a scroll context here; let the window handle scrolling */
+    overflow: visible;
 }
 
 .top-row {
@@ -25,6 +26,34 @@ main {
     flex-shrink: 0; /* Don't let header shrink */
     z-index: 100;
 }
+
+/* New current game info strip between buttons */
+.current-game-info {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0 0.75rem;
+    min-width: 0;            /* allow content to truncate */
+    flex: 1 1 auto;          /* take remaining space, lowest priority */
+    overflow: hidden;        /* clip inside */
+    white-space: nowrap;     /* single line */
+}
+.current-game-info .cg-item,
+.current-game-info .cg-sep,
+.current-game-info .cg-empty {
+    font-size: 0.9rem;
+    color: #333;
+}
+.current-game-info .cg-item {
+    max-width: 16ch;         /* prevent overly long names from pushing */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.current-game-info .cg-item.rating { color: #666; }
+.current-game-info .gold { color: #8a6d3b; }
+.current-game-info .silver { color: #5a5a5a; }
+.current-game-info .result { font-weight: 600; }
+.current-game-info .cg-empty { color: #777; font-style: italic; }
 
 /* Visible burger button in the header */
 .burger-button {
@@ -57,13 +86,14 @@ main {
     text-overflow: ellipsis;
 }
 
-/* Article content area: fills remaining space and constrains children */
+/* Article content area: fills remaining space; scrolling is handled by the window */
 article {
     flex: 1 1 auto;
     min-height: 0;       /* ← This is critical! */
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;    /* Changed from 'auto' to 'hidden' for the board */
+    /* Allow children to size naturally; no inner scrollbars here */
+    overflow: visible;
 }
 

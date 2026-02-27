@@ -2,24 +2,32 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     /* Ensure the background color is visible across platforms */
     background-color: #ff00aa; /*#f7f7f7;  */
+    height: 100%;
     min-height: 100%;
-    margin: 0; /* prevent default white margins around the page height: 100%;
-    overflow-x: hidden;*/
+    margin: 0; /* prevent default white margins around the page */
+    /* Full-window scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Mobile polish */
+    -webkit-overflow-scrolling: touch; /* smooth inertial scrolling on iOS */
+    overscroll-behavior: contain;      /* avoid scroll chaining in WebView */
+    scrollbar-gutter: stable both-edges; /* prevent layout shift when bar appears */
 }
 
 #app {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    /* NEW: ensure app fills viewport and doesn't scroll internally */
-    height: 100vh;
-    overflow: hidden;
+    /* Let the window handle scrolling; the app should expand naturally */
+    min-height: 100%;
+    height: auto;
+    overflow: visible;
 }
 
 /* NEW: Container for all page content below the sticky header */
 .page-wrapper {
     flex: 1 1 auto;  /* Claim all remaining vertical space */
-    overflow: hidden; /* Don't let content overflow */
+    /* Do not clip; allow the body/window to scroll */
+    overflow: visible;
     display: flex;
     flex-direction: column;
 }
@@ -63,8 +71,9 @@ button.navbar-toggler {
 .page {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
 }
 
 /* ============================================= */
@@ -92,7 +101,8 @@ a, .btn-link { color: #006bb7; }
     padding-right: 0px;
     flex: 1 1 auto;
     min-height: 0;    /* Critical for flex children to shrink */
-    overflow: auto;
+    /* Let the window provide the scrollbar */
+    overflow: visible;
     display: flex;
     flex-direction: column;
     /* Stretch children to full available width so page grids can expand */
