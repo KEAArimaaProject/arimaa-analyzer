@@ -50,7 +50,7 @@ public class GameRecordServiceTests
         rec.BRatingK.Should().Be(120);
         rec.WType.Should().Be(GameRecord.PlayerType.Bot);
         rec.BType.Should().Be(GameRecord.PlayerType.Human);
-        rec.Event.Should().Be("Casual game");
+        rec.OrdEvent.Should().Be("Casual game");
         rec.Site.Should().Be("Over the Net");
         rec.TimeControl.Should().Be("2/2/100/10/8");
         rec.Postal.Should().Be(0);
@@ -64,7 +64,7 @@ public class GameRecordServiceTests
         rec.Corrupt.Should().BeFalse();
 
         rec.MoveListRaw.Should().NotBeNullOrWhiteSpace();
-        rec.EventsRaw.Should().NotBeNullOrWhiteSpace();
+        rec.OrdEvent.Should().NotBeNullOrWhiteSpace();
         rec.EventLines.Should().NotBeEmpty();
         rec.EventLines.Last().Should().Contain("game finished with result w t");
     }
@@ -113,7 +113,7 @@ public class GameRecordServiceTests
             StartTs = start,
             EndTs = end,
             ResultTermination = term,
-            EventsRaw = eventsRaw,
+            OrdEvent = eventsRaw,
             Rated = rated,
             Postal = postal,
             TimeControl = timeCtrl

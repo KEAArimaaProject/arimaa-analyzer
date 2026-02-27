@@ -62,6 +62,7 @@
             </div>
         </div>
 
+        
         <!-- EventsRaw multi-select -->
         <div class="gs-field full">
             <label>Events</label>
@@ -366,6 +367,39 @@
                         Id = tc,
                         Label = tc,
                         Checked = false // unchecked means "Any" (no restriction)
+                    });
+                }
+            }
+        }
+
+        // Populate Events checklist from the expanding cache in the service.
+        // If nothing is cached yet, attempt to load data once to seed the cache.
+        var evs = GameRecordService.GetDistinctEvents();
+        if (evs == null || evs.Count == 0)
+        {
+            try
+            {
+                await GameRecordService.LoadAllAsync();
+                evs = GameRecordService.GetDistinctEvents();
+            }
+            catch
+            {
+                // Ignore here; the page hosting the menu will surface load errors.
+            }
+        }
+
+        if (evs != null && evs.Count > 0)
+        {
+            if (_eventChecks.Count == 0)
+            {
+                foreach (var ev in evs)
+                {
+                    if (string.IsNullOrWhiteSpace(ev)) continue;
+                    _eventChecks.Add(new CheckItem
+                    {
+                        Id = ev,
+                        Label = ev,
+                        Checked = false
                     });
                 }
             }

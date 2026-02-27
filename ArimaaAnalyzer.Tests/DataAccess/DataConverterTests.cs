@@ -212,13 +212,13 @@ public class DataConverterTests
         });
 
         var rec1 = DataConverter.FromTsv(header, string.Join('\t', new[] { "9001", "", " ", "  ", "123" }));
-        rec1.Event.Should().BeNull();
+        rec1.OrdEvent.Should().BeNullOrEmpty();
         rec1.Site.Should().BeNull();
         rec1.TimeControl.Should().BeNull();
         rec1.Postal.Should().Be(123);
 
         var rec2 = DataConverter.FromTsv(header, string.Join('\t', new[] { "9002", "Open", "ServerA", "60|3", "abc" }));
-        rec2.Event.Should().Be("Open");
+        rec2.OrdEvent.Should().Be("Open");
         rec2.Site.Should().Be("ServerA");
         rec2.TimeControl.Should().Be("60|3");
         rec2.Postal.Should().BeNull();
@@ -287,7 +287,7 @@ public class DataConverterTests
         rec.Turns![^1].AEIstring.Should().Be(moveLines[^1]);
 
         // Events integrity
-        rec.EventsRaw.Should().NotBeNullOrWhiteSpace();
+        rec.OrdEvent.Should().NotBeNullOrWhiteSpace();
         rec.EventLines.Should().NotBeEmpty();
         rec.EventLines[^1].Should().Contain("game finished with result w g");
     }
@@ -318,7 +318,7 @@ public class DataConverterTests
         // This test now only ensures the full, real TSV row parses end-to-end.
         rec.Id.Should().Be(669123);
         rec.MoveListRaw.Should().NotBeNullOrWhiteSpace();
-        rec.EventsRaw.Should().NotBeNullOrWhiteSpace();
+        rec.OrdEvent.Should().NotBeNullOrWhiteSpace();
         rec.Turns.Should().NotBeNull();
     }
 
@@ -439,10 +439,10 @@ public class DataConverterTests
         });
 
         var rec = DataConverter.FromTsv(header, line);
-        rec.EventsRaw.Should().NotBeNullOrEmpty();
+        rec.Event.Should().NotBeNullOrEmpty();
         rec.EventLines.Should().HaveCount(3);
         rec.EventLines[0].Should().Contain("b player joining");
-        rec.EventLines[2].Should().Contain("game finished");
+        rec.EventLines[2].Should().Contain("game finished with result w r");
     }
 
     [Fact]
@@ -523,7 +523,7 @@ public class DataConverterTests
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(rec.EventsRaw))
+            if (!string.IsNullOrWhiteSpace(rec.OrdEvent))
             {
                 rec.EventLines.Count.Should().BeGreaterThan(0);
             }

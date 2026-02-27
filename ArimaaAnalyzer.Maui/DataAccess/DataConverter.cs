@@ -66,7 +66,7 @@ public static class DataConverter
             WType = ParsePlayerType(Get("wtype")),
             BType = ParsePlayerType(Get("btype")),
 
-            Event = EmptyToNull(Get("event")),
+            Event = EmptyToNull(Get("events")),
             Site = EmptyToNull(Get("site")),
             TimeControl = EmptyToNull(Get("timecontrol")),
 
@@ -81,7 +81,7 @@ public static class DataConverter
             Corrupt = TryBoolN(Get("corrupt")),
 
             MoveListRaw = Get("movelist"),
-            EventsRaw = Get("events"),
+            OrdEvent = Get("event"),
             Turns = ParseTurns(Get("movelist"))
         };
 

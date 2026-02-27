@@ -35,6 +35,14 @@ public class GameRecord
 
     // Context
     public string? Event { get; init; }
+    
+    public IReadOnlyList<string> EventLines =>
+        string.IsNullOrEmpty(Event)
+            ? Array.Empty<string>()
+            : Event.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.TrimEnd('\r', '\n'))   // just in case
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToList();
     public string? Site { get; init; }
     public string? TimeControl { get; init; }
 
@@ -58,9 +66,7 @@ public class GameRecord
     /// </summary>
     public IReadOnlyList<GameTurn>? Turns { get; init; }
 
-    public string? EventsRaw { get; init; }
-    public IReadOnlyList<string> EventLines =>
-        string.IsNullOrEmpty(EventsRaw) ? Array.Empty<string>() : EventsRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    public string? OrdEvent { get; init; }
 
     public enum PlayerType { Human, Bot }
     public enum Side { Gold, Silver }

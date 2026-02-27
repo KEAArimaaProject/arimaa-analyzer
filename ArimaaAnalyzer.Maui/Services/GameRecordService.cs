@@ -21,6 +21,8 @@ public static class GameRecordService
     
     // Expanding cache of distinct time controls gathered from all read GameRecord items
     private static readonly HashSet<string> _timeControlCache = new(StringComparer.OrdinalIgnoreCase);
+    // Expanding cache of distinct OrdEvent blobs gathered from all read GameRecord items
+    private static readonly HashSet<string> _eventCache = new(StringComparer.OrdinalIgnoreCase);
 
 
     // ────────────────────────────────────────────────
@@ -138,6 +140,10 @@ public static class GameRecordService
                 {
                     _timeControlCache.Add(tc.TimeControl!.Trim());
                 }
+                if (!string.IsNullOrWhiteSpace(tc.OrdEvent))
+                {
+                    _eventCache.Add(tc.OrdEvent!.Trim());
+                }
             }
         }
 
@@ -159,6 +165,10 @@ public static class GameRecordService
                 {
                     _timeControlCache.Add(tc.TimeControl!.Trim());
                 }
+                if (!string.IsNullOrWhiteSpace(tc.OrdEvent))
+                {
+                    _eventCache.Add(tc.OrdEvent!.Trim());
+                }
             }
         }
         return list;
@@ -174,6 +184,20 @@ public static class GameRecordService
         {
             // Return a snapshot (sorted for stable UI)
             var list = new List<string>(_timeControlCache);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list;
+        }
+    }
+
+    /// <summary>
+    /// Returns the current distinct set of raw event strings observed so far.
+    /// This cache only ever expands; it is never cleared or overwritten by subsequent loads.
+    /// </summary>
+    public static IReadOnlyCollection<string> GetDistinctEvents()
+    {
+        lock (_cacheLock)
+        {
+            var list = new List<string>(_eventCache);
             list.Sort(StringComparer.OrdinalIgnoreCase);
             return list;
         }
@@ -333,7 +357,7 @@ public static class GameRecordService
         // EventsRaw exact match set
         if (options.EventsRawSet is { Count: > 0 })
         {
-            source = source.Where(r => r.EventsRaw != null && options.EventsRawSet.Contains(r.EventsRaw));
+            source = source.Where(r => r.OrdEvent != null && options.EventsRawSet.Contains(r.OrdEvent));
         }
 
         // Rated flag
