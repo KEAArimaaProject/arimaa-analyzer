@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Players` (
   `rating` INT NULL,
   `RU` INT NULL,
   `games_played` VARCHAR(45) NULL,
-  `Countries_id` INT NOT NULL,
+  `countries_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Players_Countries1_idx` (`Countries_id` ASC) VISIBLE,
-  CONSTRAINT `fk_Players_Countries1`
-    FOREIGN KEY (`Countries_id`)
-    REFERENCES `mydb`.`Countries` (`id`)
+  INDEX `fk_Players_Countries_idx` (`Countries_id` ASC) VISIBLE,
+  CONSTRAINT `fk_Players_Countries`
+    FOREIGN KEY (`countries_id`)
+    REFERENCES `mydb`.`Countries` (`id`)  
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -82,7 +82,7 @@ ENGINE = InnoDB;
 -- Table `mydb`.`GameTypes`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`GameTypes` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `time_increment` INT NULL,
   `time_reserve` INT NULL,
@@ -96,37 +96,35 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `mydb`.`Matches` (
   `id` INT NOT NULL,
   `termination_type` VARCHAR(45) NOT NULL,
-  `Moves_moves` VARCHAR(45) NOT NULL,
-  `Moves_id` INT NOT NULL,
   `player_id_silver` INT NOT NULL,
   `player_id_gold` INT NOT NULL,
   `match_result` VARCHAR(45) NOT NULL,
-  `Events_id` INT NOT NULL,
-  `GameTypes_name` VARCHAR(45) NOT NULL,
+  `events_id` INT NOT NULL,
+  `gameTypes_id` INT NOT NULL,
   `timestamp` TIMESTAMP NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Matches_copy1_Players_copy11_idx` (`player_id_silver` ASC) VISIBLE,
-  INDEX `fk_Matches_copy1_Players_copy12_idx` (`player_id_gold` ASC) VISIBLE,
-  INDEX `fk_Matches_copy1_Events_copy11_idx` (`Events_id` ASC) VISIBLE,
-  INDEX `fk_Matches_copy1_GameTypes_copy11_idx` (`GameTypes_name` ASC) VISIBLE,
-  CONSTRAINT `fk_Matches_copy1_Players_copy11`
+  INDEX `fk_Matches_Players_Silver_idx` (`player_id_silver` ASC) VISIBLE,
+  INDEX `fk_Matches_Players_Gold_idx` (`player_id_gold` ASC) VISIBLE,
+  INDEX `fk_Matches_Events_idx` (`events_id` ASC) VISIBLE,
+  INDEX `fk_Matches_GameTypes_idx` (`gameTypes_id` ASC) VISIBLE,
+  CONSTRAINT `fk_Matches_Players_Silver`
     FOREIGN KEY (`player_id_silver`)
     REFERENCES `mydb`.`Players` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Matches_copy1_Players_copy12`
+  CONSTRAINT `fk_Matches_Players_Gold`
     FOREIGN KEY (`player_id_gold`)
     REFERENCES `mydb`.`Players` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Matches_copy1_Events_copy11`
-    FOREIGN KEY (`Events_id`)
+  CONSTRAINT `fk_Matches_Events`
+    FOREIGN KEY (`events_id`)
     REFERENCES `mydb`.`Events` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Matches_copy1_GameTypes_copy11`
-    FOREIGN KEY (`GameTypes_name`)
-    REFERENCES `mydb`.`GameTypes` (`name`)
+  CONSTRAINT `fk_Matches_GameTypes`
+    FOREIGN KEY (`gameTypes_id`)
+    REFERENCES `mydb`.`GameTypes` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -153,19 +151,19 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
   `sequence` INT NOT NULL,
   `direction` VARCHAR(1) NOT NULL,
   `status` VARCHAR(1) NOT NULL,
-  `Matches_copy1_id` INT NOT NULL,
+  `matches_id` INT NOT NULL,
   `position_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Moves_copy1_Matches_copy11_idx` (`Matches_copy1_id` ASC) VISIBLE,
-  INDEX `fk_Moves_position1_idx` (`position_id` ASC) VISIBLE,
-  CONSTRAINT `fk_Moves_copy1_Matches_copy11`
-    FOREIGN KEY (`Matches_copy1_id`)
-    REFERENCES `mydb`.`Matches` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Moves_position1`
+  INDEX `fk_Moves_position_idx` (`position_id` ASC) VISIBLE,
+  INDEX `fk_Moves_Matches_idx` (`matches_id` ASC) VISIBLE,
+  CONSTRAINT `fk_Moves_position`
     FOREIGN KEY (`position_id`)
     REFERENCES `mydb`.`Position` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_Moves_Matches`
+    FOREIGN KEY (`matches_id`)
+    REFERENCES `mydb`.`Matches` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -176,19 +174,19 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByMatch` (
   `id` INT NOT NULL,
-  `Matches_id` INT NOT NULL,
+  `matches_id` INT NOT NULL,
   `position_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Openings_Matches1_idx` (`Matches_id` ASC) VISIBLE,
-  INDEX `fk_Openings_position1_idx` (`position_id` ASC) VISIBLE,
-  CONSTRAINT `fk_Openings_Matches1`
-    FOREIGN KEY (`Matches_id`)
-    REFERENCES `mydb`.`Matches` (`id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Openings_position1`
+  INDEX `fk_OpeningsByMatch_position_idx` (`position_id` ASC) VISIBLE,
+  INDEX `fk_OpeningsByMatch_Matches_idx` (`matches_id` ASC) VISIBLE,
+  CONSTRAINT `fk_OpeningsByMatch_position`
     FOREIGN KEY (`position_id`)
     REFERENCES `mydb`.`Position` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_OpeningsByMatch_Matches`
+    FOREIGN KEY (`matches_id`)
+    REFERENCES `mydb`.`Matches` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
@@ -202,14 +200,14 @@ CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByPuzzle` (
   `position_id` INT NOT NULL,
   `puzzles_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Openings_copy1_position1_idx` (`position_id` ASC) VISIBLE,
-  INDEX `fk_Openings_copy1_puzzles1_idx` (`puzzles_id` ASC) VISIBLE,
-  CONSTRAINT `fk_Openings_copy1_position1`
+  INDEX `fk_OpeningsByPuzzle_position_idx` (`position_id` ASC) VISIBLE,
+  INDEX `fk_OOpeningsByPuzzle_puzzles_idx` (`puzzles_id` ASC) VISIBLE,
+  CONSTRAINT `fk_OpeningsByPuzzle_position`
     FOREIGN KEY (`position_id`)
     REFERENCES `mydb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Openings_copy1_puzzles1`
+  CONSTRAINT `fk_OpeningsByPuzzle_puzzles`
     FOREIGN KEY (`puzzles_id`)
     REFERENCES `mydb`.`Puzzles` (`id`)
     ON DELETE NO ACTION
@@ -229,19 +227,20 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
   `position_id` INT NOT NULL,
   `puzzles_id` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_Solution_position1_idx` (`position_id` ASC) VISIBLE,
-  INDEX `fk_Solution_puzzles1_idx` (`puzzles_id` ASC) VISIBLE,
-  CONSTRAINT `fk_Solution_position1`
+  INDEX `fk_Solution_position_idx` (`position_id` ASC) VISIBLE,
+  INDEX `fk_Solution_puzzles_idx` (`puzzles_id` ASC) VISIBLE,
+  CONSTRAINT `fk_Solution_position`
     FOREIGN KEY (`position_id`)
     REFERENCES `mydb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_Solution_puzzles1`
+  CONSTRAINT `fk_Solution_puzzles`
     FOREIGN KEY (`puzzles_id`)
     REFERENCES `mydb`.`Puzzles` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
 
 
 SET SQL_MODE=@OLD_SQL_MODE;
