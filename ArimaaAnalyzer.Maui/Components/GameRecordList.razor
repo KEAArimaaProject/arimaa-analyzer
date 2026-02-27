@@ -60,7 +60,11 @@
                 <tbody>
                 @foreach (var g in PagedItems)
                 {
-                    <tr>
+                    <tr class="gr-row"
+                        role="button"
+                        tabindex="0"
+                        title="Click to load this game on the main board"
+                        @onclick="(() => OnSelect.InvokeAsync(g))">
                         <td>@FormatDate(g.StartTs)</td>
                         <td class="result">@FormatSide(g.ResultSide)</td>
                         <td class="wcol name" title="@g.WUsername">@NullSafe(g.WUsername)</td>
@@ -89,6 +93,9 @@
             ClampPage();
         }
     }
+
+    [Parameter]
+    public EventCallback<GameRecord> OnSelect { get; set; }
 
     [Parameter]
     public int PageSize { get; set; } = 5;

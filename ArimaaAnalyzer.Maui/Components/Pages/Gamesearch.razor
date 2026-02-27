@@ -3,6 +3,8 @@
 @using ArimaaAnalyzer.Maui.Components
 @using ArimaaAnalyzer.Maui.Services
 @using Microsoft.AspNetCore.Components
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using System.Linq
 
 <h1>Gamesearch</h1>
 
@@ -24,7 +26,7 @@
             }
             else
             {
-                <GameRecordList Items="_games" PageSize="5" />
+                <GameRecordList Items="_games" PageSize="5" OnSelect="HandleSelect" />
             }
         </div>
     </div>
@@ -35,6 +37,8 @@
     private List<GameRecord> _games = new();
     private bool _loading = true;
     private string? _errorMessage;
+    [Inject] private ArimaaGameService Game { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,6 +75,36 @@
         {
             _errorMessage = $"Search failed: {ex.GetBaseException().Message}";
             return 0;
+        }
+    }
+
+    private void HandleSelect(GameRecord record)
+    {
+        try
+        {
+            _errorMessage = null;
+            // Prefer the raw movelist text; fall back to concatenating parsed turn AEI lines
+            var text = record.MoveListRaw;
+            if (string.IsNullOrWhiteSpace(text) && record.Turns is { Count: > 0 })
+            {
+                text = string.Join('\n', record.Turns.Select(t => t.AEIstring));
+            }
+
+            var root = string.IsNullOrWhiteSpace(text) ? null : NotationService.ExtractTurnsWithMoves(text!);
+            if (root is null)
+            {
+                _errorMessage = "Unable to parse the selected game's move list.";
+                return;
+            }
+
+            Game.Load(root);
+            Game.ShowOuterUi = true;
+            // Navigate to the main Arimaa board page so the user sees the loaded game
+            Nav.NavigateTo("/arimaa");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load game: {ex.GetBaseException().Message}";
         }
     }
 }
