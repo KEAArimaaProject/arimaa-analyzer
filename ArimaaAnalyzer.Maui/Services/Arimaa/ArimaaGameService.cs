@@ -16,6 +16,11 @@ public sealed class ArimaaGameService
 
     public GameTurn? CurrentNode { get; private set; }
 
+    // Currently selected game metadata (if loaded from a GameRecord)
+    public GameRecord? SelectedRecord { get; private set; }
+
+    public event Action? SelectedRecordChanged;
+
     // Raised whenever the CurrentNode changes (e.g., navigation or commit)
     public event Action? CurrentNodeChanged;
 
@@ -86,6 +91,15 @@ public sealed class ArimaaGameService
         CurrentNodeChanged?.Invoke();
         // Also notify that the underlying board state changed so views like ArimaaBoard re-render
         StateChanged?.Invoke();
+    }
+
+    public void SetSelectedRecord(GameRecord? record)
+    {
+        if (!ReferenceEquals(SelectedRecord, record))
+        {
+            SelectedRecord = record;
+            SelectedRecordChanged?.Invoke();
+        }
     }
 
     public bool CanPrev => CurrentNode?.Parent is not null;

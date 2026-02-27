@@ -83,6 +83,8 @@
         try
         {
             _errorMessage = null;
+            // Remember the selected record so header can show its metadata
+            Game.SetSelectedRecord(record);
             // Prefer the raw movelist text; fall back to concatenating parsed turn AEI lines
             var text = record.MoveListRaw;
             if (string.IsNullOrWhiteSpace(text) && record.Turns is { Count: > 0 })

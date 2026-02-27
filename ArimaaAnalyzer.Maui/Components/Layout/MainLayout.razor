@@ -21,7 +21,27 @@
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
             @if (IsOnArimaaPage)
             {
-                
+                <!-- Current game quick info (takes lowest priority in flex; shrinks before buttons) -->
+                <div class="current-game-info" title="Current game summary">
+                    @if (Game?.SelectedRecord is { } r)
+                    {
+                        <span class="cg-item start">@FormatDate(r.StartTs)</span>
+                        <span class="cg-sep">•</span>
+                        <span class="cg-item result">@FormatSide(r.ResultSide)</span>
+                        <span class="cg-sep">•</span>
+                        <span class="cg-item gold" title="Gold">@NullSafe(r.WUsername)</span>
+                        <span class="cg-item rating gold-rating">(@FormatInt(r.WRating))</span>
+                        <span class="cg-sep">vs</span>
+                        <span class="cg-item silver" title="Silver">@NullSafe(r.BUsername)</span>
+                        <span class="cg-item rating silver-rating">(@FormatInt(r.BRating))</span>
+                        <span class="cg-sep">•</span>
+                        <span class="cg-item time" title="Time control">@NullSafe(r.TimeControl)</span>
+                    }
+                    else
+                    {
+                        <span class="cg-empty">No game selected</span>
+                    }
+                </div>
                 <button class="analyze-position" @onclick="AnalyzePosition" disabled="@_analysisInProgress">
                     Analyze Position
                 </button>
@@ -117,11 +137,21 @@
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
+        if (Game is not null)
+        {
+            Game.SelectedRecordChanged += OnSelectedRecordChanged;
+        }
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         // Re-render so the conditional button shows/hides when navigating
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSelectedRecordChanged()
+    {
+        // Update header info when a new record is selected
         InvokeAsync(StateHasChanged);
     }
 
@@ -132,8 +162,29 @@
         StateHasChanged();
     }
 
+    // Local format helpers (mirror GameRecordList formatting)
+    private static string NullSafe(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;
+    private static string FormatInt(int? v) => v.HasValue ? v.Value.ToString() : "—";
+    private static string FormatSide(GameRecord.Side? side)
+        => side switch
+        {
+            GameRecord.Side.Gold => "Gold",
+            GameRecord.Side.Silver => "Silver",
+            _ => "—"
+        };
+    private static string FormatDate(DateTimeOffset? dto)
+    {
+        if (dto is null) return "—";
+        var local = dto.Value.ToLocalTime();
+        return local.ToString("yyyy-MM-dd HH:mm");
+    }
+
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
+        if (Game is not null)
+        {
+            Game.SelectedRecordChanged -= OnSelectedRecordChanged;
+        }
     }
 }

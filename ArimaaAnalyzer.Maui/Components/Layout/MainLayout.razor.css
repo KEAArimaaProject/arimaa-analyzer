@@ -27,6 +27,34 @@ main {
     z-index: 100;
 }
 
+/* New current game info strip between buttons */
+.current-game-info {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0 0.75rem;
+    min-width: 0;            /* allow content to truncate */
+    flex: 1 1 auto;          /* take remaining space, lowest priority */
+    overflow: hidden;        /* clip inside */
+    white-space: nowrap;     /* single line */
+}
+.current-game-info .cg-item,
+.current-game-info .cg-sep,
+.current-game-info .cg-empty {
+    font-size: 0.9rem;
+    color: #333;
+}
+.current-game-info .cg-item {
+    max-width: 16ch;         /* prevent overly long names from pushing */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.current-game-info .cg-item.rating { color: #666; }
+.current-game-info .gold { color: #8a6d3b; }
+.current-game-info .silver { color: #5a5a5a; }
+.current-game-info .result { font-weight: 600; }
+.current-game-info .cg-empty { color: #777; font-style: italic; }
+
 /* Visible burger button in the header */
 .burger-button {
     display: inline-block;
