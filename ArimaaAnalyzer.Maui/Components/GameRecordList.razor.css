@@ -170,13 +170,13 @@
 
 /* Side accents */
 .gr-list .wcol {
-  --col: 210, 90%, 96%;
-  --bd: 210, 16%, 82%;
+  --col: 30, 90%, 96%; /* warm gold background */
+  --bd: 30, 16%, 76%;  /* matching warm border */
 }
 
 .gr-list .bcol {
-  --col: 30, 90%, 96%;
-  --bd: 30, 16%, 76%;
+  --col: 210, 90%, 96%; /* cool silver/blue background */
+  --bd: 210, 16%, 82%;  /* matching cool border */
 }
 
 .gr-list td.wcol.name {
