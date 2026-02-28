@@ -24,9 +24,9 @@
     <aside class="mini-boards" aria-label="Additional analysis boards">
         <h3 class="mini-title">Analysis Boards</h3>
         <div class="mini-boards-grid" @ref="_miniGridRef">
-            @for (var i = 0; i < _miniBoardCount; i++)
+            @for (var i = 0; i < _miniGames.Count; i++)
             {
-                <ArimaaBoard Game="Game" BoardSettings="@ArimaaBoardSettings.Tiny" />
+                <ArimaaBoard Game="_miniGames[i]" BoardSettings="@ArimaaBoardSettings.Tiny" />
             }
         </div>
     </aside>
@@ -46,10 +46,42 @@
     [Inject]
     private IJSRuntime JS { get; set; } = default!;
 
+    [Inject]
+    private MiniBoardsCoordinator MiniBoards { get; set; } = default!;
+
     private ElementReference _miniGridRef;
     private int _miniBoardCount = 0; // computed dynamically
     private DotNetObjectReference<Arimaa>? _dotNetRef;
     private IJSObjectReference? _module;
+    private readonly List<ArimaaGameService> _miniGames = new();
+
+    private void RebuildMiniGames()
+    {
+        // Capture current AEI from the shared main Game to initialize mini boards consistently
+        var aei = Game?.State?.localAeiSetPosition;
+        var orientation = Game?.State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+        _miniGames.Clear();
+        for (int i = 0; i < _miniBoardCount; i++)
+        {
+            GameState state;
+            if (!string.IsNullOrWhiteSpace(aei))
+            {
+                state = new GameState(aei!);
+            }
+            else
+            {
+                // Fallback: create an empty default state from the DI default
+                state = new GameState(NotationService.BoardToAei(new[]
+                {
+                    "rrrrrrrr","hdcemcdh","........","........","........","........","HDCMECDH","RRRRRRRR"
+                }, Sides.Gold));
+            }
+            state.boardorientation = orientation;
+            var svc = new ArimaaGameService(state);
+            _miniGames.Add(svc);
+        }
+        MiniBoards.SetMiniGames(_miniGames);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -91,6 +123,7 @@
         if (_miniBoardCount != count)
         {
             _miniBoardCount = count;
+            RebuildMiniGames();
             StateHasChanged();
         }
         return Task.CompletedTask;

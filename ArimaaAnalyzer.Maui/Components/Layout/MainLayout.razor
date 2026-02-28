@@ -10,6 +10,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ArimaaGameService Game
+@inject MiniBoardsCoordinator MiniBoards
 @inject AnalysisService Analysis
 @implements IDisposable
 
@@ -94,8 +95,9 @@
                 return;
             }
 
-            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: calling BuildGameTurnTreeAsync(depth=3) with CurrentNode')");
-            var generatedRoot = await Analysis.BuildGameTurnTreeAsync(root, searchDepth: 3);
+            var depth = MiniBoards?.Count ?? 0; // depth equals number of mini boards
+            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: calling BuildGameTurnTreeAsync(depth='+{depth}+') with CurrentNode')");
+            var generatedRoot = await Analysis.BuildGameTurnTreeAsync(root, searchDepth: depth);
 
             // Build a simple string from the generated main-line children chain
             var parts = new List<string>();
@@ -118,6 +120,24 @@
             var js = $"(function(){{var el=document.getElementById('aiMovesInput'); if(el) el.value={System.Text.Json.JsonSerializer.Serialize(movesText)};}})()";
             await JS.InvokeVoidAsync("eval", js);
             await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: textarea updated.')");
+
+            // Distribute positions to mini boards: one node per mini board along the main line
+            if ((MiniBoards?.Count ?? 0) > 0)
+            {
+                var list = new List<GameTurn>();
+                // Include the root as the first mini board (from GameTurn.AEIstring),
+                // then follow the first-child chain for subsequent mini boards.
+                var walker = generatedRoot;
+                var i = 0;
+                while (walker is not null && i < MiniBoards.Count)
+                {
+                    list.Add(walker);
+                    walker = walker.Children.FirstOrDefault();
+                    i++;
+                }
+                MiniBoards.LoadNodes(list);
+                await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: distributed '+{list.Count}+' nodes to mini boards (count='+{MiniBoards.Count}+')')");
+            }
         }
         catch (Exception ex)
         {

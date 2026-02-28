@@ -39,6 +39,8 @@ public static class MauiProgram
 
         // AI analysis service controlling the AEI engine
         builder.Services.AddSingleton<AnalysisService>();
+        // Coordinator for mini-board services
+        builder.Services.AddSingleton<MiniBoardsCoordinator>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
