@@ -53,10 +53,15 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Players` (
   `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   `rating` INT NULL,
   `RU` INT NULL,
-  `games_played` VARCHAR(45) NULL,
+  `games_played` INT NULL,
   `countries_id` INT NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE INDEX `username_UNIQUE` (`username`),
+  UNIQUE INDEX `email_UNIQUE` (`email`),
   INDEX `fk_Players_Countries_idx` (`Countries_id` ASC) VISIBLE,
+  INDEX `idx_players_rating` (`rating`),
+  INDEX `idx_players_ru` (`RU`),
+
   CONSTRAINT `fk_Players_Countries`
     FOREIGN KEY (`countries_id`)
     REFERENCES `mydb`.`Countries` (`id`)  
@@ -76,6 +81,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Events` (
   `rating` INT NOT NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
+
 
 
 -- -----------------------------------------------------
@@ -107,6 +113,13 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Matches` (
   INDEX `fk_Matches_Players_Gold_idx` (`player_id_gold` ASC) VISIBLE,
   INDEX `fk_Matches_Events_idx` (`events_id` ASC) VISIBLE,
   INDEX `fk_Matches_GameTypes_idx` (`gameTypes_id` ASC) VISIBLE,
+  INDEX `idx_matches_termination_result` (`termination_type`, `match_result`),
+  INDEX `idx_matches_gametype_result` (`gameTypes_id`, `match_result`),
+  INDEX `idx_matches_event_result` (`events_id`, `match_result`),
+  INDEX `idx_matches_silver_timestamp` (`player_id_silver`, `timestamp`),
+  INDEX `idx_matches_gold_timestamp` (`player_id_gold`, `timestamp`),
+  INDEX `idx_matches_timestamp` (`timestamp`),
+
   CONSTRAINT `fk_Matches_Players_Silver`
     FOREIGN KEY (`player_id_silver`)
     REFERENCES `mydb`.`Players` (`id`)
@@ -156,6 +169,7 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
   PRIMARY KEY (`id`),
   INDEX `fk_Moves_position_idx` (`position_id` ASC) VISIBLE,
   INDEX `fk_Moves_Matches_idx` (`matches_id` ASC) VISIBLE,
+  INDEX `idx_moves_match_turn_sequence` (`matches_id`, `turn`, `sequence`),
   CONSTRAINT `fk_Moves_position`
     FOREIGN KEY (`position_id`)
     REFERENCES `mydb`.`Position` (`id`)
