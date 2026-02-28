@@ -1,0 +1,18 @@
+# mysql server seeded with databases from dump files in the folder ./mysql
+# The seeding only happens on the first start when the volume is created.
+# If you need to reset the seeding, you need to "run docker compose down -v" to delete the volume
+services:
+  mysqldb:
+    image: mysql:9.5.0
+    container_name: mysqldb
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql:/docker-entrypoint-initdb.d
+    hostname: mysqldb
+volumes:
+  mysql_data:
+    driver: local
