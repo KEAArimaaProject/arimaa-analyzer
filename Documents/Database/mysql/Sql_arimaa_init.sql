@@ -147,7 +147,7 @@ ENGINE = InnoDB;
 -- Table `mydb`.`Position`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`Position` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `color` VARCHAR(6) NOT NULL,
   `piece` VARCHAR(4) NOT NULL,
   `cordinate` VARCHAR(2) NOT NULL,
@@ -158,9 +158,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`Moves`
 -- -----------------------------------------------------
---  Several moves are made in a turn, where each move has a piece that gets moved
 CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `turn` INT NOT NULL,
   `sequence` INT NOT NULL,
   `direction` VARCHAR(1) NOT NULL,
@@ -188,7 +187,7 @@ ENGINE = InnoDB;
 -- Table `mydb`.`OpeningsByMatch`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByMatch` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `matches_id` INT NOT NULL,
   `position_id` INT NOT NULL,
   PRIMARY KEY (`id`),
@@ -211,7 +210,7 @@ ENGINE = InnoDB;
 -- Table `mydb`.`OpeningsByPuzzle`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByPuzzle` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `position_id` INT NOT NULL,
   `puzzles_id` INT NOT NULL,
   PRIMARY KEY (`id`),
@@ -234,7 +233,7 @@ ENGINE = InnoDB;
 -- Table `mydb`.`Solutions`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
-  `id` INT NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
   `turn` INT NOT NULL,
   `sequence` INT NOT NULL, --Hvornår i turen
   `direction` VARCHAR(1) NOT NULL,
