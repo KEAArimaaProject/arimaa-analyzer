@@ -47,7 +47,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `mydb`.`Players` (
   `id` INT NOT NULL,
-  `username` VARCHAR(16) NOT NULL,
+  `username` VARCHAR(32) NOT NULL,
   `email` VARCHAR(255) NULL,
   `password` VARCHAR(32) NOT NULL,
   `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
@@ -158,12 +158,13 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `mydb`.`Moves`
 -- -----------------------------------------------------
+--  Several moves are made in a turn, where each move has a piece that gets moved
 CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
   `id` INT NOT NULL,
   `turn` INT NOT NULL,
   `sequence` INT NOT NULL,
   `direction` VARCHAR(1) NOT NULL,
-  `status` VARCHAR(1) NOT NULL,
+  `status` VARCHAR(1) NOT NULL, -- Død eller levende | 0 eller 1
   `matches_id` INT NOT NULL,
   `position_id` INT NOT NULL,
   PRIMARY KEY (`id`),
@@ -235,7 +236,7 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
   `id` INT NOT NULL,
   `turn` INT NOT NULL,
-  `sequence` INT NOT NULL,
+  `sequence` INT NOT NULL, --Hvornår i turen
   `direction` VARCHAR(1) NOT NULL,
   `status` VARCHAR(1) NOT NULL,
   `position_id` INT NOT NULL,
