@@ -36,7 +36,7 @@ pip install "git+https://github.com/MaxusTheOne/arimaa_game_to_db.git"
 
 Then, to seed the database, run:
 ```bash
-arimaa-db-populate --games-file C:\pitProj\arimaa_game_to_db\tests\test_files\allgames202602.txt
+arimaa-db-populate --database arimaadockermysqldb --games-file your/Path/to/game.txt
 ```
 flags:
 
