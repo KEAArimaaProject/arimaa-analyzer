@@ -29,9 +29,28 @@ dotnet run -f net10.0-windows10.0.19041.0
 
 ## Database Seeding
 
-Preliminary seeding can be done using the separate project:
-[arimaa_game_to_db](https://github.com/MaxusTheOne/arimaa_game_to_db)
+Preliminary seeding can be done using the py package:
+```bash
+pip install "git+https://github.com/MaxusTheOne/arimaa_game_to_db.git"
+```
 
-## Documentation
+Then, to seed the database, run:
+```bash
+arimaa-db-populate --games-file C:\pitProj\arimaa_game_to_db\tests\test_files\allgames202602.txt
+```
+flags:
 
-For more advanced installation instructions, see [Install.md](Documents/Install.md).
+--games-file: lokation to arimaa game file to use as seeding (required)
+
+Database flags
+
+--host
+
+--user
+
+--password
+
+--database
+
+--port
+
