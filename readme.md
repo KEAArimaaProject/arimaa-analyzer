@@ -44,13 +44,13 @@ flags:
 
 Database flags
 
---host
+--host | Default: localhost
 
---user
+--user | Default: root
 
---password
+--password | Default: 123456
 
---database
+--database | Default: mydb
 
---port
+--port | Default: 3307
 
