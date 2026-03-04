@@ -4,7 +4,7 @@
 services:
   mysqldb:
     image: mysql:9.5.0
-    container_name: mysqldb
+    container_name: arimaadockermysqldb
     ports:
       - "3307:3306"
     environment:
@@ -12,7 +12,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d
-    hostname: mysqldb
+    hostname: arimaadockermysqldb
 volumes:
   mysql_data:
     driver: local
