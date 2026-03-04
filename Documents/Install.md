@@ -157,14 +157,150 @@ dotnet restore
 ### "Android SDK not found" (only relevant for Android builds)
 The project has a hardcoded Android SDK path in the `.csproj` file. Update it if needed:
 ```xml
-<AndroidSdkDirectory>C:\Users\hjlyk\AppData\Local\Android\Sdk</AndroidSdkDirectory>
+<AndroidSdkDirectory>C:\Users\USER\AppData\Local\Android\Sdk</AndroidSdkDirectory>
 ```
-## Project structure
 
-- `ArimaaAnalyzer.Maui/` — Main application
-  - `Components/` — Blazor components
-  - `Services/` — Business logic and services
-  - `Platforms/` — Platform-specific code
-  - `Resources/` — Assets, icons, images
-- `ArimaaAnalyzer.Tests/` — Test project
-- `Documents/` — Documentation
+# Through Database-specific instructions
+
+
+## Database setup (Docker + MySQL)
+
+This project includes a ready-to-run MySQL database using Docker. It will auto-seed the schema on the first run using the SQL in `Documents/Database/mysql/Sql_arimaa_init.sql`.
+
+### What’s included
+
+- `Documents/Database/docker-compose.yml`
+  - Uses a stable MySQL image tag: `mysql:8.4`
+  - Exposes MySQL on your host at port `3307`
+  - Persists data in a named Docker volume `mysql_data`
+  - Mounts `./mysql` into `/docker-entrypoint-initdb.d` so the `.sql` file(s) inside are executed automatically the FIRST time a brand-new data volume is created
+- `Documents/Database/mysql/Sql_arimaa_init.sql`
+  - Creates the `arimaadockermysqldb` schema and all necessary tables
+  - Uses `CREATE ... IF NOT EXISTS` for safe re-runs
+
+### Prerequisites
+
+- Docker Desktop installed and running
+- PowerShell (commands below assume Windows; adapt for macOS/Linux shells if needed)
+
+### Start the database (auto-seeding)
+
+1. Open a terminal in the database folder:
+   ```powershell
+   cd C:\Users\USER\PROJECTFOLDER\arimaa-analyzer\Documents\Database
+   ```
+2. Start MySQL via Docker Compose (detached):
+   ```powershell
+   docker compose up -d
+   ```
+   - If your environment only has legacy Compose v1, use:
+     ```powershell
+     docker-compose up -d
+     ```
+3. Watch logs until the server is ready and seeding is complete (first run only):
+   ```powershell
+   docker logs -f arimaadockermysqldb
+   ```
+   You should see MySQL startup messages and (on a brand-new volume) execution of files from `/docker-entrypoint-initdb.d`, including `Sql_arimaa_init.sql`.
+
+3a. If any errors occur, and you need to revert 
+    the changes you made with docker-compose up -d,
+    then you can do this:
+
+
+#### Stop stack and remove the data volume
+     docker compose down -v
+
+#### (Optional) Remove any leftover container with the same name
+      docker rm -f arimaadockermysqldb 2>$null
+
+#### (Optional) Remove the Compose network if it still exists
+#### docker network ls | findstr arimaa-analyzer
+
+#### (Optional) If you want to force a fresh image pull next start
+#### docker image rm mysql:9.5.0
+
+#### Start fresh; since the volume is new, init scripts will run
+     docker compose up -d
+
+
+### Verify the database and tables
+
+Run a quick check using the MySQL client inside the container:
+```powershell
+docker exec -it arimaadockermysqldb mysql -uroot -p123456 -e "SHOW DATABASES; USE arimaadockermysqldb; SHOW TABLES;"
+```
+You should see `arimaadockermysqldb` and a list of tables (e.g., `Puzzles`, `Countries`, `Players`, etc.).
+
+### Connection details (for apps/tools)
+
+- Host: `localhost`
+- Port: `3307`
+- User: `root`
+- Password: `123456`
+- Default database: `arimaadockermysqldb`
+
+Example .NET connection string:
+```text
+Server=localhost;Port=3307;Database=arimaadockermysqldb;User ID=root;Password=123456;SslMode=None;
+```
+
+### Re-seeding from scratch (apply schema changes)
+
+The auto-seeding only runs when the data volume is created. If you modify `Sql_arimaa_init.sql` and want a fresh seed:
+```powershell
+cd C:\Users\USER\PROJECTFOLDER\arimaa-analyzer\Documents\Database
+docker compose down -v   # removes containers and the mysql_data volume
+docker compose up -d     # starts MySQL and re-runs init scripts
+```
+
+### Optional: Run the SQL manually using container-only commands
+
+If you don’t want to rely on the initial auto-seed, you can import the SQL using only Docker (no MySQL client on the host needed):
+
+- Pipe the SQL into the containerized client (PowerShell):
+  ```powershell
+  cd C:\Users\USER\PROJECTFOLDER\arimaa-analyzer\Documents\Database
+  Get-Content .\mysql\Sql_arimaa_init.sql | docker exec -i arimaadockermysqldb mysql -uroot -p123456
+  ```
+
+- Or copy the file into the container and execute it there:
+  ```powershell
+  cd C:\Users\USER\PROJECTFOLDER\arimaa-analyzer\Documents\Database
+  docker cp .\mysql\Sql_arimaa_init.sql arimaadockermysqldb:/tmp/init.sql
+  docker exec -it arimaadockermysqldb mysql -uroot -p123456 -e "SOURCE /tmp/init.sql"
+  ```
+
+### Stopping and removing
+
+- Stop (but keep data):
+  ```powershell
+  docker compose down
+  ```
+- Stop and remove data volume (use with care):
+  ```powershell
+  docker compose down -v
+  ```
+
+### Troubleshooting
+
+- Image tag fails to pull or start
+  - The compose file uses `mysql:8.4`, a stable MySQL LTS tag. If pulling fails, ensure Docker Desktop is running and you have network access.
+
+- Port conflict on `3307`
+  - Edit `Documents/Database/docker-compose.yml` and change the left side of the port mapping, e.g. `3308:3306`. Then reconnect using that port.
+
+- Seeding did not run
+  - Auto-seeding only occurs for a brand-new data volume. To force re-seed, run `docker compose down -v` and start again.
+
+- Compose v1 vs v2
+  - Preferred: `docker compose ...` (v2, integrated with Docker Desktop)
+  - Legacy: `docker-compose ...` (v1). Use only if v2 is unavailable.
+
+### Summary of what’s configured
+
+- MySQL container: `arimaadockermysqldb`
+- Image: `mysql:8.4`
+- Exposed port: host `3307` -> container `3306`
+- Root user with password `123456`
+- Auto-seeding from `Documents/Database/mysql/Sql_arimaa_init.sql` on first startup with a new volume
