@@ -245,7 +245,7 @@ CREATE TRIGGER `trg_moves_before_insert_validate`
 BEFORE INSERT ON Moves
 FOR EACH ROW
 BEGIN
-    IF NEW.direction NOT IN ('N', 'S', 'E', 'W') THEN
+    IF NEW.direction NOT IN ("n", "s", "e", "w", "x") THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Invalid move direction. Use N, S, E, or W.';
     END IF;
@@ -261,7 +261,7 @@ CREATE TRIGGER `trg_moves_before_update_validate`
 BEFORE UPDATE ON Moves
 FOR EACH ROW
 BEGIN
-    IF NEW.direction NOT IN ('N', 'S', 'E', 'W') THEN
+    IF NEW.direction NOT IN ("n", "s", "e", "w", "x") THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Invalid move direction. Use N, S, E, or W.';
     END IF;
