@@ -8,19 +8,19 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
 -- -----------------------------------------------------
--- Schema mydb
+-- Schema arimaadockermysqldb
 -- -----------------------------------------------------
 
 -- -----------------------------------------------------
--- Schema mydb
+-- Schema arimaadockermysqldb
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
-USE `mydb` ;
+CREATE SCHEMA IF NOT EXISTS `arimaadockermysqldb` DEFAULT CHARACTER SET utf8 ;
+USE `arimaadockermysqldb` ;
 
 -- -----------------------------------------------------
--- Table `mydb`.`Puzzles`
+-- Table `arimaadockermysqldb`.`Puzzles`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Puzzles` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Puzzles` (
   `id` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
   `objective` VARCHAR(45) NOT NULL,
@@ -32,9 +32,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Countries`
+-- Table `arimaadockermysqldb`.`Countries`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Countries` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Countries` (
   `id` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`id`),
@@ -43,9 +43,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Players`
+-- Table `arimaadockermysqldb`.`Players`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Players` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Players` (
   `id` INT NOT NULL,
   `username` VARCHAR(32) NOT NULL,
   `email` VARCHAR(255) NULL,
@@ -64,16 +64,16 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Players` (
 
   CONSTRAINT `fk_Players_Countries`
     FOREIGN KEY (`countries_id`)
-    REFERENCES `mydb`.`Countries` (`id`)  
+    REFERENCES `arimaadockermysqldb`.`Countries` (`id`)  
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Events`
+-- Table `arimaadockermysqldb`.`Events`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Events` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Events` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `isOfficial` TINYINT(1) NOT NULL,
@@ -85,9 +85,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`GameTypes`
+-- Table `arimaadockermysqldb`.`GameTypes`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`GameTypes` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`GameTypes` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   `time_increment` INT NULL,
@@ -97,9 +97,9 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Matches`
+-- Table `arimaadockermysqldb`.`Matches`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Matches` (
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Matches` (
   `id` INT NOT NULL,
   `termination_type` VARCHAR(45) NOT NULL,
   `player_id_silver` INT NOT NULL,
@@ -122,32 +122,32 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Matches` (
 
   CONSTRAINT `fk_Matches_Players_Silver`
     FOREIGN KEY (`player_id_silver`)
-    REFERENCES `mydb`.`Players` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Players` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_Matches_Players_Gold`
     FOREIGN KEY (`player_id_gold`)
-    REFERENCES `mydb`.`Players` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Players` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_Matches_Events`
     FOREIGN KEY (`events_id`)
-    REFERENCES `mydb`.`Events` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Events` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_Matches_GameTypes`
     FOREIGN KEY (`gameTypes_id`)
-    REFERENCES `mydb`.`GameTypes` (`id`)
+    REFERENCES `arimaadockermysqldb`.`GameTypes` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Position`
+-- Table `arimaadockermysqldb`.`Position`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Position` (
-  `id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Position` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `color` VARCHAR(6) NOT NULL,
   `piece` VARCHAR(4) NOT NULL,
   `cordinate` VARCHAR(2) NOT NULL,
@@ -156,11 +156,10 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Moves`
+-- Table `arimaadockermysqldb`.`Moves`
 -- -----------------------------------------------------
---  Several moves are made in a turn, where each move has a piece that gets moved
-CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
-  `id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Moves` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `turn` INT NOT NULL,
   `sequence` INT NOT NULL,
   `direction` VARCHAR(1) NOT NULL,
@@ -173,22 +172,22 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Moves` (
   INDEX `idx_moves_match_turn_sequence` (`matches_id`, `turn`, `sequence`),
   CONSTRAINT `fk_Moves_position`
     FOREIGN KEY (`position_id`)
-    REFERENCES `mydb`.`Position` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_Moves_Matches`
     FOREIGN KEY (`matches_id`)
-    REFERENCES `mydb`.`Matches` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Matches` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`OpeningsByMatch`
+-- Table `arimaadockermysqldb`.`OpeningsByMatch`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByMatch` (
-  `id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`OpeningsByMatch` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `matches_id` INT NOT NULL,
   `position_id` INT NOT NULL,
   PRIMARY KEY (`id`),
@@ -196,22 +195,22 @@ CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByMatch` (
   INDEX `fk_OpeningsByMatch_Matches_idx` (`matches_id` ASC) VISIBLE,
   CONSTRAINT `fk_OpeningsByMatch_position`
     FOREIGN KEY (`position_id`)
-    REFERENCES `mydb`.`Position` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_OpeningsByMatch_Matches`
     FOREIGN KEY (`matches_id`)
-    REFERENCES `mydb`.`Matches` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Matches` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`OpeningsByPuzzle`
+-- Table `arimaadockermysqldb`.`OpeningsByPuzzle`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByPuzzle` (
-  `id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`OpeningsByPuzzle` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `position_id` INT NOT NULL,
   `puzzles_id` INT NOT NULL,
   PRIMARY KEY (`id`),
@@ -219,24 +218,24 @@ CREATE TABLE IF NOT EXISTS `mydb`.`OpeningsByPuzzle` (
   INDEX `fk_OOpeningsByPuzzle_puzzles_idx` (`puzzles_id` ASC) VISIBLE,
   CONSTRAINT `fk_OpeningsByPuzzle_position`
     FOREIGN KEY (`position_id`)
-    REFERENCES `mydb`.`Position` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_OpeningsByPuzzle_puzzles`
     FOREIGN KEY (`puzzles_id`)
-    REFERENCES `mydb`.`Puzzles` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Puzzles` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `mydb`.`Solutions`
+-- Table `arimaadockermysqldb`.`Solutions`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
-  `id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `arimaadockermysqldb`.`Solutions` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `turn` INT NOT NULL,
-  `sequence` INT NOT NULL, --Hvornår i turen
+  `sequence` INT NOT NULL, -- Hvornår i turen
   `direction` VARCHAR(1) NOT NULL,
   `status` VARCHAR(1) NOT NULL,
   `position_id` INT NOT NULL,
@@ -246,12 +245,12 @@ CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
   INDEX `fk_Solution_puzzles_idx` (`puzzles_id` ASC) VISIBLE,
   CONSTRAINT `fk_Solution_position`
     FOREIGN KEY (`position_id`)
-    REFERENCES `mydb`.`Position` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Position` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
   CONSTRAINT `fk_Solution_puzzles`
     FOREIGN KEY (`puzzles_id`)
-    REFERENCES `mydb`.`Puzzles` (`id`)
+    REFERENCES `arimaadockermysqldb`.`Puzzles` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;

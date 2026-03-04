@@ -1,11 +1,56 @@
-To start, cd into ArimaaAnalyzer.Maui
+# Arimaa Analyzer
 
-then run:
+A .NET MAUI application for analyzing Arimaa game records and board positions.
+
+## Getting Started
+
+### Prerequisites
+- .NET 10 SDK installed
+
+### Initial Setup
+
+1. Navigate to the project directory:
+```bash
+cd ArimaaAnalyzer.Maui
+```
+
+2. Restore workloads:
+```bash
 dotnet workload restore
+```
 
-for a windows build, run:
+### Building & Running
+
+For Windows:
+```bash
 dotnet build -f net10.0-windows10.0.19041.0
-&
 dotnet run -f net10.0-windows10.0.19041.0
+```
 
-More advanced install instructions in ../Documents/Install.md
+## Database Seeding
+
+Preliminary seeding can be done using the py package:
+```bash
+pip install "git+https://github.com/MaxusTheOne/arimaa_game_to_db.git"
+```
+
+Then, to seed the database, run:
+```bash
+arimaa-db-populate --games-file C:\pitProj\arimaa_game_to_db\tests\test_files\allgames202602.txt
+```
+flags:
+
+--games-file: lokation to arimaa game file to use as seeding (required)
+
+Database flags
+
+--host
+
+--user
+
+--password
+
+--database
+
+--port
+
