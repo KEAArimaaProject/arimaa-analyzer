@@ -1,7 +1,7 @@
 -- Support objects for routines/triggers/events
 -- Execution order: after Sql_arimaa_init.sql
 
-USE `mydb`;
+USE `arimaadockermysqldb`;
 
 CREATE TABLE IF NOT EXISTS `audit_log` (
   `id` INT NOT NULL AUTO_INCREMENT,

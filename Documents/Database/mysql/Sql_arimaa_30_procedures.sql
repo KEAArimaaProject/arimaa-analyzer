@@ -1,7 +1,7 @@
 -- Stored procedures
 -- Requires: Sql_arimaa_init.sql, Sql_arimaa_20_support.sql
 
-USE `mydb`;
+USE `arimaadockermysqldb`;
 
 DELIMITER $$
 
@@ -190,4 +190,4 @@ END$$
 DELIMITER ;
 
 -- Optional security setup (run manually when users exist):
--- GRANT EXECUTE ON PROCEDURE mydb.get_event_participation TO 'report_user'@'%';
+-- GRANT EXECUTE ON PROCEDURE arimaadockermysqldb.get_event_participation TO 'report_user'@'%';

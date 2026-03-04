@@ -1,7 +1,7 @@
 -- Events
 -- Requires: Sql_arimaa_init.sql, Sql_arimaa_20_support.sql, Sql_arimaa_30_procedures.sql
 
-USE `mydb`;
+USE `arimaadockermysqldb`;
 
 DELIMITER $$
 

@@ -1,7 +1,7 @@
 -- Triggers
 -- Requires: Sql_arimaa_init.sql, Sql_arimaa_20_support.sql
 
-USE `mydb`;
+USE `arimaadockermysqldb`;
 
 DELIMITER $$
 

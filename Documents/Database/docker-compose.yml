@@ -8,6 +8,7 @@ services:
     ports:
       - "3307:3306"
     environment:
+      MYSQL_DATABASE: arimaadockermysqldb
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
       - mysql_data:/var/lib/mysql
