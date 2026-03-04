@@ -236,7 +236,7 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `mydb`.`Solutions` (
   `id` INT NOT NULL,
   `turn` INT NOT NULL,
-  `sequence` INT NOT NULL, --Hvornår i turen
+  `sequence` INT NOT NULL,
   `direction` VARCHAR(1) NOT NULL,
   `status` VARCHAR(1) NOT NULL,
   `position_id` INT NOT NULL,
