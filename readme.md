@@ -33,11 +33,23 @@ Preliminary seeding can be done using the py package:
 ```bash
 pip install "git+https://github.com/MaxusTheOne/arimaa_game_to_db.git"
 ```
+or, with uv:
+```bash
+uv pip install "git+https://github.com/MaxusTheOne/arimaa_game_to_db.git"
+```
 
 Then, to seed the database, run:
 ```bash
 arimaa-db-populate --database arimaadockermysqldb --games-file your/Path/to/game.txt
 ```
+or, with uv:
+```bash
+uv run arimaa-db-populate --database arimaadockermysqldb --games-file your/Path/to/game.txt
+```
+
+Game path example: --games-file C:\Users\USER\RiderProjects\arimaa-analyzer\ArimaaAnalyzer.Maui\Resources\Raw\allgames202602.txt
+
+
 flags:
 
 --games-file: lokation to arimaa game file to use as seeding (required)

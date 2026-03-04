@@ -245,14 +245,11 @@ Example .NET connection string:
 Server=localhost;Port=3307;Database=arimaadockermysqldb;User ID=root;Password=123456;SslMode=None;
 ```
 
-### Re-seeding from scratch (apply schema changes)
+### Seeding the database
 
-The auto-seeding only runs when the data volume is created. If you modify `Sql_arimaa_init.sql` and want a fresh seed:
-```powershell
-cd C:\Users\USER\PROJECTFOLDER\arimaa-analyzer\Documents\Database
-docker compose down -v   # removes containers and the mysql_data volume
-docker compose up -d     # starts MySQL and re-runs init scripts
-```
+See readme.md
+
+
 
 ### Optional: Run the SQL manually using container-only commands
 
