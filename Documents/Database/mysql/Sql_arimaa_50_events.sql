@@ -31,6 +31,13 @@ FROM Matches
 WHERE DATE(`timestamp`) = CURDATE()
 ON DUPLICATE KEY UPDATE total_matches = VALUES(total_matches)$$
 
+DROP EVENT IF EXISTS `ev_move_corrupted_matches_to_archive`$$
+CREATE EVENT `ev_move_corrupted_matches_to_archive`
+ON SCHEDULE EVERY 1 DAY
+DO
+CALL move_corrupted_matches_to_archive()$$
+
+
 DELIMITER ;
 
 -- Note: Event based on Events.end_date is omitted because the column does not exist in Sql_arimaa_init.sql.

@@ -155,13 +155,15 @@ CREATE PROCEDURE `archive_old_matches`(
     IN p_years INT
 )
 BEGIN
-    INSERT IGNORE INTO Matches_Archive
-    SELECT *
-    FROM Matches
-    WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+    START TRANSACTION;
+        INSERT IGNORE INTO Matches_Archive
+        SELECT *
+        FROM Matches
+        WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
 
-    DELETE FROM Matches
-    WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+        DELETE FROM Matches
+        WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+    COMMIT;
 END$$
 
 DROP PROCEDURE IF EXISTS `recalc_games_played`$$
@@ -185,6 +187,20 @@ BEGIN
     FROM Matches m
     JOIN GameTypes gt ON gt.id = m.gameTypes_id
     GROUP BY gt.name;
+END$$
+
+DROP PROCEDURE IF EXISTS `move_corrupted_matches_to_archive`$$
+CREATE PROCEDURE `move_corrupted_matches_to_archive`()
+BEGIN
+    START TRANSACTION;
+        INSERT INTO Matches_Archive
+        SELECT *
+        FROM Matches
+        WHERE isCorrupted = 1;
+
+        DELETE FROM Matches
+        WHERE isCorrupted = 1;
+    COMMIT;
 END$$
 
 DELIMITER ;
