@@ -22,14 +22,16 @@ BEGIN
         'UPDATE',
         OLD.id,
         JSON_OBJECT(
+            'id', OLD.id,
             'username', OLD.username,
-            'rating', OLD.rating,
-            'country', OLD.countries_id
+            'games_played', OLD.games_played,
+            'rating', OLD.rating
         ),
         JSON_OBJECT(
+            'id', NEW.id,
             'username', NEW.username,
-            'rating', NEW.rating,
-            'country', NEW.countries_id
+            'games_played', NEW.games_played,
+            'rating', NEW.rating
         )
     );
 END$$

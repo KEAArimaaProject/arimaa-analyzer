@@ -39,7 +39,8 @@ UNLOCK TABLES;
 
 LOCK TABLES `Events` WRITE;
 /*!40000 ALTER TABLE `Events` DISABLE KEYS */;
-INSERT INTO `Events` VALUES (8,'Casual game',0,1,0);
+INSERT INTO `Events` (`id`, `name`, `start_date`, `isOfficial`, `isRated`, `rating`)
+VALUES (8, 'Casual game', NULL, 0, 1, 0);
 /*!40000 ALTER TABLE `Events` ENABLE KEYS */;
 UNLOCK TABLES;
 
