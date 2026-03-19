@@ -4,6 +4,31 @@
 USE `arimaadockermysqldb`;
 
 DELIMITER $$
+DROP PROCEDURE IF EXISTS `insert_match`$$
+CREATE PROCEDURE `insert_match`(
+    IN p_termination_type VARCHAR(45),
+    IN p_player_id_silver INT,
+    IN p_player_id_gold INT,
+    IN p_match_result VARCHAR(45),
+    IN p_events_id INT,
+    IN p_gameTypes_id INT,
+    IN p_timestamp DATETIME
+)
+BEGIN
+    INSERT INTO Matches (termination_type, player_id_silver, player_id_gold, match_result, events_id, gameTypes_id, timestamp)
+    VALUES (p_termination_type, p_player_id_silver, p_player_id_gold, p_match_result, p_events_id, p_gameTypes_id, p_timestamp);
+END$$
+
+DROP PROCEDURE IF EXISTS `mark_match_as_corrupted`$$
+CREATE PROCEDURE `mark_match_as_corrupted`(
+    IN p_match_id INT
+)
+BEGIN
+    UPDATE Matches
+    SET isCorrupted = 1
+    WHERE id = p_match_id;
+END$$
+
 
 DROP PROCEDURE IF EXISTS `get_top_and_bottom_players`$$
 CREATE PROCEDURE `get_top_and_bottom_players`()
@@ -150,18 +175,35 @@ BEGIN
     WHERE mv.id IS NULL;
 END$$
 
+DROP PROCEDURE IF EXISTS `mark_matches_without_moves_as_corrupted`$$
+CREATE PROCEDURE `mark_matches_without_moves_as_corrupted`()
+BEGIN
+    UPDATE Matches
+    SET isCorrupted = 1
+    WHERE id IN (
+        SELECT m.id
+        FROM Matches m
+        LEFT JOIN Moves mv ON m.id = mv.matches_id
+        WHERE mv.id IS NULL
+    );
+END$$
+    WHERE mv.id IS NULL;
+END$$
+
 DROP PROCEDURE IF EXISTS `archive_old_matches`$$
 CREATE PROCEDURE `archive_old_matches`(
     IN p_years INT
 )
 BEGIN
-    INSERT IGNORE INTO Matches_Archive
-    SELECT *
-    FROM Matches
-    WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+    START TRANSACTION;
+        INSERT IGNORE INTO Matches_Archive
+        SELECT *
+        FROM Matches
+        WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
 
-    DELETE FROM Matches
-    WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+        DELETE FROM Matches
+        WHERE `timestamp` < DATE_SUB(NOW(), INTERVAL p_years YEAR);
+    COMMIT;
 END$$
 
 DROP PROCEDURE IF EXISTS `recalc_games_played`$$
@@ -185,6 +227,20 @@ BEGIN
     FROM Matches m
     JOIN GameTypes gt ON gt.id = m.gameTypes_id
     GROUP BY gt.name;
+END$$
+
+DROP PROCEDURE IF EXISTS `move_corrupted_matches_to_archive`$$
+CREATE PROCEDURE `move_corrupted_matches_to_archive`()
+BEGIN
+    START TRANSACTION;
+        INSERT INTO Matches_Archive
+        SELECT *
+        FROM Matches
+        WHERE isCorrupted = 1;
+
+        DELETE FROM Matches
+        WHERE isCorrupted = 1;
+    COMMIT;
 END$$
 
 DELIMITER ;
