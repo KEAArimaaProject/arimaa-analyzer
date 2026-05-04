@@ -22,14 +22,14 @@ public static class MauiProgram
             // Demo board from tests/documentation
             var board = new[]
             {
-                "rrrrrrrr",
-                "hdcemcdh",
                 "........",
                 "........",
                 "........",
                 "........",
-                "HDCMECDH",
-                "RRRRRRRR"
+                "........",
+                "........",
+                "........",
+                "........"
             };
 
             var aei = NotationService.BoardToAei(board, Sides.Gold);

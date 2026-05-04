@@ -59,6 +59,34 @@
   min-width: 0;
 }
 
+/* Edit pieces palette */
+.editpieces {
+  /* mirror aside behavior */
+}
+
+.editpieces-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr); /* 6 x 2 grid */
+  grid-auto-rows: 1fr;
+  gap: 8px;
+}
+
+.editpieces-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  padding: 6px;
+  user-select: none;
+}
+
+.editpieces-item img {
+  max-width: 100%;
+  height: auto;
+  pointer-events: none; /* so the wrapper div receives pointer events */
+}
+
 /* On narrow/tall layouts, stack vertically with the mini boards below the main area */
 @media (max-width: 900px) {
   .arimaa-page {

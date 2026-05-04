@@ -1,0 +1,59 @@
+﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<aside id="editpieces" class="editpieces" aria-label="Edit pieces palette" @onpointerup="OnEditPiecesPointerUp">
+    <h3 class="mini-title">Edit Pieces</h3>
+    <div class="editpieces-grid">
+        @foreach (var item in _palette)
+        {
+            <div class="editpieces-item" title="Drag to board"
+                 @onpointerdown="() => OnPalettePointerDown(item.Char)">
+                <img src="@($"pieces/{item.File}")" alt="@item.Alt" draggable="false" />
+            </div>
+        }
+    </div>
+</aside>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public ArimaaGameService Game { get; set; } = default!;
+
+    private readonly (char Char, string File, string Alt)[] _palette = new (char, string, string)[]
+    {
+        // Gold (uppercase) then Silver (lowercase)
+        ('E', "white-Elephant.svg", "Gold Elephant"),
+        ('M', "white-Camel.svg", "Gold Camel"),
+        ('H', "white-Horse.svg", "Gold Horse"),
+        ('D', "white-Dog.svg", "Gold Dog"),
+        ('C', "white-Cat.svg", "Gold Cat"),
+        ('R', "white-Rabbit.svg", "Gold Rabbit"),
+        ('e', "black-Elephant.svg", "Silver Elephant"),
+        ('m', "black-Camel.svg", "Silver Camel"),
+        ('h', "black-Horse.svg", "Silver Horse"),
+        ('d', "black-Dog.svg", "Silver Dog"),
+        ('c', "black-Cat.svg", "Silver Cat"),
+        ('r', "black-Rabbit.svg", "Silver Rabbit"),
+    };
+
+    private async Task OnPalettePointerDown(char pieceChar)
+    {
+        // Start a palette-origin drag with the AEI character for the piece
+        await JS.InvokeVoidAsync("setDragFromPalette", pieceChar.ToString());
+    }
+
+    private async Task OnEditPiecesPointerUp(PointerEventArgs e)
+    {
+        // If a board-origin drag is released over the palette, remove that board piece
+        var boardDrag = await JS.InvokeAsync<int[]?>("getBoardDragIfAny");
+        if (boardDrag is not null && boardDrag.Length == 2)
+        {
+            var from = new Position(boardDrag[0], boardDrag[1]);
+            Game.RemovePieceAt(from);
+        }
+        await JS.InvokeVoidAsync("clearDragState");
+    }
+}

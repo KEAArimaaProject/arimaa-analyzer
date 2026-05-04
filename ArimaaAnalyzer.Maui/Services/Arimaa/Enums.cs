@@ -8,6 +8,12 @@ public enum BoardOrientation
     GoldEastSilverWest
 }
 
+public enum Side
+{
+    Gold,
+    Silver
+}
+
 public enum PieceType
 {
     Rabbit,

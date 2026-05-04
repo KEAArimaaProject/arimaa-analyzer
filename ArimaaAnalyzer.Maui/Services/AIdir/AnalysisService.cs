@@ -264,7 +264,7 @@ public class AnalysisService : IAsyncDisposable
     public async Task<(string bestMove, string? ponder, IReadOnlyList<string> log)> GetBestMoveAsync(
         string aeiPosition, 
         string optionName, 
-        string optionValue, 
+        string timetothink, 
         CancellationToken ct = default)
     {
         //the AI can only make gold moves, so if it silver to move, the board must be flipped:
@@ -274,7 +274,7 @@ public class AnalysisService : IAsyncDisposable
         //var flippedBoard = NotationService.AeiToBoard(AEIflipped);
         
         await SendAsync(AEIflipped, ct).ConfigureAwait(false);
-        await SetOptionAsync(optionName, optionValue, ct).ConfigureAwait(false);
+        await SetOptionAsync(optionName, timetothink, ct).ConfigureAwait(false);
         await IsReadyAsync(ct).ConfigureAwait(false);
 
         var resultmoves = await GoAsync(string.Empty, ct).ConfigureAwait(false);
@@ -353,9 +353,14 @@ public class AnalysisService : IAsyncDisposable
     /// </summary>
     /// <param name="positionNode">A GameTurn representing the starting position; its <see cref="GameTurn.AEIstring"/> will be used.</param>
     /// <param name="searchDepth">Number of consecutive turns to generate. Must be greater than 0.</param>
+    /// <param name="timetothink">Per-move time in seconds passed to the engine option (e.g., option 'tcmove'). Defaults to 2.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The root GameTurn node of the generated chain (depth nodes long).</returns>
-    public async Task<GameTurn> BuildGameTurnTreeAsync(GameTurn positionNode, int searchDepth, CancellationToken ct = default)
+    public async Task<GameTurn> BuildGameTurnTreeAsync(
+        GameTurn positionNode, 
+        int searchDepth, 
+        int timetothink = 2000,
+        CancellationToken ct = default)
     {
         if (positionNode is null) throw new ArgumentNullException(nameof(positionNode));
         if (searchDepth <= 0) throw new ArgumentOutOfRangeException(nameof(searchDepth), "searchDepth must be > 0");
@@ -383,7 +388,7 @@ public class AnalysisService : IAsyncDisposable
         while (endcondition == false && loopnumber < searchDepth)
         {
             // Use GetBestMoveAsync to handle position, options, and getting the move
-            var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", "2", ct).ConfigureAwait(false);
+            var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", (timetothink/1000).ToString(), ct).ConfigureAwait(false);
             
             var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var side = ParseSideFromAei(currentAei);
@@ -414,6 +419,74 @@ public class AnalysisService : IAsyncDisposable
         }
 
         return root!;
+    }
+
+    /// <summary>
+    /// Streams generated <see cref="GameTurn"/> nodes one-by-one as they are produced by the engine,
+    /// along the main line starting from the provided <paramref name="positionNode"/>.
+    /// Consumers can display results incrementally (e.g., first mini board updates immediately).
+    /// </summary>
+    /// <param name="positionNode">Starting position node.</param>
+    /// <param name="maxDepth">Maximum number of turns to generate and yield. Must be &gt; 0.</param>
+    /// <param name="timetothink">Per-move time in milliseconds (passed to engine as seconds).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>An async sequence yielding each generated node in order.</returns>
+    public async IAsyncEnumerable<GameTurn> BuildGameTurnStreamAsync(
+        GameTurn positionNode,
+        int maxDepth,
+        int timetothink = 2000,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (positionNode is null) throw new ArgumentNullException(nameof(positionNode));
+        if (maxDepth <= 0) throw new ArgumentOutOfRangeException(nameof(maxDepth), "maxDepth must be > 0");
+
+        // Ensure engine is ready
+        if (!IsRunning)
+        {
+            var exePath = ResolveSharp2015Path();
+            await StartAsync(exePath, arguments: "aei", ct: ct).ConfigureAwait(false);
+        }
+        await NewGameAsync(ct).ConfigureAwait(false);
+
+        GameTurn? tail = null;
+        string currentAei = positionNode.AEIstring;
+
+        int moveNumber = 1;
+        if (int.TryParse(positionNode.MoveNumber, out var parsed))
+            moveNumber = parsed + 1;
+
+        var loop = 0;
+        var end = false;
+        while (!end && loop < maxDepth)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", (timetothink/1000).ToString(), ct).ConfigureAwait(false);
+            var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var side = ParseSideFromAei(currentAei);
+
+            var node = new GameTurn(
+                oldAEIstring: currentAei,
+                updatedAEIstring: string.Empty,
+                MoveNumber: moveNumber.ToString(),
+                Side: side,
+                Moves: moves,
+                isMainLine: tail is null ? true : tail.IsMainLine);
+
+            // Link to previous (maintain a simple chain)
+            if (tail is not null)
+                tail.AddChild(node);
+            tail = node;
+
+            // Yield immediately so UI can update
+            yield return node;
+
+            // Prepare for next iteration
+            currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
+            end = CorrectMoveService.HasWinCondition(currentAei);
+            moveNumber++;
+            loop++;
+        }
     }
 
     private static Sides ParseSideFromAei(string aei)

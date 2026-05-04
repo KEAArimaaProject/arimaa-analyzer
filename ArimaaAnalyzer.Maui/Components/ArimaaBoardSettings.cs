@@ -48,6 +48,11 @@ public class ArimaaBoardSettings
     /// </summary>
     public bool IsResponsive { get; set; } = true;
 
+    // Custom shared settings for analysis/runtime tuning
+    public int BoardInt { get; set; } = 4; // allowed 1..9
+    public int ThinkInt { get; set; } = 100; // allowed 100 - 10000
+    public Boolean Play { get; set; } = false; // Play against the AI.
+
     /// <summary>
     /// Small responsive board (useful for sidebars or analysis panels).
     /// Size: ~40px per square, responsive, read-only.

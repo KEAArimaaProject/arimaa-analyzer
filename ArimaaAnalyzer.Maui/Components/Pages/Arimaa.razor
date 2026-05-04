@@ -3,6 +3,7 @@
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Components
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 
@@ -11,25 +12,51 @@
     <section class="main-area" aria-label="Main game">
         <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" />
         <GameTurnChildren Game="Game" />
-        <div class="ai-moves">
-            <label for="aiMovesInput">AI moves</label>
-            <textarea id="aiMovesInput">AI moves</textarea>
+        
+        <div class="analysis-settings">
+            <div class="form-group">
+                
+                <label for="boardIntSelect">BoardCount</label>
+                <select id="boardIntSelect" @bind="PageBoardSettings.BoardInt" @bind:after="OnBoardIntChanged">
+                    @for (var i = 0; i <= 29; i++)
+                    {
+                        <option value="@i">@i</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="thinkInt">ThinktimeMS</label>
+                <select id="thinkInt" @bind="PageBoardSettings.ThinkInt">
+                    @for (var i = 1; i <= 20; i++)
+                    {
+                        var val = i * 100;
+                        <option value="@val">@val.ToString()</option>
+                    }
+                </select>
+            </div>
         </div>
     </section>
     
-    <!-- Analysis/side section with smaller boards. Will appear to the left on wide layouts,
-     <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Compact"/>
-            <ArimaaBoard Game="DemoGame" BoardSettings="@ArimaaBoardSettings.Tiny"/>
-         and below on narrow/tall layouts via Arimaa.razor.css -->
-    <aside class="mini-boards" aria-label="Additional analysis boards">
-        <h3 class="mini-title">Analysis Boards</h3>
-        <div class="mini-boards-grid" @ref="_miniGridRef">
-            @for (var i = 0; i < _miniGames.Count; i++)
-            {
-                <ArimaaBoard Game="_miniGames[i]" BoardSettings="@ArimaaBoardSettings.Tiny" />
-            }
-        </div>
-    </aside>
+    <!-- Side section: either editpieces palette (when Play is true) or analysis mini-boards -->
+    @if (PageBoardSettings?.Play == true)
+    {
+        <Piecepallette Game="Game" />
+    }
+    else
+    {
+        <!-- Analysis/side section with smaller boards. Appears left on wide, below on narrow -->
+        <aside class="mini-boards" aria-label="Additional analysis boards">
+            <h3 class="mini-title">Analysis Boards</h3>
+            <div class="mini-boards-grid" @ref="_miniGridRef">
+                @for (var i = 0; i < _miniGames.Count; i++)
+                {
+                    <!-- Use @key so that when the underlying Game service instance changes,
+                         Blazor disposes/recreates the child component and its event subscriptions. -->
+                    <ArimaaBoard @key="_miniGames[i]" Game="_miniGames[i]" BoardSettings="@ArimaaBoardSettings.Tiny" />
+                }
+            </div>
+        </aside>
+    }
 
 </div>
 
@@ -55,31 +82,48 @@
     private IJSObjectReference? _module;
     private readonly List<ArimaaGameService> _miniGames = new();
 
+
     private void RebuildMiniGames()
     {
-        // Capture current AEI from the shared main Game to initialize mini boards consistently
+        // Keep existing instances to avoid losing references used by the coordinator and UI.
+        // Only append or trim as needed so actions like WipeAll() reach all currently displayed boards.
+        var desired = _miniBoardCount < 0 ? 0 : _miniBoardCount;
+        var current = _miniGames.Count;
+
+        // Capture the current AEI/orientation to initialize any newly added boards consistently
         var aei = Game?.State?.localAeiSetPosition;
         var orientation = Game?.State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
-        _miniGames.Clear();
-        for (int i = 0; i < _miniBoardCount; i++)
+
+        if (desired > current)
         {
-            GameState state;
-            if (!string.IsNullOrWhiteSpace(aei))
+            // Append new boards
+            for (int i = current; i < desired; i++)
             {
-                state = new GameState(aei!);
-            }
-            else
-            {
-                // Fallback: create an empty default state from the DI default
-                state = new GameState(NotationService.BoardToAei(new[]
+                GameState state;
+                if (!string.IsNullOrWhiteSpace(aei))
                 {
-                    "rrrrrrrr","hdcemcdh","........","........","........","........","HDCMECDH","RRRRRRRR"
-                }, Sides.Gold));
+                    state = new GameState(aei!);
+                }
+                else
+                {
+                    // Fallback: create an empty default state
+                    state = new GameState(NotationService.BoardToAei(new[]
+                    {
+                        "........","........","........","........","........","........","........","........"
+                    }, Sides.Gold));
+                }
+                state.boardorientation = orientation;
+                var svc = new ArimaaGameService(state);
+                _miniGames.Add(svc);
             }
-            state.boardorientation = orientation;
-            var svc = new ArimaaGameService(state);
-            _miniGames.Add(svc);
         }
+        else if (desired < current)
+        {
+            // Trim excess boards
+            _miniGames.RemoveRange(desired, current - desired);
+        }
+
+        // Update coordinator with the up-to-date list (preserving shared instances for indices < min(old,new))
         MiniBoards.SetMiniGames(_miniGames);
     }
 
@@ -109,24 +153,41 @@
             var tileW = 192; // px
             var tileH = 192; // px
             var gap = 12;    // px (matches .mini-boards-grid gap)
-            if (_module is not null)
+            if (_module is not null && (PageBoardSettings?.Play != true))
             {
                 await _module.InvokeVoidAsync("observe", _miniGridRef, _dotNetRef, tileW, tileH, gap, null);
             }
         }
     }
 
-    [JSInvokable]
-    public Task SetMiniBoardCount(int count)
+    /// <summary>
+    /// Sync manual changes from the settings dropdown back to the mini boards count.
+    /// If the user selects a different BoardInt, we rebuild mini boards accordingly.
+    /// A subsequent resize will still update both via SetMiniBoardCount.
+    /// </summary>
+    protected override void OnParametersSet()
     {
-        if (count < 0) count = 0;
-        if (_miniBoardCount != count)
+        if (PageBoardSettings is null) return;
+        var desired = PageBoardSettings.BoardInt;
+        if (desired < 0) desired = 0;
+        if (desired != _miniBoardCount)
         {
-            _miniBoardCount = count;
+            _miniBoardCount = desired;
+            RebuildMiniGames();
+        }
+    }
+
+    private void OnBoardIntChanged()
+    {
+        if (PageBoardSettings is null) return;
+        var desired = PageBoardSettings.BoardInt;
+        if (desired < 0) desired = 0;
+        if (desired != _miniBoardCount)
+        {
+            _miniBoardCount = desired;
             RebuildMiniGames();
             StateHasChanged();
         }
-        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

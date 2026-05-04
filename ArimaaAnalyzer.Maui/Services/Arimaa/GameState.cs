@@ -136,6 +136,31 @@ public sealed class GameState
     }
 
     /// <summary>
+    /// Place a piece (by AEI char) onto an empty target square.
+    /// Returns false if the square is not empty or out of bounds.
+    /// </summary>
+    public bool TryPlace(Position to, char pieceChar)
+    {
+        if (!to.IsOnBoard) return false;
+        if (pieceChar == ' ') return false;
+
+        // Normalize coordinates based on current board orientation
+        var (nrTo, ncTo) = BoardRotationService.MapDisplayToNormalized(to.Row, to.Col, boardorientation);
+
+        var boardChars = ExtractBoardString();
+        if (boardChars == null) return false;
+
+        var toIdx = nrTo * 8 + ncTo;
+        if (boardChars[toIdx] != ' ') return false; // destination not empty
+
+        var newBoardChars = boardChars.ToCharArray();
+        newBoardChars[toIdx] = pieceChar;
+
+        RebuildAei(new string(newBoardChars));
+        return true;
+    }
+
+    /// <summary>
     /// Remove a piece at the given position.
     /// Used after trap captures or other removals.
     /// </summary>

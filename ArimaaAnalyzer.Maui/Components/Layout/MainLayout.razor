@@ -40,14 +40,30 @@
                     }
                     else
                     {
-                        <span class="cg-empty">No game selected</span>
+                        
+                        
+                        
+                        
+                        <span class="cg-empty">No game</span>
                     }
                 </div>
+                
+                @if (_sharedSettings.Play)
+                {
+                    <button class="human-play" @onclick="Humanmove" disabled="@_analysisInProgress">
+                        HumanMove
+                    </button>
+                }
                 <button class="analyze-position" @onclick="AnalyzePosition" disabled="@_analysisInProgress">
-                    Analyze Position
+                    @(_sharedSettings.Play 
+                        ? $"Move {(((Game?.State?.SideToMove) ?? Sides.Gold) == Sides.Gold ? "G" : "S")}" 
+                        : "Analyze Position")
                 </button>
                 <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
                     Toggle Outer UI (@(_sharedSettings.ShowOuterUi ? "On" : "Off"))
+                </button>
+                <button class="play-with-ai" @onclick="PlayWithAi" disabled="@_analysisInProgress">
+                    Play (@(_sharedSettings.Play ? "On" : "Off"))
                 </button>
             }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
@@ -66,77 +82,128 @@
 
     private bool _analysisInProgress;
 
+    private async Task Humanmove()
+    {
+        // First, sync AEI to match the currently displayed board, then flip side-to-move and analyze
+        if (Game is null || Game.State is null) return;
+
+        try
+        {
+            // 1) Ensure the AEI string (node) reflects the current board position
+            SyncAeiWithBoard();
+
+            // Determine AEI to flip from the now-synced state
+            var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
+            var baseAei = Game.State.localAeiSetPosition;
+
+            var flippedAei = FlipSideInAei(baseAei);
+
+            // Create a lightweight child node with flipped side and no moves, attach under current if exists
+            var newSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+            var moveNumber = currentNode?.MoveNumber ?? "0";
+
+            var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
+                oldAEIstring: baseAei,
+                updatedAEIstring: flippedAei,
+                MoveNumber: moveNumber,
+                Side: newSide,
+                Moves: new List<string>(),
+                isMainLine: false);
+
+            if (currentNode is not null)
+            {
+                currentNode.AddChild(child);
+            }
+
+            // Load the flipped node into the game service so subscribers update properly
+            Game.Load(child);
+
+            StateHasChanged();
+            await AnalyzePosition();
+        }
+        catch { /* ignore flip errors for now */ }
+    }
+    
+    // Ensure the active node AEI matches the current on-screen board state (Game.State.localAeiSetPosition)
+    private void SyncAeiWithBoard()
+    {
+        if (Game is null || Game.State is null) return;
+        var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
+        var liveAei = Game.State.localAeiSetPosition;
+        if (string.IsNullOrWhiteSpace(liveAei)) return;
+
+        var nodeAei = currentNode?.AEIstring;
+        if (!string.Equals(nodeAei, liveAei, StringComparison.Ordinal))
+        {
+            var moveNumber = currentNode?.MoveNumber ?? "0";
+            var side = Game.State.SideToMove;
+
+            var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
+                oldAEIstring: nodeAei ?? liveAei,
+                updatedAEIstring: liveAei,
+                MoveNumber: moveNumber,
+                Side: side,
+                Moves: new List<string>(),
+                isMainLine: false);
+
+            if (currentNode is not null)
+            {
+                try { currentNode.AddChild(child); } catch { /* ignore attach issues */ }
+            }
+
+            Game.Load(child);
+        }
+    }
+    
+    private void ToggleOuterUi()
+    {
+        _sharedSettings.ShowOuterUi = !_sharedSettings.ShowOuterUi;
+        // Components reading this setting will update on next render
+        StateHasChanged();
+    }
+
+    private static string FlipSideInAei(string aei)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) return aei;
+        var trimmed = aei.TrimStart();
+        const string prefix = "setposition ";
+        var idx = trimmed.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+        if (idx != 0) return aei; // unexpected format, leave as-is
+        var after = trimmed.Substring(prefix.Length);
+        if (after.Length == 0) return aei;
+        var side = char.ToLowerInvariant(after[0]);
+        char flipped = side == 'g' ? 's' : 'g';
+        // rebuild string preserving the rest
+        var rest = after.Length > 1 ? after.Substring(1) : string.Empty;
+        var rebuilt = $"{prefix}{flipped}{rest}";
+        // Keep original leading whitespace if any
+        var leadingLen = aei.Length - aei.TrimStart().Length;
+        return (leadingLen > 0 ? aei.Substring(0, leadingLen) : string.Empty) + rebuilt;
+    }
+    
+    private void PlayWithAi()
+    {
+        _sharedSettings.Play = !_sharedSettings.Play;
+        // Components reading this setting will update on next render
+        StateHasChanged();
+    }
+
     private async Task AnalyzePosition()
     {
         if (_analysisInProgress) return;
         _analysisInProgress = true;
         try
         {
-            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: invoked')");
-            var isOnArimaa = IsOnArimaaPage;
-            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: IsOnArimaaPage=' + {System.Text.Json.JsonSerializer.Serialize(isOnArimaa)})");
-            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: Nav.Uri=' + {System.Text.Json.JsonSerializer.Serialize(Nav?.Uri ?? "null")})");
-
-            if (Game is null)
+            // Decide branch based on Play flag
+            if (_sharedSettings.Play)
             {
-                await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition: Game service is null (DI not available).')");
-                return;
+                await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: Play=true -> one-turn analyze-and-move')");
+                await AnalyzePosition_PlayOneTurnAsync();
             }
-            if (Game.State is null)
+            else
             {
-                await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition: Game.State is null.')");
-                return;
-            }
-            // Take the root directly from the active GameState's CurrentNode
-            var root = Game?.State?.CurrentNode;
-            if (root is null)
-            {
-                await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition: No CurrentNode available in game state.')");
-                return;
-            }
-
-            var depth = MiniBoards?.Count ?? 0; // depth equals number of mini boards
-            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: calling BuildGameTurnTreeAsync(depth='+{depth}+') with CurrentNode')");
-            var generatedRoot = await Analysis.BuildGameTurnTreeAsync(root, searchDepth: depth);
-
-            // Build a simple string from the generated main-line children chain
-            var parts = new List<string>();
-            GameTurn? node = generatedRoot;
-            var nodeIndex = 0;
-            while (node is not null)
-            {
-                if (node.Moves is { Count: > 0 })
-                {
-                    parts.Add(string.Join(' ', node.Moves));
-                    await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: node['+{nodeIndex}+'] moves=' + {System.Text.Json.JsonSerializer.Serialize(string.Join(" ", node.Moves))})");
-                }
-                node = node.Children.FirstOrDefault();
-                nodeIndex++;
-            }
-            var movesText = string.Join("\n", parts);
-            await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: collected '+{parts.Count}+' lines; injecting into #aiMovesInput')");
-
-            // Replace the textarea content with id="aiMovesInput"
-            var js = $"(function(){{var el=document.getElementById('aiMovesInput'); if(el) el.value={System.Text.Json.JsonSerializer.Serialize(movesText)};}})()";
-            await JS.InvokeVoidAsync("eval", js);
-            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: textarea updated.')");
-
-            // Distribute positions to mini boards: one node per mini board along the main line
-            if ((MiniBoards?.Count ?? 0) > 0)
-            {
-                var list = new List<GameTurn>();
-                // Include the root as the first mini board (from GameTurn.AEIstring),
-                // then follow the first-child chain for subsequent mini boards.
-                var walker = generatedRoot;
-                var i = 0;
-                while (walker is not null && i < MiniBoards.Count)
-                {
-                    list.Add(walker);
-                    walker = walker.Children.FirstOrDefault();
-                    i++;
-                }
-                MiniBoards.LoadNodes(list);
-                await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: distributed '+{list.Count}+' nodes to mini boards (count='+{MiniBoards.Count}+')')");
+                await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: Play=false -> analyze-only (mini-boards)')");
+                await AnalyzePosition_AnalyzeOnlyAsync();
             }
         }
         catch (Exception ex)
@@ -147,6 +214,124 @@
         {
             _analysisInProgress = false;
         }
+    }
+
+    // New: analyze-only path (preserves existing behavior)
+    private async Task AnalyzePosition_AnalyzeOnlyAsync()
+    {
+        await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition_AnalyzeOnlyAsync: invoked')");
+        var isOnArimaa = IsOnArimaaPage;
+        await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_AnalyzeOnlyAsync: IsOnArimaaPage=' + {System.Text.Json.JsonSerializer.Serialize(isOnArimaa)})");
+        await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_AnalyzeOnlyAsync: Nav.Uri=' + {System.Text.Json.JsonSerializer.Serialize(Nav?.Uri ?? "null")})");
+
+        if (Game is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition_AnalyzeOnlyAsync: Game service is null (DI not available).')");
+            return;
+        }
+        if (Game.State is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition_AnalyzeOnlyAsync: Game.State is null.')");
+            return;
+        }
+
+        var root = Game?.State?.CurrentNode;
+        if (root is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition_AnalyzeOnlyAsync: No CurrentNode available in game state.')");
+            return;
+        }
+
+        var depth = MiniBoards?.Count ?? 0; // depth equals number of mini boards
+        await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_AnalyzeOnlyAsync: streaming BuildGameTurnStreamAsync(depth='+{depth}+') with CurrentNode')");
+
+        // Wipe existing mini-board visuals so the user can clearly see new updates coming in
+        if (MiniBoards is not null && depth > 0)
+        {
+            MiniBoards.WipeAll();
+            await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition_AnalyzeOnlyAsync: mini-boards wiped to neutral state')");
+        }
+
+        var idx = 0;
+        var max = depth;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await foreach (var genNode in Analysis.BuildGameTurnStreamAsync(root, maxDepth: max, timetothink: _sharedSettings.ThinkInt))
+        {
+            // Update the corresponding mini board immediately
+            if ((MiniBoards?.Count ?? 0) > 0 && idx < MiniBoards.Count)
+            {
+                MiniBoards.SetNode(idx, genNode);
+            }
+
+            idx++;
+            if (idx >= max) break;
+        }
+        sw.Stop();
+        var elapsedMs = sw.ElapsedMilliseconds;
+        await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_AnalyzeOnlyAsync: streaming complete in '+{elapsedMs}+' ms; nodes='+{idx})");
+    }
+
+    // New: one-turn analyze and apply move to main board
+    private async Task AnalyzePosition_PlayOneTurnAsync()
+    {
+        await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition_PlayOneTurnAsync: invoked')");
+
+        if (Game is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition_PlayOneTurnAsync: Game service is null (DI not available).')");
+            return;
+        }
+        if (Game.State is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.error('AnalyzePosition_PlayOneTurnAsync: Game.State is null.')");
+            return;
+        }
+
+        var current = Game.State.CurrentNode;
+        if (current is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition_PlayOneTurnAsync: No CurrentNode available in game state.')");
+            return;
+        }
+        // 1) Ensure the AEI string (node) reflects the current board position
+        SyncAeiWithBoard();
+
+        // Generate exactly one turn from current position
+        ArimaaAnalyzer.Maui.Models.GameTurn? generated = null;
+        await foreach (var gen in Analysis.BuildGameTurnStreamAsync(current, maxDepth: 1, timetothink: _sharedSettings.ThinkInt))
+        {
+            generated = gen;
+            break; // only need one
+        }
+
+        if (generated is null)
+        {
+            await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition_PlayOneTurnAsync: Engine did not produce a move.')");
+            return;
+        }
+
+        // Attach as a non-mainline child to avoid violating main-line parent constraints
+        var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
+            oldAEIstring: current.AEIstring,
+            updatedAEIstring: generated.AEIstring,
+            MoveNumber: generated.MoveNumber,
+            Side: generated.Side,
+            Moves: generated.Moves,
+            isMainLine: false);
+
+        try
+        {
+            current.AddChild(child);
+        }
+        catch (Exception addEx)
+        {
+            await JS.InvokeVoidAsync("eval", $"console.warn('AnalyzePosition_PlayOneTurnAsync: Could not attach child to current node: '+ {System.Text.Json.JsonSerializer.Serialize(addEx.Message)})");
+            // proceed to load the generated move directly
+        }
+
+        // Move the main board to the newly generated node
+        Game.Load(child);
+        await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_PlayOneTurnAsync: Applied move '+{System.Text.Json.JsonSerializer.Serialize(string.Join(' ', child.Moves))}+' and updated main board.')");
     }
     
     private bool IsOnArimaaPage =>
@@ -175,12 +360,6 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleOuterUi()
-    {
-        _sharedSettings.ShowOuterUi = !_sharedSettings.ShowOuterUi;
-        // Components reading this setting will update on next render
-        StateHasChanged();
-    }
 
     // Local format helpers (mirror GameRecordList formatting)
     private static string NullSafe(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;

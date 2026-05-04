@@ -37,6 +37,32 @@
             }
             return null;
         };
+
+        // Simple in-page drag state for palette/board interactions
+        window._dragState = null;
+        window.setDragFromPalette = (pieceChar) => {
+            window._dragState = { source: 'palette', pieceChar: pieceChar };
+        };
+        window.setDragFromBoard = (row, col) => {
+            window._dragState = { source: 'board', row: row, col: col };
+        };
+        window.getPalettePieceIfAny = () => {
+            const s = window._dragState;
+            if (s && s.source === 'palette' && s.pieceChar) return s.pieceChar;
+            return '';
+        };
+        window.getBoardDragIfAny = () => {
+            const s = window._dragState;
+            if (s && s.source === 'board' && Number.isInteger(s.row) && Number.isInteger(s.col)) return [s.row, s.col];
+            return null;
+        };
+        window.clearDragState = () => { window._dragState = null; };
+        window.isOverElementById = (x, y, id) => {
+            const el = document.elementFromPoint(x, y);
+            if (!el) return false;
+            const target = el.closest('#' + id);
+            return !!target;
+        };
     </script>
 </body>
 

@@ -1,4 +1,5 @@
 ﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Components
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
@@ -78,8 +79,8 @@
                                      alt="@($"{piece.Side} {piece.Type}")"
                                      draggable="false"
                                      title="@(EffectiveBehavior.IsInteractive ? "Drag to move" : "")"
-                                     @onpointerdown="() => OnDragStart(pos)"
-                                />
+                                     @onpointerdown="async (e) => await OnDragStartAsync(pos)"
+                                 />
                             }
                         </div>
                     }
@@ -149,22 +150,53 @@
         }
     }
 
-    private void OnDragStart(Position from)
+    private async Task OnDragStartAsync(Position from)
     {
         if (!EffectiveBehavior.IsInteractive) return;
 
         // Only start a drag if there's a piece on the square
-        if (Game.State.GetPiece(from) is not null)
+        var piece = Game.State.GetPiece(from);
+        if (piece is not null)
         {
             _selectedPos = from;
+            // Mark JS drag state so palette can detect a board-origin drag
+            await JS.InvokeVoidAsync("setDragFromBoard", from.Row, from.Col);
         }
     }
 
     
     private async Task OnPointerUp(PointerEventArgs e)
     {
+        // First, check if a palette piece is being dragged onto the board
+        var palettePiece = await JS.InvokeAsync<string>("getPalettePieceIfAny");
+        if (!string.IsNullOrEmpty(palettePiece))
+        {
+            var coords = await JS.InvokeAsync<int[]?>("getBoardSquare", e.ClientX, e.ClientY);
+            if (coords is not null && coords.Length == 2)
+            {
+                var target = new Position(coords[0], coords[1]);
+                if (Game.TryPlace(target, palettePiece[0]))
+                {
+                    // placed successfully
+                }
+            }
+            await JS.InvokeVoidAsync("clearDragState");
+            _selectedPos = null;
+            return;
+        }
+
         if (_selectedPos is { } from)
         {
+            // If dropped over the editpieces area, remove the piece from the board
+            var overPalette = await JS.InvokeAsync<bool>("isOverElementById", e.ClientX, e.ClientY, "editpieces");
+            if (overPalette)
+            {
+                Game.RemovePieceAt(from);
+                await JS.InvokeVoidAsync("clearDragState");
+                _selectedPos = null;
+                return;
+            }
+
             // Use JS to find the actual square under the pointer.
             // This works for both Windows (normal events) and Android (captured events).
             var coords = await JS.InvokeAsync<int[]?>("getBoardSquare", e.ClientX, e.ClientY);
@@ -185,13 +217,25 @@
                 Game.TryMove(from, target);
             }
         }
+        await JS.InvokeVoidAsync("clearDragState");
         _selectedPos = null;
     }
 
     // Displays the move number and the moves that led to the current position
     // Example: "12 Rc3n Hb4e". Falls back to "UI" when no node is loaded.
     private string CurrentTurnCaption
-        => Game?.CurrentNode is { } node
-            ? ($"{node.MoveNumber} {string.Join(" ", node.Moves ?? System.Array.Empty<string>())}" ).Trim()
-            : "UI";
+    {
+        get
+        {
+            var side = Game?.State.SideToMove;
+            var sideText = side == Sides.Gold ? "Gold to move" : "Silver to move";
+            if (Game?.CurrentNode is { } node)
+            {
+                var moves = string.Join(" ", node.Moves ?? System.Array.Empty<string>());
+                var tail = ($"{node.MoveNumber} {moves}").Trim();
+                return string.IsNullOrWhiteSpace(tail) ? sideText : $"{sideText} — {tail}";
+            }
+            return sideText;
+        }
+    }
 }

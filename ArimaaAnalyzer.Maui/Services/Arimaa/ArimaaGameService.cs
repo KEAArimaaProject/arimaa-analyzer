@@ -68,6 +68,46 @@ public sealed class ArimaaGameService
         return success;
     }
 
+    // Place a piece from the editpieces palette onto the board
+    public bool TryPlace(Position to, char pieceChar)
+    {
+        if (!to.IsOnBoard) return false;
+        if (_snapshots is null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+            _snapshots = new List<GameState>
+            {
+                new GameState(State.localAeiSetPosition) { boardorientation = orientation }
+            };
+        }
+
+        var success = State.TryPlace(to, pieceChar);
+        if (success)
+        {
+            CorrectMoveService.ApplyTrapCaptures(State);
+            OnStateMutated();
+        }
+        return success;
+    }
+
+    // Remove a piece (used when dragging from board back to editpieces)
+    public void RemovePieceAt(Position p)
+    {
+        if (!p.IsOnBoard) return;
+        if (_snapshots is null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+            _snapshots = new List<GameState>
+            {
+                new GameState(State.localAeiSetPosition) { boardorientation = orientation }
+            };
+        }
+
+        State.RemovePieceAt(p);
+        CorrectMoveService.ApplyTrapCaptures(State);
+        OnStateMutated();
+    }
+
     public void ClearSelection() => Selected = null;
 
     // Load a GameTurn node and update the underlying GameState accordingly

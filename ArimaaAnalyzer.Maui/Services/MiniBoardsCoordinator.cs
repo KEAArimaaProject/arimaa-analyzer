@@ -39,8 +39,44 @@ public sealed class MiniBoardsCoordinator
         }
     }
 
+    /// <summary>
+    /// Immediately load a single node into the specified mini board index.
+    /// Safe no-op if index is out of range.
+    /// </summary>
+    public void SetNode(int index, GameTurn node)
+    {
+        if (node == null) return;
+        if (index < 0 || index >= _miniGames.Count) return;
+        var svc = _miniGames[index];
+        svc?.Load(node);
+    }
+
     public void Clear()
     {
         _miniGames.Clear();
+    }
+
+    /// <summary>
+    /// Wipe all mini boards to a neutral empty position so users can clearly see
+    /// when new analysis results arrive. Keeps the registered mini-board services intact.
+    /// </summary>
+    public void WipeAll()
+    {
+        if (_miniGames.Count == 0) return;
+
+        // Build an empty board AEI with Gold to move, then wrap it into a GameTurn
+        // so we can reuse the normal Load path of each mini board service.
+        var emptyAei = NotationService.BoardToAei(NotationService.InitializeEmptyBoard(), Sides.Gold);
+        var blankNode = new GameTurn(oldAEIstring: emptyAei,
+                                     updatedAEIstring: emptyAei,
+                                     MoveNumber: "0",
+                                     Side: Sides.Gold,
+                                     Moves: Array.Empty<string>(),
+                                     isMainLine: true);
+
+        foreach (var svc in _miniGames)
+        {
+            svc?.Load(blankNode);
+        }
     }
 }
