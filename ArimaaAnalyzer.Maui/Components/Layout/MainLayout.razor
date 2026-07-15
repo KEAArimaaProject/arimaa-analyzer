@@ -47,12 +47,16 @@
                 
                 @if (_sharedSettings.Play)
                 {
-                    <button class="human-play" @onclick="Humanmove" disabled="@_analysisInProgress">
+                    <button type="button"
+                            class="tb-btn tb-btn-standalone human-play"
+                            @onclick="Humanmove"
+                            disabled="@_analysisInProgress"
+                            title="Analyze for the opposite side to move">
                         HumanMove
                     </button>
                 }
 
-                <div class="analysis-settings" role="group" aria-label="Analysis settings">
+                <div class="tb-group analysis-settings" role="group" aria-label="Analysis settings">
                     <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
                         <span class="as-label">Boards</span>
                         <select id="boardIntSelect"
@@ -66,7 +70,7 @@
                             }
                         </select>
                     </label>
-                    <span class="as-divider" aria-hidden="true"></span>
+                    <span class="tb-divider" aria-hidden="true"></span>
                     <label class="as-field" for="thinkInt" title="Engine think time per move">
                         <span class="as-label">Think</span>
                         <select id="thinkInt"
@@ -82,19 +86,38 @@
                     </label>
                 </div>
 
-                <button class="analyze-position" @onclick="() => AnalyzePosition(Sides.Gold)" disabled="@_analysisInProgress"
-                        title="Analyze / move with Gold moving first">
-                    MoveG
+                <div class="tb-group move-actions" role="group" aria-label="AI move side">
+                    <button type="button"
+                            class="tb-btn analyze-position"
+                            @onclick="() => AnalyzePosition(Sides.Gold)"
+                            disabled="@_analysisInProgress"
+                            title="Analyze / move with Gold moving first">
+                        MoveG
+                    </button>
+                    <span class="tb-divider" aria-hidden="true"></span>
+                    <button type="button"
+                            class="tb-btn analyze-position"
+                            @onclick="() => AnalyzePosition(Sides.Silver)"
+                            disabled="@_analysisInProgress"
+                            title="Analyze / move with Silver moving first">
+                        MoveS
+                    </button>
+                </div>
+
+                <button type="button"
+                        class="tb-btn tb-btn-standalone toggle-outer-ui @(_sharedSettings.ShowOuterUi ? "is-on" : "is-off")"
+                        @onclick="ToggleOuterUi"
+                        title="Show or hide the board outer UI">
+                    <span class="tb-btn-label">Outer UI</span>
+                    <span class="tb-btn-state">@(_sharedSettings.ShowOuterUi ? "On" : "Off")</span>
                 </button>
-                <button class="analyze-position" @onclick="() => AnalyzePosition(Sides.Silver)" disabled="@_analysisInProgress"
-                        title="Analyze / move with Silver moving first">
-                    MoveS
-                </button>
-                <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
-                    Toggle Outer UI (@(_sharedSettings.ShowOuterUi ? "On" : "Off"))
-                </button>
-                <button class="play-with-ai" @onclick="PlayWithAi" disabled="@_analysisInProgress">
-                    Play (@(_sharedSettings.Play ? "On" : "Off"))
+                <button type="button"
+                        class="tb-btn tb-btn-standalone play-with-ai @(_sharedSettings.Play ? "is-on" : "is-off")"
+                        @onclick="PlayWithAi"
+                        disabled="@_analysisInProgress"
+                        title="Toggle play-against-AI mode">
+                    <span class="tb-btn-label">Play</span>
+                    <span class="tb-btn-state">@(_sharedSettings.Play ? "On" : "Off")</span>
                 </button>
             }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
