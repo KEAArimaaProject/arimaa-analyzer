@@ -41,9 +41,6 @@
                     else
                     {
                         
-                        
-                        
-                        
                         <span class="cg-empty">No game</span>
                     }
                 </div>
@@ -54,10 +51,13 @@
                         HumanMove
                     </button>
                 }
-                <button class="analyze-position" @onclick="AnalyzePosition" disabled="@_analysisInProgress">
-                    @(_sharedSettings.Play 
-                        ? $"Move {(((Game?.State?.SideToMove) ?? Sides.Gold) == Sides.Gold ? "G" : "S")}" 
-                        : "Analyze Position")
+                <button class="analyze-position" @onclick="() => AnalyzePosition(Sides.Gold)" disabled="@_analysisInProgress"
+                        title="Analyze / move with Gold moving first">
+                    MoveG
+                </button>
+                <button class="analyze-position" @onclick="() => AnalyzePosition(Sides.Silver)" disabled="@_analysisInProgress"
+                        title="Analyze / move with Silver moving first">
+                    MoveS
                 </button>
                 <button class="toggle-outer-ui" @onclick="ToggleOuterUi">
                     Toggle Outer UI (@(_sharedSettings.ShowOuterUi ? "On" : "Off"))
@@ -84,44 +84,49 @@
 
     private async Task Humanmove()
     {
-        // First, sync AEI to match the currently displayed board, then flip side-to-move and analyze
+        // Flip side-to-move relative to the board, then analyze for that side
         if (Game is null || Game.State is null) return;
 
         try
         {
-            // 1) Ensure the AEI string (node) reflects the current board position
             SyncAeiWithBoard();
-
-            // Determine AEI to flip from the now-synced state
-            var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
-            var baseAei = Game.State.localAeiSetPosition;
-
-            var flippedAei = FlipSideInAei(baseAei);
-
-            // Create a lightweight child node with flipped side and no moves, attach under current if exists
-            var newSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
-            var moveNumber = currentNode?.MoveNumber ?? "0";
-
-            var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
-                oldAEIstring: baseAei,
-                updatedAEIstring: flippedAei,
-                MoveNumber: moveNumber,
-                Side: newSide,
-                Moves: new List<string>(),
-                isMainLine: false);
-
-            if (currentNode is not null)
-            {
-                currentNode.AddChild(child);
-            }
-
-            // Load the flipped node into the game service so subscribers update properly
-            Game.Load(child);
-
+            var flippedSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
             StateHasChanged();
-            await AnalyzePosition();
+            await AnalyzePosition(flippedSide);
         }
         catch { /* ignore flip errors for now */ }
+    }
+
+    /// <summary>
+    /// Sync board AEI, then if needed flip side-to-move so the AI's first move is for <paramref name="desiredSide"/>.
+    /// </summary>
+    private void EnsureSideToMove(Sides desiredSide)
+    {
+        if (Game is null || Game.State is null) return;
+
+        SyncAeiWithBoard();
+
+        if (Game.State.SideToMove == desiredSide) return;
+
+        var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
+        var baseAei = Game.State.localAeiSetPosition;
+        var flippedAei = FlipSideInAei(baseAei);
+        var moveNumber = currentNode?.MoveNumber ?? "0";
+
+        var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
+            oldAEIstring: baseAei,
+            updatedAEIstring: flippedAei,
+            MoveNumber: moveNumber,
+            Side: desiredSide,
+            Moves: new List<string>(),
+            isMainLine: false);
+
+        if (currentNode is not null)
+        {
+            try { currentNode.AddChild(child); } catch { /* ignore attach issues */ }
+        }
+
+        Game.Load(child);
     }
     
     // Ensure the active node AEI matches the current on-screen board state (Game.State.localAeiSetPosition)
@@ -188,21 +193,27 @@
         StateHasChanged();
     }
 
-    private async Task AnalyzePosition()
+    private async Task AnalyzePosition(Sides firstSide)
     {
         if (_analysisInProgress) return;
         _analysisInProgress = true;
         try
         {
+            // Force which side the AI moves first (Gold or Silver)
+            EnsureSideToMove(firstSide);
+            StateHasChanged();
+
+            var sideLabel = firstSide == Sides.Gold ? "Gold" : "Silver";
+
             // Decide branch based on Play flag
             if (_sharedSettings.Play)
             {
-                await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: Play=true -> one-turn analyze-and-move')");
+                await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: Play=true, firstSide={sideLabel} -> one-turn analyze-and-move')");
                 await AnalyzePosition_PlayOneTurnAsync();
             }
             else
             {
-                await JS.InvokeVoidAsync("eval", "console.log('AnalyzePosition: Play=false -> analyze-only (mini-boards)')");
+                await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition: Play=false, firstSide={sideLabel} -> analyze-only (mini-boards)')");
                 await AnalyzePosition_AnalyzeOnlyAsync();
             }
         }
@@ -287,14 +298,15 @@
             return;
         }
 
-        var current = Game.State.CurrentNode;
+        // Ensure the AEI string (node) reflects the current board position, then re-read current
+        // (EnsureSideToMove / SyncAeiWithBoard may have replaced CurrentNode).
+        SyncAeiWithBoard();
+        var current = Game.State.CurrentNode ?? Game.CurrentNode;
         if (current is null)
         {
             await JS.InvokeVoidAsync("eval", "console.warn('AnalyzePosition_PlayOneTurnAsync: No CurrentNode available in game state.')");
             return;
         }
-        // 1) Ensure the AEI string (node) reflects the current board position
-        SyncAeiWithBoard();
 
         // Generate exactly one turn from current position
         ArimaaAnalyzer.Maui.Models.GameTurn? generated = null;
