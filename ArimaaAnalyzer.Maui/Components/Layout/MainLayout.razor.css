@@ -221,6 +221,12 @@ main {
     line-height: 1.7rem;
 }
 
+/* Longer labels (e.g. move-path target) */
+.analysis-settings .as-select-wide {
+    min-width: 12.5rem;
+    max-width: 16rem;
+}
+
 /* MoveG / MoveS slightly tighter min width so they match select chips */
 .move-actions .tb-btn {
     min-width: 3.5rem;
@@ -250,6 +256,11 @@ main {
         max-width: 4.6rem;
         font-size: 0.78rem;
     }
+
+    .analysis-settings .as-select-wide {
+        min-width: 9rem;
+        max-width: 12rem;
+    }
 }
 
 @media (max-width: 640px) {
@@ -259,6 +270,11 @@ main {
 
     .analysis-settings .as-select {
         min-width: 3.4rem;
+    }
+
+    .analysis-settings .as-select-wide {
+        min-width: 7.5rem;
+        max-width: 10rem;
     }
 
     .tb-btn-standalone .tb-btn-label {

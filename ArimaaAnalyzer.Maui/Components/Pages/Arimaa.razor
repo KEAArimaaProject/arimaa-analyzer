@@ -148,7 +148,9 @@
     {
         if (PageBoardSettings is null) return;
 
-        _miniBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePaths;
+        // Main board uses cascaded PageBoardSettings.ShowMovePaths; mini boards use analysis flag.
+        PageBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePathsOnMain;
+        _miniBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePathsOnAnalysis;
 
         var desired = PageBoardSettings.BoardInt;
         if (desired < 0) desired = 0;

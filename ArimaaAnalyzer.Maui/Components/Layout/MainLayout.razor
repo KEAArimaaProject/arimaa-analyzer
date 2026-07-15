@@ -57,6 +57,19 @@
                 }
 
                 <div class="tb-group analysis-settings" role="group" aria-label="Analysis settings">
+                    <label class="as-field" for="movePathTargetSelect" title="Which boards show move path lines">
+                        <span class="as-label">Paths</span>
+                        <select id="movePathTargetSelect"
+                                class="as-select as-select-wide"
+                                @bind="_sharedSettings.MovePathTarget"
+                                @bind:after="OnMovePathTargetChanged">
+                            <option value="@MovePathTarget.MainOnly">Main board has MovePath</option>
+                            <option value="@MovePathTarget.AnalysisOnly">Analysis boards have MovePath</option>
+                            <option value="@MovePathTarget.Both">Both have MovePath</option>
+                            <option value="@MovePathTarget.Neither">Neither have MovePath</option>
+                        </select>
+                    </label>
+                    <span class="tb-divider" aria-hidden="true"></span>
                     <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
                         <span class="as-label">Boards</span>
                         <select id="boardIntSelect"
@@ -105,13 +118,6 @@
                 </div>
 
                 <button type="button"
-                        class="tb-btn tb-btn-standalone toggle-move-paths @(_sharedSettings.ShowMovePaths ? "is-on" : "is-off")"
-                        @onclick="ToggleMovePaths"
-                        title="Show or hide move path lines on boards">
-                    <span class="tb-btn-label">Paths</span>
-                    <span class="tb-btn-state">@(_sharedSettings.ShowMovePaths ? "On" : "Off")</span>
-                </button>
-                <button type="button"
                         class="tb-btn tb-btn-standalone toggle-outer-ui @(_sharedSettings.ShowOuterUi ? "is-on" : "is-off")"
                         @onclick="ToggleOuterUi"
                         title="Show or hide the board outer UI">
@@ -139,9 +145,17 @@
 </div>
 
 @code {
-    private readonly ArimaaBoardSettings _sharedSettings = ArimaaBoardSettings.PlayableLargeWithUi;
+    private readonly ArimaaBoardSettings _sharedSettings = CreateSharedSettings();
 
     private bool _analysisInProgress;
+
+    private static ArimaaBoardSettings CreateSharedSettings()
+    {
+        var s = ArimaaBoardSettings.PlayableLargeWithUi;
+        s.MovePathTarget = MovePathTarget.AnalysisOnly;
+        s.ShowMovePaths = s.ShowMovePathsOnMain; // false for AnalysisOnly
+        return s;
+    }
 
     /// <summary>
     /// Re-render so cascaded board settings (BoardInt) reach the Arimaa page mini-boards.
@@ -149,6 +163,23 @@
     private void OnBoardIntChanged()
     {
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Apply which boards show move paths, then re-render cascaded consumers.
+    /// </summary>
+    private void OnMovePathTargetChanged()
+    {
+        ApplyMovePathTargetToSharedBoard();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Shared settings are used by the main board; keep ShowMovePaths in sync with the target mode.
+    /// </summary>
+    private void ApplyMovePathTargetToSharedBoard()
+    {
+        _sharedSettings.ShowMovePaths = _sharedSettings.ShowMovePathsOnMain;
     }
 
     private async Task Humanmove()
@@ -236,11 +267,7 @@
         StateHasChanged();
     }
 
-    private void ToggleMovePaths()
-    {
-        _sharedSettings.ShowMovePaths = !_sharedSettings.ShowMovePaths;
-        StateHasChanged();
-    }
+
 
     private static string FlipSideInAei(string aei)
     {

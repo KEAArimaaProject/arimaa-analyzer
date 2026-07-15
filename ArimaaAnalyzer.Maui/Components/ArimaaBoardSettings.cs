@@ -54,10 +54,23 @@ public class ArimaaBoardSettings
     public Boolean Play { get; set; } = false; // Play against the AI.
 
     /// <summary>
-    /// When true, boards draw colored orthogonal path lines for pieces that moved
-    /// in the turn that produced the current position.
+    /// When true, this board instance draws colored orthogonal path lines for pieces
+    /// that moved in the turn that produced the current position.
+    /// Resolved from <see cref="MovePathTarget"/> for main vs analysis boards.
     /// </summary>
-    public bool ShowMovePaths { get; set; } = true;
+    public bool ShowMovePaths { get; set; } = false;
+
+    /// <summary>
+    /// Which boards should show move paths (main, analysis, both, or neither).
+    /// Default: analysis boards only.
+    /// </summary>
+    public MovePathTarget MovePathTarget { get; set; } = MovePathTarget.AnalysisOnly;
+
+    public bool ShowMovePathsOnMain =>
+        MovePathTarget is MovePathTarget.MainOnly or MovePathTarget.Both;
+
+    public bool ShowMovePathsOnAnalysis =>
+        MovePathTarget is MovePathTarget.AnalysisOnly or MovePathTarget.Both;
 
     /// <summary>
     /// Small responsive board (useful for sidebars or analysis panels).
@@ -95,7 +108,9 @@ public class ArimaaBoardSettings
         PieceSizePx = 44,
         ShowOuterUi = true,
         Behavior = BoardBehavior.Playable,
-        IsResponsive = true
+        IsResponsive = true,
+        MovePathTarget = MovePathTarget.AnalysisOnly,
+        ShowMovePaths = false // main board; analysis boards get their own settings
     };
 
     /// <summary>
