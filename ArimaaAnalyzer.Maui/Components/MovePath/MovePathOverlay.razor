@@ -1,0 +1,56 @@
+@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using System.Globalization
+@using System.Linq
+@using System.Text
+
+@if (Paths is { Count: > 0 })
+{
+    <svg class="move-path-overlay"
+         viewBox="0 0 8 8"
+         preserveAspectRatio="none"
+         aria-hidden="true"
+         focusable="false">
+        @foreach (var path in Paths.OrderBy(p => p.OrderIndex))
+        {
+            if (path.Squares.Count < 2) continue;
+            @* viewBox is 8×8 (one unit per square); stroke 0.2 = 1/5 of square width *@
+            <polyline class="move-path-line"
+                      points="@ToPointsAttribute(path.Squares)"
+                      stroke="@path.Color"
+                      stroke-width="@StrokeWidth.ToString(CultureInfo.InvariantCulture)"
+                      fill="none"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+        }
+    </svg>
+}
+
+@code {
+    /// <summary>
+    /// Paths in display-space coordinates (row/col 0..7).
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<PieceMovePath>? Paths { get; set; }
+
+    /// <summary>
+    /// Stroke width in SVG user units where the board is an 8×8 grid.
+    /// Default 0.2 = 1/5 of one square.
+    /// </summary>
+    [Parameter]
+    public double StrokeWidth { get; set; } = 0.2;
+
+    private static string ToPointsAttribute(IReadOnlyList<Position> squares)
+    {
+        // Square centers: (col + 0.5, row + 0.5) in the 8×8 viewBox.
+        var sb = new StringBuilder(squares.Count * 12);
+        for (var i = 0; i < squares.Count; i++)
+        {
+            if (i > 0) sb.Append(' ');
+            var p = squares[i];
+            var x = (p.Col + 0.5).ToString("0.###", CultureInfo.InvariantCulture);
+            var y = (p.Row + 0.5).ToString("0.###", CultureInfo.InvariantCulture);
+            sb.Append(x).Append(',').Append(y);
+        }
+        return sb.ToString();
+    }
+}

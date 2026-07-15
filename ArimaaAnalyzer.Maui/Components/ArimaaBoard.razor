@@ -1,6 +1,7 @@
 ﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Components
+@using ArimaaAnalyzer.Maui.Components.MovePath
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
@@ -86,6 +87,11 @@
                     }
                 </div>
             }
+
+            @if (EffectiveSettings.ShowMovePaths && _movePaths.Count > 0)
+            {
+                <MovePathOverlay Paths="_movePaths" />
+            }
         </div>
 
         @if (EffectiveShowOuterUi)
@@ -121,6 +127,7 @@
     public ArimaaGameService Game { get; set; } = default!;
 
     private Position? _selectedPos;
+    private IReadOnlyList<PieceMovePath> _movePaths = Array.Empty<PieceMovePath>();
 
     private ArimaaBoardSettings EffectiveSettings => BoardSettings ?? Settings ?? ArimaaBoardSettings.Default;
     private BoardBehavior EffectiveBehavior => (EffectiveSettings?.Behavior) ?? Behavior;
@@ -134,11 +141,31 @@
             Game.StateChanged += OnGameChanged;
             Game.CurrentNodeChanged += OnGameChanged;
         }
+        RefreshMovePaths();
+    }
+
+    protected override void OnParametersSet()
+    {
+        RefreshMovePaths();
     }
 
     private void OnGameChanged()
     {
+        RefreshMovePaths();
         InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshMovePaths()
+    {
+        if (!EffectiveSettings.ShowMovePaths || Game is null)
+        {
+            _movePaths = Array.Empty<PieceMovePath>();
+            return;
+        }
+
+        var node = Game.CurrentNode ?? Game.State?.CurrentNode;
+        var orientation = Game.State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+        _movePaths = MovePathService.Compute(node, orientation);
     }
 
     public void Dispose()

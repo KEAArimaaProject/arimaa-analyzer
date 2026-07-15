@@ -29,7 +29,7 @@
                 {
                     <!-- Use @key so that when the underlying Game service instance changes,
                          Blazor disposes/recreates the child component and its event subscriptions. -->
-                    <ArimaaBoard @key="_miniGames[i]" Game="_miniGames[i]" BoardSettings="@ArimaaBoardSettings.Tiny" />
+                    <ArimaaBoard @key="_miniGames[i]" Game="_miniGames[i]" BoardSettings="_miniBoardSettings" />
                 }
             </div>
         </aside>
@@ -58,6 +58,9 @@
     private DotNetObjectReference<Arimaa>? _dotNetRef;
     private IJSObjectReference? _module;
     private readonly List<ArimaaGameService> _miniGames = new();
+
+    // Stable settings instance so toggles (e.g. ShowMovePaths) persist across renders.
+    private readonly ArimaaBoardSettings _miniBoardSettings = ArimaaBoardSettings.Tiny;
 
 
     private void RebuildMiniGames()
@@ -138,12 +141,15 @@
     }
 
     /// <summary>
-    /// Sync BoardInt from the top-bar analysis settings (cascaded from MainLayout)
-    /// into the mini-board list. A subsequent resize may still adjust layout via JS.
+    /// Sync BoardInt / ShowMovePaths from the top-bar settings (cascaded from MainLayout)
+    /// into the mini-board list and their display options.
     /// </summary>
     protected override void OnParametersSet()
     {
         if (PageBoardSettings is null) return;
+
+        _miniBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePaths;
+
         var desired = PageBoardSettings.BoardInt;
         if (desired < 0) desired = 0;
         if (desired != _miniBoardCount)

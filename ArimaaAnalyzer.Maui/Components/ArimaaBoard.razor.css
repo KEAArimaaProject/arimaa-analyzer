@@ -91,6 +91,7 @@
 .board-inner {
   --piece-size: 44px;   /* piece image size */
   display: block;
+  position: relative; /* anchor for MovePathOverlay */
   border: 2px solid #333;
   touch-action: none; /* prevent scroll on touch */
   /* Fixed square size driven by settings via --inner-size */
@@ -99,6 +100,11 @@
   height: var(--inner-size);
   box-sizing: border-box;
   align-self: center;
+}
+
+/* Path lines are drawn above the grid (standard move-arrow layering). */
+.board-inner ::deep .move-path-overlay {
+  z-index: 3;
 }
 
 /* Removed container query sizing due to WebView2 layout issue where block-size

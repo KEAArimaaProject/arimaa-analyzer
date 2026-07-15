@@ -105,6 +105,13 @@
                 </div>
 
                 <button type="button"
+                        class="tb-btn tb-btn-standalone toggle-move-paths @(_sharedSettings.ShowMovePaths ? "is-on" : "is-off")"
+                        @onclick="ToggleMovePaths"
+                        title="Show or hide move path lines on boards">
+                    <span class="tb-btn-label">Paths</span>
+                    <span class="tb-btn-state">@(_sharedSettings.ShowMovePaths ? "On" : "Off")</span>
+                </button>
+                <button type="button"
                         class="tb-btn tb-btn-standalone toggle-outer-ui @(_sharedSettings.ShowOuterUi ? "is-on" : "is-off")"
                         @onclick="ToggleOuterUi"
                         title="Show or hide the board outer UI">
@@ -226,6 +233,12 @@
     {
         _sharedSettings.ShowOuterUi = !_sharedSettings.ShowOuterUi;
         // Components reading this setting will update on next render
+        StateHasChanged();
+    }
+
+    private void ToggleMovePaths()
+    {
+        _sharedSettings.ShowMovePaths = !_sharedSettings.ShowMovePaths;
         StateHasChanged();
     }
 

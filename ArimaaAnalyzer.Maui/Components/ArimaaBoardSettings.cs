@@ -54,6 +54,12 @@ public class ArimaaBoardSettings
     public Boolean Play { get; set; } = false; // Play against the AI.
 
     /// <summary>
+    /// When true, boards draw colored orthogonal path lines for pieces that moved
+    /// in the turn that produced the current position.
+    /// </summary>
+    public bool ShowMovePaths { get; set; } = true;
+
+    /// <summary>
     /// Small responsive board (useful for sidebars or analysis panels).
     /// Size: ~40px per square, responsive, read-only.
     /// </summary>
@@ -115,7 +121,8 @@ public class ArimaaBoardSettings
         PieceSizePx = 18,
         ShowOuterUi = false,
         Behavior = BoardBehavior.Spectator,
-        IsResponsive = true
+        IsResponsive = true,
+        ShowMovePaths = true
     };
 
     /// <summary>
