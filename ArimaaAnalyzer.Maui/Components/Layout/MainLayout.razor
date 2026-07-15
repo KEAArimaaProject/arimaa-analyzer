@@ -77,9 +77,9 @@
                                 class="as-select"
                                 @bind="_sharedSettings.ThinkInt"
                                 disabled="@_analysisInProgress">
-                            @for (var i = 1; i <= 20; i++)
+                            @for (var i = 1; i <= 40; i++)
                             {
-                                var val = i * 100;
+                                var val = i * 200;
                                 <option value="@val">@val ms</option>
                             }
                         </select>
