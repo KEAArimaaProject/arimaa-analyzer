@@ -12,29 +12,6 @@
     <section class="main-area" aria-label="Main game">
         <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" />
         <GameTurnChildren Game="Game" />
-        
-        <div class="analysis-settings">
-            <div class="form-group">
-                
-                <label for="boardIntSelect">BoardCount</label>
-                <select id="boardIntSelect" @bind="PageBoardSettings.BoardInt" @bind:after="OnBoardIntChanged">
-                    @for (var i = 0; i <= 29; i++)
-                    {
-                        <option value="@i">@i</option>
-                    }
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="thinkInt">ThinktimeMS</label>
-                <select id="thinkInt" @bind="PageBoardSettings.ThinkInt">
-                    @for (var i = 1; i <= 20; i++)
-                    {
-                        var val = i * 100;
-                        <option value="@val">@val.ToString()</option>
-                    }
-                </select>
-            </div>
-        </div>
     </section>
     
     <!-- Side section: either editpieces palette (when Play is true) or analysis mini-boards -->
@@ -161,9 +138,8 @@
     }
 
     /// <summary>
-    /// Sync manual changes from the settings dropdown back to the mini boards count.
-    /// If the user selects a different BoardInt, we rebuild mini boards accordingly.
-    /// A subsequent resize will still update both via SetMiniBoardCount.
+    /// Sync BoardInt from the top-bar analysis settings (cascaded from MainLayout)
+    /// into the mini-board list. A subsequent resize may still adjust layout via JS.
     /// </summary>
     protected override void OnParametersSet()
     {
@@ -174,19 +150,6 @@
         {
             _miniBoardCount = desired;
             RebuildMiniGames();
-        }
-    }
-
-    private void OnBoardIntChanged()
-    {
-        if (PageBoardSettings is null) return;
-        var desired = PageBoardSettings.BoardInt;
-        if (desired < 0) desired = 0;
-        if (desired != _miniBoardCount)
-        {
-            _miniBoardCount = desired;
-            RebuildMiniGames();
-            StateHasChanged();
         }
     }
 

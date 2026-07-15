@@ -51,6 +51,37 @@
                         HumanMove
                     </button>
                 }
+
+                <div class="analysis-settings" role="group" aria-label="Analysis settings">
+                    <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
+                        <span class="as-label">Boards</span>
+                        <select id="boardIntSelect"
+                                class="as-select"
+                                @bind="_sharedSettings.BoardInt"
+                                @bind:after="OnBoardIntChanged"
+                                disabled="@_analysisInProgress">
+                            @for (var i = 0; i <= 29; i++)
+                            {
+                                <option value="@i">@i</option>
+                            }
+                        </select>
+                    </label>
+                    <span class="as-divider" aria-hidden="true"></span>
+                    <label class="as-field" for="thinkInt" title="Engine think time per move">
+                        <span class="as-label">Think</span>
+                        <select id="thinkInt"
+                                class="as-select"
+                                @bind="_sharedSettings.ThinkInt"
+                                disabled="@_analysisInProgress">
+                            @for (var i = 1; i <= 20; i++)
+                            {
+                                var val = i * 100;
+                                <option value="@val">@val ms</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+
                 <button class="analyze-position" @onclick="() => AnalyzePosition(Sides.Gold)" disabled="@_analysisInProgress"
                         title="Analyze / move with Gold moving first">
                     MoveG
@@ -81,6 +112,14 @@
     private readonly ArimaaBoardSettings _sharedSettings = ArimaaBoardSettings.PlayableLargeWithUi;
 
     private bool _analysisInProgress;
+
+    /// <summary>
+    /// Re-render so cascaded board settings (BoardInt) reach the Arimaa page mini-boards.
+    /// </summary>
+    private void OnBoardIntChanged()
+    {
+        StateHasChanged();
+    }
 
     private async Task Humanmove()
     {
