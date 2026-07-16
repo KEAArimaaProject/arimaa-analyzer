@@ -3,6 +3,8 @@
 let dotnetRef = null;
 let boundHandler = null;
 
+const HOTKEY_KEYS = new Set(['j', 'l', 'i', 'k', 'g', 's']);
+
 function isEditableTarget(target) {
     if (!target) return false;
     const el = target;
@@ -23,8 +25,13 @@ export function connect(dotnet) {
         const key = e.key;
         if (!key || key.length !== 1) return;
 
+        const normalized = key.toLowerCase();
+        if (!HOTKEY_KEYS.has(normalized)) return;
+
+        e.preventDefault();
+
         try {
-            dotnetRef.invokeMethodAsync('OnKeyDown', key.toLowerCase());
+            dotnetRef.invokeMethodAsync('OnKeyDown', normalized);
         } catch {
             /* host disconnected */
         }

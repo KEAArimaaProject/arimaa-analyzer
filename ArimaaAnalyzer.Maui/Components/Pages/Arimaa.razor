@@ -115,25 +115,30 @@
         StateHasChanged();
     }
 
+    protected override void OnInitialized()
+    {
+        // Load before first render so navigation hotkeys (e.g. "l") work immediately.
+        if (Game.CurrentNode is null)
+        {
+            var root = NotationService.ExtractTurnsWithMoves(Game_base)!;
+            Game.Load(root);
+            Game.ShowOuterUi = true;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             try
             {
-                // Initialize the shared Game service with the demo tree so MainLayout can access CurrentNode
-                var root = NotationService.ExtractTurnsWithMoves(Game_base)!;
-                if (Game?.State?.CurrentNode is null)
-                {
-                    Game.Load(root);
-                    Game.ShowOuterUi = true;
-                }
-                await JS.InvokeVoidAsync("eval", "console.log('Arimaa page initialized: shared Game loaded with demo root.')");
+                await JS.InvokeVoidAsync("eval", "document.body.setAttribute('tabindex','-1'); document.body.focus({preventScroll:true});");
             }
-            catch (Exception ex)
+            catch
             {
-                await JS.InvokeVoidAsync("eval", $"console.error('Arimaa page init failed: '+{System.Text.Json.JsonSerializer.Serialize(ex.ToString())})");
+                /* ignore focus errors on platforms that block programmatic focus */
             }
+
             _dotNetRef = DotNetObjectReference.Create(this);
             _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/miniBoards.js");
             // Dimensions should match the CSS mini tile sizing in Arimaa.razor.css
