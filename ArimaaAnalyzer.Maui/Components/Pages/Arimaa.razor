@@ -10,7 +10,7 @@
 <div class="arimaa-page">
     <!-- Main game area -->
     <section class="main-area" aria-label="Main game">
-        <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" />
+        <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" OnBoardRotated="OnMainBoardRotated" />
         <GameTurnChildren Game="Game" />
     </section>
     
@@ -105,6 +105,14 @@
 
         // Update coordinator with the up-to-date list (preserving shared instances for indices < min(old,new))
         MiniBoards.SetMiniGames(_miniGames);
+        MiniBoards.SyncOrientation(orientation);
+    }
+
+    private void OnMainBoardRotated()
+    {
+        var orientation = Game.State.boardorientation;
+        MiniBoards.SyncOrientation(orientation);
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

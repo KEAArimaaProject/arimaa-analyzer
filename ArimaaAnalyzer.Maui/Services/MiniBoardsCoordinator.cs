@@ -11,8 +11,22 @@ namespace ArimaaAnalyzer.Maui.Services;
 public sealed class MiniBoardsCoordinator
 {
     private readonly List<ArimaaGameService> _miniGames = new();
+    private BoardOrientation _sharedOrientation = BoardOrientation.GoldSouthSilverNorth;
 
     public int Count => _miniGames.Count;
+
+    /// <summary>
+    /// Keep all analysis mini-boards aligned with the main board's rotation.
+    /// </summary>
+    public void SyncOrientation(BoardOrientation orientation)
+    {
+        _sharedOrientation = orientation;
+        foreach (var svc in _miniGames)
+        {
+            if (svc?.State is null) continue;
+            svc.State.boardorientation = orientation;
+        }
+    }
 
     public void SetMiniGames(IReadOnlyList<ArimaaGameService> services)
     {
@@ -35,6 +49,7 @@ public sealed class MiniBoardsCoordinator
             if (node != null && svc != null)
             {
                 svc.Load(node);
+                svc.State.boardorientation = _sharedOrientation;
             }
         }
     }
@@ -48,7 +63,9 @@ public sealed class MiniBoardsCoordinator
         if (node == null) return;
         if (index < 0 || index >= _miniGames.Count) return;
         var svc = _miniGames[index];
-        svc?.Load(node);
+        if (svc is null) return;
+        svc.Load(node);
+        svc.State.boardorientation = _sharedOrientation;
     }
 
     public void Clear()
@@ -76,7 +93,9 @@ public sealed class MiniBoardsCoordinator
 
         foreach (var svc in _miniGames)
         {
-            svc?.Load(blankNode);
+            if (svc is null) continue;
+            svc.Load(blankNode);
+            svc.State.boardorientation = _sharedOrientation;
         }
     }
 }
