@@ -230,6 +230,10 @@
             </CascadingValue>
         </article>
     </main>
+
+    <HotkeyHost IsOnArimaaPage="@IsOnArimaaPage"
+                IsAnalysisInProgress="@(() => _analysisInProgress)"
+                OnAnalyze="@AnalyzePosition" />
 </div>
 
 @code {

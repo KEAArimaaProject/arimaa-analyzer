@@ -1,4 +1,5 @@
-﻿using ArimaaAnalyzer.Maui.Services;
+﻿using ArimaaAnalyzer.Maui.Components.HotKeys;
+using ArimaaAnalyzer.Maui.Services;
 using Microsoft.Extensions.Logging;
 using ArimaaAnalyzer.Maui.Services.Arimaa;
 
@@ -41,6 +42,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AnalysisService>();
         // Coordinator for mini-board services
         builder.Services.AddSingleton<MiniBoardsCoordinator>();
+        builder.Services.AddSingleton<HotkeyService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

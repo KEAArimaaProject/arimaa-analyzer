@@ -144,6 +144,17 @@ public sealed class ArimaaGameService
 
     public bool CanPrev => CurrentNode?.Parent is not null;
     public bool CanNext => CurrentNode?.Children is { Count: > 0 };
+    public bool CanGoToStart => CurrentNode?.Parent is not null;
+
+    public bool CanGoToEnd
+    {
+        get
+        {
+            if (CurrentNode is null) return false;
+            var leaf = GetMainLineLeaf(GetRoot(CurrentNode));
+            return leaf is not null && !ReferenceEquals(leaf, CurrentNode);
+        }
+    }
 
     public void GoPrev()
     {
@@ -161,6 +172,48 @@ public sealed class ArimaaGameService
         {
             Load(next);
         }
+    }
+
+    /// <summary>
+    /// Jump to the game root (position before the first move).
+    /// </summary>
+    public void GoToStart()
+    {
+        if (CurrentNode is null) return;
+        var root = GetRoot(CurrentNode);
+        if (root is not null && !ReferenceEquals(root, CurrentNode))
+            Load(root);
+    }
+
+    /// <summary>
+    /// Jump to the last position on the main line.
+    /// </summary>
+    public void GoToEnd()
+    {
+        if (CurrentNode is null) return;
+        var root = GetRoot(CurrentNode);
+        var leaf = GetMainLineLeaf(root);
+        if (leaf is not null && !ReferenceEquals(leaf, CurrentNode))
+            Load(leaf);
+    }
+
+    private static GameTurn GetRoot(GameTurn node)
+    {
+        while (node.Parent is not null)
+            node = node.Parent;
+        return node;
+    }
+
+    private static GameTurn? GetMainLineLeaf(GameTurn? node)
+    {
+        if (node is null) return null;
+        while (true)
+        {
+            var next = node.Children.FirstOrDefault(c => c.IsMainLine) ?? node.Children.FirstOrDefault();
+            if (next is null) break;
+            node = next;
+        }
+        return node;
     }
 
     // Indicates whether the board has diverged from the loaded node (i.e., there is a pending move to commit)
