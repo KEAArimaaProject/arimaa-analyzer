@@ -57,17 +57,42 @@
                 }
 
                 <div class="tb-group analysis-settings" role="group" aria-label="Analysis settings">
-                    <label class="as-field" for="movePathTargetSelect" title="Which boards show move path lines">
+                    <label class="as-field" title="Which boards show move path lines">
                         <span class="as-label">Paths</span>
-                        <select id="movePathTargetSelect"
-                                class="as-select as-select-wide"
-                                @bind="_sharedSettings.MovePathTarget"
-                                @bind:after="OnMovePathTargetChanged">
-                            <option value="@MovePathTarget.MainOnly">Main board has MovePath</option>
-                            <option value="@MovePathTarget.AnalysisOnly">Analysis boards have MovePath</option>
-                            <option value="@MovePathTarget.Both">Both have MovePath</option>
-                            <option value="@MovePathTarget.Neither">Neither have MovePath</option>
-                        </select>
+                        <div class="as-compact-select">
+                            @if (_movePathMenuOpen)
+                            {
+                                <div class="as-compact-select-backdrop" @onclick="CloseMovePathMenu"></div>
+                            }
+                            <button type="button"
+                                    id="movePathTargetSelect"
+                                    class="as-select as-select-compact"
+                                    title="@MovePathTargetDisplay.Full(_sharedSettings.MovePathTarget)"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="@_movePathMenuOpen"
+                                    @onclick="ToggleMovePathMenu"
+                                    @onclick:stopPropagation="true">
+                                @MovePathTargetDisplay.Short(_sharedSettings.MovePathTarget)
+                            </button>
+                            @if (_movePathMenuOpen)
+                            {
+                                <ul class="as-compact-select-menu"
+                                    role="listbox"
+                                    aria-labelledby="movePathTargetSelect"
+                                    @onclick:stopPropagation="true">
+                                    @foreach (var target in Enum.GetValues<MovePathTarget>())
+                                    {
+                                        var isSelected = _sharedSettings.MovePathTarget == target;
+                                        <li role="option"
+                                            aria-selected="@isSelected"
+                                            class="as-compact-select-option @(isSelected ? "selected" : null)"
+                                            @onclick="() => SelectMovePathTarget(target)">
+                                            @MovePathTargetDisplay.Full(target)
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
                     </label>
                     <span class="tb-divider" aria-hidden="true"></span>
                     <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
@@ -133,7 +158,6 @@
                     <span class="tb-btn-state">@(_sharedSettings.Play ? "On" : "Off")</span>
                 </button>
             }
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
         <article class="content">
@@ -148,6 +172,7 @@
     private readonly ArimaaBoardSettings _sharedSettings = CreateSharedSettings();
 
     private bool _analysisInProgress;
+    private bool _movePathMenuOpen;
 
     private static ArimaaBoardSettings CreateSharedSettings()
     {
@@ -172,6 +197,27 @@
     {
         ApplyMovePathTargetToSharedBoard();
         StateHasChanged();
+    }
+
+    private void ToggleMovePathMenu()
+    {
+        _movePathMenuOpen = !_movePathMenuOpen;
+    }
+
+    private void CloseMovePathMenu()
+    {
+        _movePathMenuOpen = false;
+    }
+
+    private void SelectMovePathTarget(MovePathTarget target)
+    {
+        if (_sharedSettings.MovePathTarget != target)
+        {
+            _sharedSettings.MovePathTarget = target;
+            OnMovePathTargetChanged();
+        }
+
+        _movePathMenuOpen = false;
     }
 
     /// <summary>

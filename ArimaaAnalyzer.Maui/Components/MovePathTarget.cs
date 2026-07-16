@@ -17,3 +17,25 @@ public enum MovePathTarget
     /// <summary>No boards show move paths.</summary>
     Neither = 3,
 }
+
+/// <summary>Display labels for <see cref="MovePathTarget"/> in compact UI controls.</summary>
+public static class MovePathTargetDisplay
+{
+    public static string Full(MovePathTarget target) => target switch
+    {
+        MovePathTarget.MainOnly => "Main board has MovePath",
+        MovePathTarget.AnalysisOnly => "Analysis boards have MovePath",
+        MovePathTarget.Both => "Both have MovePath",
+        MovePathTarget.Neither => "Neither have MovePath",
+        _ => target.ToString(),
+    };
+
+    public static string Short(MovePathTarget target) => target switch
+    {
+        MovePathTarget.MainOnly => "Main",
+        MovePathTarget.AnalysisOnly => "Anal",
+        MovePathTarget.Both => "Both",
+        MovePathTarget.Neither => "None",
+        _ => target.ToString(),
+    };
+}

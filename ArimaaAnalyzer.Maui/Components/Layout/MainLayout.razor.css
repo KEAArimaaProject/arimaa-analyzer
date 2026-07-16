@@ -221,10 +221,59 @@ main {
     line-height: 1.7rem;
 }
 
-/* Longer labels (e.g. move-path target) */
-.analysis-settings .as-select-wide {
-    min-width: 12.5rem;
-    max-width: 16rem;
+/* Compact move-path picker: short label when closed, full text in menu */
+.as-compact-select {
+    position: relative;
+    display: inline-flex;
+}
+
+.as-compact-select-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+}
+
+.analysis-settings .as-select-compact {
+    min-width: 3.25rem;
+    max-width: 3.75rem;
+    padding: 0 1.15rem 0 0.3rem;
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.as-compact-select-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 200;
+    margin: 0;
+    padding: 0.2rem;
+    list-style: none;
+    min-width: 14.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 0.35rem;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.as-compact-select-option {
+    padding: 0.3rem 0.45rem;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #1f2937;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.as-compact-select-option:hover {
+    background: #f3f4f6;
+}
+
+.as-compact-select-option.selected {
+    background: #e8f1fb;
+    color: #1b6ec2;
 }
 
 /* MoveG / MoveS slightly tighter min width so they match select chips */
@@ -257,9 +306,9 @@ main {
         font-size: 0.78rem;
     }
 
-    .analysis-settings .as-select-wide {
-        min-width: 9rem;
-        max-width: 12rem;
+    .analysis-settings .as-select-compact {
+        min-width: 3rem;
+        max-width: 3.5rem;
     }
 }
 
@@ -270,11 +319,6 @@ main {
 
     .analysis-settings .as-select {
         min-width: 3.4rem;
-    }
-
-    .analysis-settings .as-select-wide {
-        min-width: 7.5rem;
-        max-width: 10rem;
     }
 
     .tb-btn-standalone .tb-btn-label {
