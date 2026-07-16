@@ -32,10 +32,10 @@ public static class MovePathTargetDisplay
 
     public static string Short(MovePathTarget target) => target switch
     {
-        MovePathTarget.MainOnly => "Main",
-        MovePathTarget.AnalysisOnly => "Anal",
-        MovePathTarget.Both => "Both",
-        MovePathTarget.Neither => "None",
+        MovePathTarget.MainOnly => "M",
+        MovePathTarget.AnalysisOnly => "A",
+        MovePathTarget.Both => "B",
+        MovePathTarget.Neither => "N",
         _ => target.ToString(),
     };
 }
