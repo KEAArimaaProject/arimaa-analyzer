@@ -57,9 +57,9 @@
                 }
 
                 <div class="tb-group analysis-settings" role="group" aria-label="Analysis settings">
-                    <label class="as-field" title="Which boards show move path lines">
-                        <span class="as-label">Paths</span>
-                        <div class="as-compact-select">
+                    <div class="as-field" title="Which boards show move path lines">
+                        <span id="movePathTargetLabel" class="as-label">Paths</span>
+                        <div class="as-compact-select @(_movePathMenuOpen ? "open" : null)">
                             @if (_movePathMenuOpen)
                             {
                                 <div class="as-compact-select-backdrop" @onclick="CloseMovePathMenu"></div>
@@ -70,6 +70,7 @@
                                     title="@MovePathTargetDisplay.Full(_sharedSettings.MovePathTarget)"
                                     aria-haspopup="listbox"
                                     aria-expanded="@_movePathMenuOpen"
+                                    aria-labelledby="movePathTargetLabel movePathTargetSelect"
                                     @onclick="ToggleMovePathMenu"
                                     @onclick:stopPropagation="true">
                                 @MovePathTargetDisplay.Short(_sharedSettings.MovePathTarget)
@@ -78,22 +79,26 @@
                             {
                                 <ul class="as-compact-select-menu"
                                     role="listbox"
-                                    aria-labelledby="movePathTargetSelect"
+                                    aria-labelledby="movePathTargetLabel"
                                     @onclick:stopPropagation="true">
                                     @foreach (var target in Enum.GetValues<MovePathTarget>())
                                     {
                                         var isSelected = _sharedSettings.MovePathTarget == target;
-                                        <li role="option"
-                                            aria-selected="@isSelected"
-                                            class="as-compact-select-option @(isSelected ? "selected" : null)"
-                                            @onclick="() => SelectMovePathTarget(target)">
-                                            @MovePathTargetDisplay.Full(target)
+                                        <li role="presentation">
+                                            <button type="button"
+                                                    role="option"
+                                                    aria-selected="@isSelected"
+                                                    class="as-compact-select-option @(isSelected ? "selected" : null)"
+                                                    @onclick="() => SelectMovePathTarget(target)"
+                                                    @onclick:stopPropagation="true">
+                                                @MovePathTargetDisplay.Full(target)
+                                            </button>
                                         </li>
                                     }
                                 </ul>
                             }
                         </div>
-                    </label>
+                    </div>
                     <span class="tb-divider" aria-hidden="true"></span>
                     <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
                         <span class="as-label">Boards</span>
@@ -206,18 +211,23 @@
 
     private void CloseMovePathMenu()
     {
+        if (!_movePathMenuOpen) return;
         _movePathMenuOpen = false;
+        StateHasChanged();
     }
 
     private void SelectMovePathTarget(MovePathTarget target)
     {
+        _movePathMenuOpen = false;
+
         if (_sharedSettings.MovePathTarget != target)
         {
             _sharedSettings.MovePathTarget = target;
             OnMovePathTargetChanged();
+            return;
         }
 
-        _movePathMenuOpen = false;
+        StateHasChanged();
     }
 
     /// <summary>

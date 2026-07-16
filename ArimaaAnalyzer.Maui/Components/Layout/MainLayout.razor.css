@@ -227,10 +227,14 @@ main {
     display: inline-flex;
 }
 
+.as-compact-select.open {
+    z-index: 250;
+}
+
 .as-compact-select-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 199;
+    z-index: 1;
 }
 
 .analysis-settings .as-select-compact {
@@ -246,7 +250,7 @@ main {
     position: absolute;
     top: calc(100% + 2px);
     left: 0;
-    z-index: 200;
+    z-index: 2;
     margin: 0;
     padding: 0.2rem;
     list-style: none;
@@ -257,12 +261,24 @@ main {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
+.as-compact-select-menu li {
+    margin: 0;
+    padding: 0;
+}
+
 .as-compact-select-option {
+    display: block;
+    width: 100%;
+    margin: 0;
     padding: 0.3rem 0.45rem;
+    border: none;
     border-radius: 0.25rem;
+    background: transparent;
+    font-family: inherit;
     font-size: 0.8125rem;
     font-weight: 500;
     color: #1f2937;
+    text-align: left;
     white-space: nowrap;
     cursor: pointer;
 }
