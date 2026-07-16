@@ -15,19 +15,19 @@ public static class MovePathService
     /// <summary>
     /// Build paths from a loaded <see cref="GameTurn"/> (uses its step list).
     /// </summary>
-    public static IReadOnlyList<PieceMovePath> Compute(GameTurn? turn, BoardOrientation orientation)
+    public static IReadOnlyList<PieceMovePath> Compute(GameTurn? turn, BoardOrientation orientation, string? paletteId = null)
     {
         if (turn is null || turn.Moves is null || turn.Moves.Count == 0)
             return Array.Empty<PieceMovePath>();
 
-        return Compute(turn.Moves, orientation);
+        return Compute(turn.Moves, orientation, paletteId);
     }
 
     /// <summary>
     /// Build display-space paths from Arimaa step tokens (e.g. Ed2n, hb5s).
     /// Captures (…x) and setup placements (Ra1) are ignored for path geometry.
     /// </summary>
-    public static IReadOnlyList<PieceMovePath> Compute(IReadOnlyList<string> moves, BoardOrientation orientation)
+    public static IReadOnlyList<PieceMovePath> Compute(IReadOnlyList<string> moves, BoardOrientation orientation, string? paletteId = null)
     {
         if (moves is null || moves.Count == 0)
             return Array.Empty<PieceMovePath>();
@@ -84,7 +84,7 @@ public static class MovePathService
 
             result.Add(new PieceMovePath(
                 displaySquares,
-                MovePathPalette.GetColor(b.OrderIndex),
+                MovePathPalette.GetColor(b.OrderIndex, paletteId),
                 b.OrderIndex));
         }
 

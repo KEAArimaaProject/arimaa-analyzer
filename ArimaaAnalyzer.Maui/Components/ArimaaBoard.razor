@@ -175,7 +175,7 @@
 
         var node = Game.CurrentNode ?? Game.State?.CurrentNode;
         var orientation = Game.State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
-        _movePaths = MovePathService.Compute(node, orientation);
+        _movePaths = MovePathService.Compute(node, orientation, EffectiveSettings.MovePathPaletteId);
     }
 
     public void Dispose()

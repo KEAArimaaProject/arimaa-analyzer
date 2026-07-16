@@ -3,26 +3,15 @@ using System;
 namespace ArimaaAnalyzer.Maui.Components.MovePath;
 
 /// <summary>
-/// Fixed color palette for move-path overlays, ordered by first-piece-moved.
+/// Resolves move-path line colors from a selected palette preset.
 /// </summary>
 public static class MovePathPalette
 {
-    /// <summary>
-    /// Colors in assignment order:
-    /// 1st piece → Deep Navy Blue, 2nd → Strong Red, 3rd → Deep Brown-Red, 4th → Medium Blue.
-    /// </summary>
-    public static readonly string[] Colors =
+    public static string GetColor(int orderIndex, string? paletteId = null)
     {
-        "#004488", // Deep Navy Blue
-        "#BE0032", // Strong Red / Vermillion
-        "#882D17", // Deep Brown-Red
-        "#0067A5", // Medium Blue
-    };
-
-    public static string GetColor(int orderIndex)
-    {
+        var colors = MovePathPaletteOptions.GetColors(paletteId);
         if (orderIndex < 0) orderIndex = 0;
-        // If more than 4 pieces move (unusual), cycle the palette.
-        return Colors[orderIndex % Colors.Length];
+        if (colors.Length == 0) return "#000000";
+        return colors[orderIndex % colors.Length];
     }
 }

@@ -292,6 +292,53 @@ main {
     color: #1b6ec2;
 }
 
+/* Move-path palette picker: compact swatches when closed, named rows in menu */
+.analysis-settings .as-select-palette {
+    min-width: 3.6rem;
+    max-width: 4.25rem;
+    padding: 0 1.15rem 0 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.palette-swatch-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.12rem;
+}
+
+.palette-swatch {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.85rem;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 0.12rem;
+    flex: 0 0 auto;
+}
+
+.as-palette-menu {
+    min-width: 13.5rem;
+}
+
+.as-palette-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.palette-option-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.as-palette-option .palette-swatch {
+    width: 0.65rem;
+    height: 0.95rem;
+}
+
 /* MoveG / MoveS slightly tighter min width so they match select chips */
 .move-actions .tb-btn {
     min-width: 3.5rem;
@@ -325,6 +372,11 @@ main {
     .analysis-settings .as-select-compact {
         min-width: 3rem;
         max-width: 3.5rem;
+    }
+
+    .analysis-settings .as-select-palette {
+        min-width: 3.2rem;
+        max-width: 3.8rem;
     }
 }
 

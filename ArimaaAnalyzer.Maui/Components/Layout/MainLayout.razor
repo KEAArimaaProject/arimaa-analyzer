@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using ArimaaAnalyzer.Maui.Components
+@using ArimaaAnalyzer.Maui.Components.MovePath
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Services.Arimaa
 @using System.Linq
@@ -100,6 +101,64 @@
                         </div>
                     </div>
                     <span class="tb-divider" aria-hidden="true"></span>
+                    <div class="as-field" title="Move path line colors">
+                        <span id="movePathPaletteLabel" class="as-label">Colors</span>
+                        <div class="as-compact-select as-palette-select @(_paletteMenuOpen ? "open" : null)">
+                            @if (_paletteMenuOpen)
+                            {
+                                <div class="as-compact-select-backdrop" @onclick="ClosePaletteMenu"></div>
+                            }
+                            @{
+                                var selectedPalette = MovePathPaletteOptions.Get(_sharedSettings.MovePathPaletteId);
+                            }
+                            <button type="button"
+                                    id="movePathPaletteSelect"
+                                    class="as-select as-select-palette"
+                                    title="@selectedPalette.Description"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="@_paletteMenuOpen"
+                                    aria-labelledby="movePathPaletteLabel movePathPaletteSelect"
+                                    @onclick="TogglePaletteMenu"
+                                    @onclick:stopPropagation="true">
+                                <span class="palette-swatch-row" aria-hidden="true">
+                                    @foreach (var color in selectedPalette.Colors)
+                                    {
+                                        <span class="palette-swatch" style="background-color:@color"></span>
+                                    }
+                                </span>
+                            </button>
+                            @if (_paletteMenuOpen)
+                            {
+                                <ul class="as-compact-select-menu as-palette-menu"
+                                    role="listbox"
+                                    aria-labelledby="movePathPaletteLabel"
+                                    @onclick:stopPropagation="true">
+                                    @foreach (var palette in MovePathPaletteOptions.All)
+                                    {
+                                        var isSelected = string.Equals(_sharedSettings.MovePathPaletteId, palette.Id, StringComparison.OrdinalIgnoreCase);
+                                        <li role="presentation">
+                                            <button type="button"
+                                                    role="option"
+                                                    aria-selected="@isSelected"
+                                                    class="as-compact-select-option as-palette-option @(isSelected ? "selected" : null)"
+                                                    title="@palette.Description"
+                                                    @onclick="() => SelectMovePathPalette(palette.Id)"
+                                                    @onclick:stopPropagation="true">
+                                                <span class="palette-option-name">@palette.Name</span>
+                                                <span class="palette-swatch-row" aria-hidden="true">
+                                                    @foreach (var color in palette.Colors)
+                                                    {
+                                                        <span class="palette-swatch" style="background-color:@color"></span>
+                                                    }
+                                                </span>
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                    <span class="tb-divider" aria-hidden="true"></span>
                     <label class="as-field" for="boardIntSelect" title="Number of analysis mini-boards">
                         <span class="as-label">Boards</span>
                         <select id="boardIntSelect"
@@ -178,6 +237,7 @@
 
     private bool _analysisInProgress;
     private bool _movePathMenuOpen;
+    private bool _paletteMenuOpen;
 
     private static ArimaaBoardSettings CreateSharedSettings()
     {
@@ -207,6 +267,7 @@
     private void ToggleMovePathMenu()
     {
         _movePathMenuOpen = !_movePathMenuOpen;
+        if (_movePathMenuOpen) _paletteMenuOpen = false;
     }
 
     private void CloseMovePathMenu()
@@ -224,6 +285,33 @@
         {
             _sharedSettings.MovePathTarget = target;
             OnMovePathTargetChanged();
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    private void TogglePaletteMenu()
+    {
+        _paletteMenuOpen = !_paletteMenuOpen;
+        if (_paletteMenuOpen) _movePathMenuOpen = false;
+    }
+
+    private void ClosePaletteMenu()
+    {
+        if (!_paletteMenuOpen) return;
+        _paletteMenuOpen = false;
+        StateHasChanged();
+    }
+
+    private void SelectMovePathPalette(string paletteId)
+    {
+        _paletteMenuOpen = false;
+
+        if (!string.Equals(_sharedSettings.MovePathPaletteId, paletteId, StringComparison.OrdinalIgnoreCase))
+        {
+            _sharedSettings.MovePathPaletteId = paletteId;
+            StateHasChanged();
             return;
         }
 

@@ -1,4 +1,6 @@
-﻿namespace ArimaaAnalyzer.Maui.Components;
+﻿using ArimaaAnalyzer.Maui.Components.MovePath;
+
+namespace ArimaaAnalyzer.Maui.Components;
 
 /// <summary>
 /// Configuration for an Arimaa board display.
@@ -71,6 +73,11 @@ public class ArimaaBoardSettings
 
     public bool ShowMovePathsOnAnalysis =>
         MovePathTarget is MovePathTarget.AnalysisOnly or MovePathTarget.Both;
+
+    /// <summary>
+    /// Selected move-path color palette (<see cref="MovePathPaletteOptions"/> preset id).
+    /// </summary>
+    public string MovePathPaletteId { get; set; } = MovePathPaletteOptions.DefaultId;
 
     /// <summary>
     /// Small responsive board (useful for sidebars or analysis panels).
