@@ -52,7 +52,7 @@ public class ArimaaBoardSettings
 
     // Custom shared settings for analysis/runtime tuning
     public int BoardInt { get; set; } = 4; // allowed 1..9
-    public int ThinkInt { get; set; } = 100; // allowed 100 - 10000
+    public int ThinkInt { get; set; } = 200; // allowed 200 - 8000 (steps of 200 ms)
     public Boolean Play { get; set; } = false; // Play against the AI.
 
     /// <summary>
