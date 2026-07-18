@@ -16,13 +16,13 @@
             {
                 <div>Loading games…</div>
             }
-            else if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <div class="alert alert-danger" role="alert">@_errorMessage</div>
-            }
             else
             {
                 <div class="gr-list pgl-list">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                    }
                     <div class="gr-toolbar">
                         <span class="gr-title">Pasted games (@_games.Count)</span>
                         <div class="pgl-sort" role="group" aria-label="Sort list">
@@ -41,7 +41,7 @@
                             </button>
                         </div>
                     </div>
-                    <p class="pgl-hint">Click a row to open the game on the board.</p>
+                    <p class="pgl-hint">Click a row to open the game on the board. Use × to remove a saved game.</p>
 
                     @if (_games.Count == 0)
                     {
@@ -57,6 +57,9 @@
                             <table class="table table-sm table-hover">
                                 <thead>
                                 <tr>
+                                    <th class="pgl-col-actions" scope="col">
+                                        <span class="visually-hidden">Actions</span>
+                                    </th>
                                     <th class="pgl-col-name">Name</th>
                                     <th class="pgl-col-date">Added (yyyymmdd_hh:mm)</th>
                                 </tr>
@@ -70,6 +73,23 @@
                                         title="Click to load this game on the main board"
                                         @onclick="() => HandleSelect(g)"
                                         @onkeydown="(e) => OnRowKeyDown(e, g)">
+                                        <td class="pgl-actions" @onclick:stopPropagation="true">
+                                            <button type="button"
+                                                    class="pgl-delete-btn"
+                                                    title="Delete @g.Name"
+                                                    aria-label="Delete @g.Name"
+                                                    disabled="@(_deletingId == g.Id)"
+                                                    @onclick="() => HandleDeleteAsync(g)">
+                                                @if (_deletingId == g.Id)
+                                                {
+                                                    <span aria-hidden="true">…</span>
+                                                }
+                                                else
+                                                {
+                                                    <span aria-hidden="true">×</span>
+                                                }
+                                            </button>
+                                        </td>
                                         <td class="pgl-name">@g.Name</td>
                                         <td class="pgl-timestamp">@g.DisplayTimestamp</td>
                                     </tr>
@@ -89,6 +109,7 @@
     private bool _loading = true;
     private string? _errorMessage;
     private PastedGameSortBy _sortBy = PastedGameSortBy.DateNewestFirst;
+    private Guid? _deletingId;
 
     private string DateSortIndicator => _sortBy switch
     {
@@ -172,6 +193,33 @@
         catch (Exception ex)
         {
             _errorMessage = $"Failed to load game: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private async Task HandleDeleteAsync(PastedGameEntry entry)
+    {
+        if (_deletingId is not null)
+            return;
+
+        try
+        {
+            _errorMessage = null;
+            _deletingId = entry.Id;
+            var removed = await PastedGames.DeleteAsync(entry.Id);
+            if (!removed)
+            {
+                _errorMessage = "That game was already removed.";
+            }
+
+            _games.RemoveAll(g => g.Id == entry.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete game: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            _deletingId = null;
         }
     }
 }
