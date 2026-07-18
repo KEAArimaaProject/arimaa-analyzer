@@ -25,8 +25,23 @@
                 <div class="gr-list pgl-list">
                     <div class="gr-toolbar">
                         <span class="gr-title">Pasted games (@_games.Count)</span>
-                        <span class="pgl-hint">Newest first · click a row to open on the board</span>
+                        <div class="pgl-sort" role="group" aria-label="Sort list">
+                            <span class="pgl-sort-label">Sort by</span>
+                            <button type="button"
+                                    class="pgl-sort-btn @(_sortBy is PastedGameSortBy.DateNewestFirst or PastedGameSortBy.DateOldestFirst ? "active" : null)"
+                                    title="@(_sortBy == PastedGameSortBy.DateOldestFirst ? "Oldest first (click for newest)" : "Newest first (click for oldest)")"
+                                    @onclick="ToggleSortDate">
+                                Date @DateSortIndicator
+                            </button>
+                            <button type="button"
+                                    class="pgl-sort-btn @(_sortBy is PastedGameSortBy.NameAscending or PastedGameSortBy.NameDescending ? "active" : null)"
+                                    title="@(_sortBy == PastedGameSortBy.NameDescending ? "Z–A (click for A–Z)" : "A–Z (click for Z–A)")"
+                                    @onclick="ToggleSortName">
+                                Name @NameSortIndicator
+                            </button>
+                        </div>
                     </div>
+                    <p class="pgl-hint">Click a row to open the game on the board.</p>
 
                     @if (_games.Count == 0)
                     {
@@ -42,7 +57,8 @@
                             <table class="table table-sm table-hover">
                                 <thead>
                                 <tr>
-                                    <th>Added (yyyymmdd_hh:mm)</th>
+                                    <th class="pgl-col-name">Name</th>
+                                    <th class="pgl-col-date">Added (yyyymmdd_hh:mm)</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -54,6 +70,7 @@
                                         title="Click to load this game on the main board"
                                         @onclick="() => HandleSelect(g)"
                                         @onkeydown="(e) => OnRowKeyDown(e, g)">
+                                        <td class="pgl-name">@g.Name</td>
                                         <td class="pgl-timestamp">@g.DisplayTimestamp</td>
                                     </tr>
                                 }
@@ -71,6 +88,21 @@
     private List<PastedGameEntry> _games = new();
     private bool _loading = true;
     private string? _errorMessage;
+    private PastedGameSortBy _sortBy = PastedGameSortBy.DateNewestFirst;
+
+    private string DateSortIndicator => _sortBy switch
+    {
+        PastedGameSortBy.DateNewestFirst => "↓",
+        PastedGameSortBy.DateOldestFirst => "↑",
+        _ => "",
+    };
+
+    private string NameSortIndicator => _sortBy switch
+    {
+        PastedGameSortBy.NameAscending => "↑",
+        PastedGameSortBy.NameDescending => "↓",
+        _ => "",
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,7 +115,7 @@
         {
             _errorMessage = null;
             _loading = true;
-            var items = await PastedGames.GetAllNewestFirstAsync();
+            var items = await PastedGames.GetAllAsync(_sortBy);
             _games = items.ToList();
         }
         catch (Exception ex)
@@ -95,6 +127,22 @@
         {
             _loading = false;
         }
+    }
+
+    private async Task ToggleSortDate()
+    {
+        _sortBy = _sortBy == PastedGameSortBy.DateNewestFirst
+            ? PastedGameSortBy.DateOldestFirst
+            : PastedGameSortBy.DateNewestFirst;
+        await ReloadAsync();
+    }
+
+    private async Task ToggleSortName()
+    {
+        _sortBy = _sortBy == PastedGameSortBy.NameAscending
+            ? PastedGameSortBy.NameDescending
+            : PastedGameSortBy.NameAscending;
+        await ReloadAsync();
     }
 
     private void OnRowKeyDown(KeyboardEventArgs e, PastedGameEntry entry)
