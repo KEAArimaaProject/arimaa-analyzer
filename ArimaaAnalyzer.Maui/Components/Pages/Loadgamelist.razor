@@ -1,12 +1,129 @@
-﻿@page "/loadgamelist"
+@page "/loadgamelist"
+@using ArimaaAnalyzer.Maui.Models
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Services.Arimaa
 @using Microsoft.AspNetCore.Components
 @inject ArimaaGameService Game
 @inject NavigationManager Nav
+@inject PastedGameLibraryService PastedGames
 
+<h1>Load game list</h1>
 
-<p>Page to see already loaded games</p>
+<div class="gamesearch-layout loadgamelist-layout">
+    <div class="gs-right">
+        <div class="gs-card">
+            @if (_loading)
+            {
+                <div>Loading games…</div>
+            }
+            else if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+            else
+            {
+                <div class="gr-list pgl-list">
+                    <div class="gr-toolbar">
+                        <span class="gr-title">Pasted games (@_games.Count)</span>
+                        <span class="pgl-hint">Newest first · click a row to open on the board</span>
+                    </div>
 
+                    @if (_games.Count == 0)
+                    {
+                        <div class="gr-empty">
+                            No pasted games yet. Paste a game on
+                            <a href="loadgamemanual">Load game manual</a>
+                            first.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-wrap pgl-scroll">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                <tr>
+                                    <th>Added (yyyymmdd_hh:mm)</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var g in _games)
+                                {
+                                    <tr class="gr-row"
+                                        role="button"
+                                        tabindex="0"
+                                        title="Click to load this game on the main board"
+                                        @onclick="() => HandleSelect(g)"
+                                        @onkeydown="(e) => OnRowKeyDown(e, g)">
+                                        <td class="pgl-timestamp">@g.DisplayTimestamp</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
 
+@code {
+    private List<PastedGameEntry> _games = new();
+    private bool _loading = true;
+    private string? _errorMessage;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            _loading = true;
+            var items = await PastedGames.GetAllNewestFirstAsync();
+            _games = items.ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load pasted games: {ex.GetBaseException().Message}";
+            _games = new List<PastedGameEntry>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnRowKeyDown(KeyboardEventArgs e, PastedGameEntry entry)
+    {
+        if (e.Key is "Enter" or " ")
+            HandleSelect(entry);
+    }
+
+    private void HandleSelect(PastedGameEntry entry)
+    {
+        try
+        {
+            _errorMessage = null;
+            Game.SetSelectedRecord(null);
+
+            var root = NotationService.ExtractTurnsWithMoves(entry.Notation);
+            if (root is null)
+            {
+                _errorMessage = "Unable to parse the selected game's move list.";
+                return;
+            }
+
+            Game.Load(root);
+            Game.ShowOuterUi = true;
+            Nav.NavigateTo("/arimaa");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load game: {ex.GetBaseException().Message}";
+        }
+    }
+}

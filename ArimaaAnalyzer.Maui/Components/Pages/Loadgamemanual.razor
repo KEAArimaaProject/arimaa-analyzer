@@ -1,9 +1,10 @@
-﻿@page "/loadgamemanual"
+@page "/loadgamemanual"
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Services.Arimaa
 @using Microsoft.AspNetCore.Components
 @inject ArimaaGameService Game
 @inject NavigationManager Nav
+@inject PastedGameLibraryService PastedGames
 
 
     <p>Page to load games manually from Arimaa.com</p>
@@ -14,7 +15,7 @@
     </div>
 
     <div class="mb-3">
-        <button class="btn btn-primary" @onclick="LoadGame">Load Game</button>
+        <button class="btn btn-primary" @onclick="LoadGame" disabled="@_saving">Load Game</button>
     </div>
 
     @if (ErrorMessages?.Count > 0)
@@ -41,9 +42,10 @@
 @code {
     private string? GameNotation { get; set; }
     private bool LoadedSuccessfully { get; set; }
+    private bool _saving;
     private List<string> ErrorMessages { get; set; } = new();
 
-    private void LoadGame()
+    private async Task LoadGame()
     {
         ErrorMessages.Clear();
         LoadedSuccessfully = false;
@@ -63,6 +65,23 @@
             return;
         }
 
+        try
+        {
+            _saving = true;
+            // Persist for later re-open on Load game list
+            await PastedGames.AddAsync(input);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessages.Add($"Game is valid but could not be saved to the local list: {ex.GetBaseException().Message}");
+            // Still load onto the board even if library save fails
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        Game.SetSelectedRecord(null);
         Game.Load(root);
         Game.ShowOuterUi = true;
         LoadedSuccessfully = true;

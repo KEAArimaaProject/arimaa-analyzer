@@ -43,6 +43,7 @@ public static class MauiProgram
         // Coordinator for mini-board services
         builder.Services.AddSingleton<MiniBoardsCoordinator>();
         builder.Services.AddSingleton<HotkeyService>();
+        builder.Services.AddSingleton<PastedGameLibraryService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
