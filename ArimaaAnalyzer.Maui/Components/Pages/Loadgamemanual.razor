@@ -211,7 +211,10 @@
         Game.ShowOuterUi = true;
         LoadedSuccessfully = true;
 
-        // Navigate to the main Arimaa page to display the loaded game
-        Nav.NavigateTo("/arimaa");
+        // Ready for another paste after a successful load.
+        GameName = string.Empty;
+        GameNotation = string.Empty;
+        _nameTouched = false;
+        _nameError = null;
     }
 }
