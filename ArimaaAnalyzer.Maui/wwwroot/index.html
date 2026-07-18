@@ -63,6 +63,41 @@
             const target = el.closest('#' + id);
             return !!target;
         };
+
+        // Hotkeys: listener is always registered; Blazor sets window.arimaaHotkeys.ref via __arimaaHotkeysSetRef.
+        window.arimaaHotkeys = { ref: null, bound: false };
+        window.__arimaaHotkeysSetRef = function (r) {
+            window.arimaaHotkeys = window.arimaaHotkeys || { ref: null, bound: false };
+            window.arimaaHotkeys.ref = r;
+        };
+        (function () {
+            const HOTKEY_KEYS = new Set(['j', 'l', 'i', 'k', 'g', 's']);
+            function isEditableTarget(target) {
+                if (!target) return false;
+                const tag = target.tagName ? target.tagName.toLowerCase() : '';
+                if (tag === 'input' || tag === 'textarea') return true;
+                if (target.isContentEditable) return true;
+                return !!target.closest('[contenteditable="true"]');
+            }
+            function handleKeyDown(e) {
+                if (e.defaultPrevented || e.repeat) return;
+                if (e.ctrlKey || e.altKey || e.metaKey) return;
+                if (isEditableTarget(e.target)) return;
+                const key = e.key;
+                if (!key || key.length !== 1) return;
+                const normalized = key.toLowerCase();
+                if (!HOTKEY_KEYS.has(normalized)) return;
+                if (!window.arimaaHotkeys || !window.arimaaHotkeys.ref) return;
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    window.arimaaHotkeys.ref.invokeMethodAsync('OnKeyDown', normalized);
+                } catch { /* host disconnected */ }
+            }
+            // Single capture listener on window (avoid double-fire from window+document).
+            window.addEventListener('keydown', handleKeyDown, true);
+            window.arimaaHotkeys.bound = true;
+        })();
     </script>
 </body>
 

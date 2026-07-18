@@ -596,10 +596,32 @@
         await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_PlayOneTurnAsync: Applied move '+{System.Text.Json.JsonSerializer.Serialize(string.Join(' ', child.Moves))}+' and updated main board.')");
     }
     
-    private bool IsOnArimaaPage =>
-        Nav is not null &&
-        Uri.TryCreate(Nav.Uri, UriKind.Absolute, out var uri) &&
-        string.Equals(uri.AbsolutePath.TrimEnd('/'), "/arimaa", StringComparison.OrdinalIgnoreCase);
+    private bool IsOnArimaaPage
+    {
+        get
+        {
+            if (Nav is null) return false;
+
+            var uriText = Nav.Uri ?? string.Empty;
+            if (uriText.Contains("arimaa", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            try
+            {
+                var rel = Nav.ToBaseRelativePath(Nav.Uri).Trim().Trim('/');
+                if (rel.Equals("arimaa", StringComparison.OrdinalIgnoreCase)) return true;
+                if (rel.StartsWith("arimaa?", StringComparison.OrdinalIgnoreCase)) return true;
+                if (rel.StartsWith("arimaa/", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            catch
+            {
+                /* fall through */
+            }
+
+            return Uri.TryCreate(uriText, UriKind.Absolute, out var uri) &&
+                   string.Equals(uri.AbsolutePath.Trim('/'), "arimaa", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     protected override void OnInitialized()
     {

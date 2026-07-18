@@ -8,6 +8,9 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
+@* Invisible host so Blazor runs full lifecycle (OnAfterRender) for this component. *@
+<div class="hotkey-host" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
+
 @code {
     [Parameter]
     public bool IsOnArimaaPage { get; set; }
@@ -19,7 +22,6 @@
     public Func<Sides, Task> OnAnalyze { get; set; } = _ => Task.CompletedTask;
 
     private DotNetObjectReference<HotkeyHost>? _dotNetRef;
-    private IJSObjectReference? _module;
 
     protected override void OnInitialized()
     {
@@ -45,32 +47,68 @@
 
     private async Task EnsureConnectedAsync()
     {
-        if (_module is not null) return;
-
-        _dotNetRef ??= DotNetObjectReference.Create(this);
-        _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/hotkeys.js");
-        await _module.InvokeVoidAsync("connect", _dotNetRef);
+        try
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            // index.html defines window.__arimaaHotkeysSetRef and a permanent keydown listener.
+            await JS.InvokeVoidAsync("__arimaaHotkeysSetRef", _dotNetRef);
+        }
+        catch
+        {
+            /* JS not ready yet; will retry on next render / navigation */
+        }
     }
 
     [JSInvokable]
-    public async Task OnKeyDown(string key)
+    public Task OnKeyDown(string key)
     {
-        await Hotkeys.TryHandleAsync(key);
+        // Marshal onto the Blazor renderer sync context so board re-renders after Load().
+        return InvokeAsync(async () =>
+        {
+            await Hotkeys.TryHandleAsync(key);
+            StateHasChanged();
+        });
     }
 
     private void RegisterHandlers()
     {
-        Hotkeys.Register(HotkeyAction.PrevTurn, HandlePrevTurnAsync, () => IsOnArimaaPageActive && Game.CanPrev);
-        Hotkeys.Register(HotkeyAction.NextTurn, HandleNextTurnAsync, () => IsOnArimaaPageActive && Game.CanNext);
-        Hotkeys.Register(HotkeyAction.GoToStart, HandleGoToStartAsync, () => IsOnArimaaPageActive && Game.CanGoToStart);
-        Hotkeys.Register(HotkeyAction.GoToEnd, HandleGoToEndAsync, () => IsOnArimaaPageActive && Game.CanGoToEnd);
-        Hotkeys.Register(HotkeyAction.AnalyzeGold, () => OnAnalyze(Sides.Gold), () => IsOnArimaaPageActive && !IsAnalysisInProgress());
-        Hotkeys.Register(HotkeyAction.AnalyzeSilver, () => OnAnalyze(Sides.Silver), () => IsOnArimaaPageActive && !IsAnalysisInProgress());
+        // Gate on game capability only — not AbsolutePath. MAUI WebView URIs often fail strict
+        // path checks, which previously blocked hotkeys while board buttons still worked.
+        Hotkeys.Register(HotkeyAction.PrevTurn, HandlePrevTurnAsync, () => Game.CanPrev);
+        Hotkeys.Register(HotkeyAction.NextTurn, HandleNextTurnAsync, () => Game.CanNext);
+        Hotkeys.Register(HotkeyAction.GoToStart, HandleGoToStartAsync, () => Game.CanGoToStart);
+        Hotkeys.Register(HotkeyAction.GoToEnd, HandleGoToEndAsync, () => Game.CanGoToEnd);
+        Hotkeys.Register(HotkeyAction.AnalyzeGold, () => OnAnalyze(Sides.Gold), () => IsArimaaContext && !IsAnalysisInProgress());
+        Hotkeys.Register(HotkeyAction.AnalyzeSilver, () => OnAnalyze(Sides.Silver), () => IsArimaaContext && !IsAnalysisInProgress());
     }
 
-    private bool IsOnArimaaPageActive =>
-        Uri.TryCreate(Nav.Uri, UriKind.Absolute, out var uri) &&
-        string.Equals(uri.AbsolutePath.TrimEnd('/'), "/arimaa", StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// True when layout says we're on Arimaa, URI mentions arimaa, or a game tree is loaded.
+    /// </summary>
+    private bool IsArimaaContext
+    {
+        get
+        {
+            if (IsOnArimaaPage) return true;
+            if (Game.CurrentNode is not null) return true;
+
+            var uri = Nav.Uri ?? string.Empty;
+            if (uri.Contains("arimaa", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            try
+            {
+                var rel = Nav.ToBaseRelativePath(Nav.Uri).Trim().Trim('/');
+                return rel.Equals("arimaa", StringComparison.OrdinalIgnoreCase)
+                       || rel.StartsWith("arimaa?", StringComparison.OrdinalIgnoreCase)
+                       || rel.StartsWith("arimaa/", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
 
     private Task HandlePrevTurnAsync()
     {
@@ -100,21 +138,17 @@
     {
         Nav.LocationChanged -= OnLocationChanged;
 
-        if (_module is not null)
+        try
         {
-            try
-            {
-                await _module.InvokeVoidAsync("disconnect");
-                await _module.DisposeAsync();
-            }
-            catch
-            {
-                /* ignore on shutdown */
-            }
-
-            _module = null;
+            await JS.InvokeVoidAsync("eval", "if(window.arimaaHotkeys){window.arimaaHotkeys.ref=null;}");
+        }
+        catch
+        {
+            /* ignore on shutdown */
         }
 
         _dotNetRef?.Dispose();
+        _dotNetRef = null;
+        await Task.CompletedTask;
     }
 }
