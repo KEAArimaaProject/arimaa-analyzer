@@ -39,7 +39,9 @@ nav.navbar,
     top: 0;
     left: 0;
     right: 0;
-    height: 3.5rem;
+    /* min-height only — height grows when top-row-actions wrap to extra lines */
+    min-height: 3.5rem;
+    height: auto;
     background-color: white !important;
     border-bottom: 1px solid #ddd;
     z-index: 1000;

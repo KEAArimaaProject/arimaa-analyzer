@@ -21,6 +21,7 @@
     <main class="page-wrapper">
         <div class="top-row px-4">
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
+            <div class="top-row-actions">
             @if (IsOnArimaaPage)
             {
                 <!-- Current game quick info (takes lowest priority in flex; shrinks before buttons) -->
@@ -233,6 +234,7 @@
                     <span class="tb-btn-state">@(_showPastedGameDeleteButtons ? "On" : "Off")</span>
                 </button>
             }
+            </div>
         </div>
 
         <article class="content">

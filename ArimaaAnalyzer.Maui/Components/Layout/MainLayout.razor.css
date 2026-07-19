@@ -19,12 +19,30 @@ main {
 .top-row {
     background-color: #f7f7f7;
     border-bottom: 1px solid #d6d5d5;
-    justify-content: flex-end;
-    height: 3.5rem;
+    /* Grow with wrapped action rows instead of clipping controls */
+    min-height: 3.5rem;
+    height: auto;
     display: flex;
+    flex-wrap: nowrap; /* burger stays on its own left slot; actions wrap inside */
     align-items: center;
+    column-gap: 0.5rem;
+    row-gap: 0.35rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
     flex-shrink: 0; /* Don't let header shrink */
     z-index: 100;
+}
+
+/* Wraps control groups when the top bar is too narrow */
+.top-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    align-items: center;
+    column-gap: 0.15rem;
+    row-gap: 0.35rem;
 }
 
 /* New current game info strip between buttons */
@@ -394,12 +412,14 @@ main {
     }
 }
 
-/* Visible burger button in the header */
+/* Visible burger button in the header — fixed left; never wraps with actions */
 .burger-button {
     display: inline-block;
     width: 3.5rem;
     height: 2.5rem;
-    margin-right: auto;
+    flex: 0 0 auto;
+    align-self: center;
+    margin-right: 0;
     cursor: pointer;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 0.25rem;
