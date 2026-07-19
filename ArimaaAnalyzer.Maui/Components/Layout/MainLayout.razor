@@ -57,6 +57,16 @@
                     }
                 </div>
                 
+                @if (_sharedSettings.Play)
+                {
+                    <button type="button"
+                            class="tb-btn tb-btn-standalone human-play"
+                            @onclick="Humanmove"
+                            disabled="@_analysisInProgress"
+                            title="Analyze for the opposite side to move">
+                        HumanMove
+                    </button>
+                }
                 <div class="tb-group analysis-settings" role="group" aria-label="Analysis settings">
                     <div class="as-field" title="Which boards show move path lines">
                         <span id="movePathTargetLabel" class="as-label">Paths</span>
@@ -365,7 +375,23 @@
 
         StateHasChanged();
     }
+    
+    private async Task Humanmove()
+    {
+        // Flip side-to-move relative to the board, then analyze for that side
+        if (Game is null || Game.State is null) return;
 
+        try
+        {
+            SyncAeiWithBoard();
+            var flippedSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+            EnsureSideToMove(flippedSide);
+            StateHasChanged();
+            //await AnalyzePosition(flippedSide);
+        }
+        catch { /* ignore flip errors for now */ }
+    }
+    
     /// <summary>
     /// Shared settings are used by the main board; keep ShowMovePaths in sync with the target mode.
     /// </summary>
