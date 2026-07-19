@@ -102,6 +102,7 @@ public sealed class GameState
 
     /// <summary>
     /// Move a piece from one position to another.
+    /// If the destination is occupied, the two pieces swap positions.
     /// Updates the internal AEI string directly (no intermediate _board).
     /// </summary>
     public bool TryMove(Position from, Position to)
@@ -123,12 +124,13 @@ public sealed class GameState
 
         var sourcePiece = boardChars[fromIdx];
         if (sourcePiece == ' ') return false; // no piece at source
-        if (boardChars[toIdx] != ' ') return false; // destination not empty
 
-        // Perform move by modifying the board string
+        var destPiece = boardChars[toIdx];
+
+        // Perform move (or swap if destination is occupied) by modifying the board string
         var newBoardChars = boardChars.ToCharArray();
         newBoardChars[toIdx] = sourcePiece;
-        newBoardChars[fromIdx] = ' ';
+        newBoardChars[fromIdx] = destPiece; // empty space, or the piece being swapped
 
         // Rebuild AEI string
         RebuildAei(new string(newBoardChars));

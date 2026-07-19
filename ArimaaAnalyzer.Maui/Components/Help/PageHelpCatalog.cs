@@ -125,7 +125,7 @@ public static class PageHelpCatalog
                         "Run analysis with Gold or Silver moving first. With Play off, results fill the mini-boards. With Play on, the engine plays one move on the main board."),
                     new Section(
                         "Outer UI & Play",
-                        "Outer UI shows or hides board chrome around the squares. Play toggles play-against-AI mode (piece palette instead of mini-boards). Use MoveG / MoveS for the engine reply."),
+                        "Outer UI shows or hides board chrome around the squares. Play toggles play-against-AI mode (piece palette instead of mini-boards). Use MoveG / MoveS for the engine reply. You can move pieces manually by either dragging them or clicking on the piece and then click on the square to move to. You can make pieces swap position by dragging a piece onto another piece."),
                     new Section(
                         "Edit Pieces / Auto setup",
                         "In Play mode, drag pieces from the palette onto the board (or drag board pieces back to remove them). Auto setup places the classic 99of9 opening: first press clears the board and sets gold; second press adds silver."),
