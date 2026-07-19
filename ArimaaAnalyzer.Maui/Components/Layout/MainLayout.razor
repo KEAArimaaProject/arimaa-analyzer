@@ -380,16 +380,44 @@
     
     private async Task Humanmove()
     {
-        // Flip side-to-move relative to the board, then analyze for that side
+        // Commit any pending board edits and flip side-to-move in a single tree node.
+        // (Calling SyncAeiWithBoard + EnsureSideToMove separately used to insert two empty
+        // GameTurns — one for the board sync and one for the side flip — so j/l needed
+        // two presses. MoveG/MoveS keep one real engine node; HumanMove should also be one hop.)
         if (Game is null || Game.State is null) return;
 
         try
         {
-            SyncAeiWithBoard();
+            var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
+            var liveAei = Game.State.localAeiSetPosition;
+            if (string.IsNullOrWhiteSpace(liveAei)) return;
+
             var flippedSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
-            EnsureSideToMove(flippedSide);
+            var flippedAei = FlipSideInAei(liveAei);
+
+            // Already on the desired AEI (board + flipped side) — nothing to do
+            if (currentNode is not null &&
+                string.Equals(currentNode.AEIstring, flippedAei, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var moveNumber = currentNode?.MoveNumber ?? "0";
+            var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
+                oldAEIstring: currentNode?.AEIstring ?? liveAei,
+                updatedAEIstring: flippedAei,
+                MoveNumber: moveNumber,
+                Side: flippedSide,
+                Moves: new List<string>(),
+                isMainLine: false);
+
+            if (currentNode is not null)
+            {
+                try { currentNode.AddChild(child); } catch { /* ignore attach issues */ }
+            }
+
+            Game.Load(child);
             StateHasChanged();
-            //await AnalyzePosition(flippedSide);
         }
         catch { /* ignore flip errors for now */ }
     }
