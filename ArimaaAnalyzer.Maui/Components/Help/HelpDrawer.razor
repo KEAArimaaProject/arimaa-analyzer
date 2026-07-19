@@ -1,0 +1,140 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Backdrop: click outside closes the drawer *@
+<div class="help-drawer-backdrop @(_open ? "open" : null)"
+     @onclick="Close"
+     aria-hidden="@((!_open).ToString().ToLowerInvariant())"></div>
+
+<aside id="help-drawer"
+       class="help-drawer @(_open ? "open" : null)"
+       role="dialog"
+       aria-modal="false"
+       aria-labelledby="help-drawer-title"
+       aria-hidden="@((!_open).ToString().ToLowerInvariant())"
+       @ref="_panelRef"
+       @onkeydown="OnPanelKeyDown"
+       tabindex="-1">
+    <header class="help-drawer-header">
+        <h2 id="help-drawer-title" class="help-drawer-title">@_doc.Title</h2>
+        <button type="button"
+                class="help-drawer-close"
+                title="Close help"
+                aria-label="Close help"
+                @onclick="Close">
+            ×
+        </button>
+    </header>
+
+    <div class="help-drawer-body">
+        @foreach (var helpSection in _doc.Sections)
+        {
+            <section class="help-section">
+                <h3 class="help-section-heading">@helpSection.Heading</h3>
+                <p class="help-section-body">@helpSection.Body</p>
+            </section>
+        }
+    </div>
+</aside>
+
+@code {
+    private bool _open;
+    private string _pageKey = "home";
+    private PageHelpCatalog.Doc _doc = PageHelpCatalog.Get("home");
+    private ElementReference _panelRef;
+    private DotNetObjectReference<HelpDrawer>? _dotNetRef;
+    private bool _escapeBound;
+    private bool _pendingFocus;
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string PageKey { get; set; } = "home";
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var key = string.IsNullOrWhiteSpace(PageKey) ? "home" : PageKey;
+        if (!string.Equals(_pageKey, key, StringComparison.OrdinalIgnoreCase))
+        {
+            _pageKey = key;
+            _doc = PageHelpCatalog.Get(key);
+        }
+
+        if (IsOpen && !_open)
+            _pendingFocus = true;
+
+        _open = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_open)
+        {
+            await EnsureEscapeBoundAsync();
+            if (_pendingFocus)
+            {
+                _pendingFocus = false;
+                try { await _panelRef.FocusAsync(); }
+                catch { /* element may not be focusable yet */ }
+            }
+        }
+        else
+        {
+            await UnbindEscapeAsync();
+        }
+    }
+
+    private async Task EnsureEscapeBoundAsync()
+    {
+        if (_escapeBound) return;
+        try
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("__helpDrawerBindEscape", _dotNetRef);
+            _escapeBound = true;
+        }
+        catch
+        {
+            /* JS not ready; Escape still works when panel is focused via OnPanelKeyDown */
+        }
+    }
+
+    private async Task UnbindEscapeAsync()
+    {
+        if (!_escapeBound) return;
+        try
+        {
+            await JS.InvokeVoidAsync("__helpDrawerUnbindEscape");
+        }
+        catch { /* ignore */ }
+        _escapeBound = false;
+    }
+
+    private async Task Close()
+    {
+        if (!_open) return;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task OnPanelKeyDown(KeyboardEventArgs e)
+    {
+        if (string.Equals(e.Key, "Escape", StringComparison.OrdinalIgnoreCase))
+            await Close();
+    }
+
+    [JSInvokable]
+    public Task CloseFromEscape() => InvokeAsync(Close);
+
+    public async ValueTask DisposeAsync()
+    {
+        await UnbindEscapeAsync();
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+    }
+}

@@ -98,6 +98,29 @@
             window.addEventListener('keydown', handleKeyDown, true);
             window.arimaaHotkeys.bound = true;
         })();
+
+        // Help drawer: Escape closes while open (bound only while the drawer is open).
+        window.__helpDrawerEscHandler = null;
+        window.__helpDrawerBindEscape = function (dotnetRef) {
+            if (window.__helpDrawerEscHandler) {
+                window.removeEventListener('keydown', window.__helpDrawerEscHandler, true);
+                window.__helpDrawerEscHandler = null;
+            }
+            window.__helpDrawerEscHandler = function (e) {
+                if (!e || e.key !== 'Escape' || e.defaultPrevented || e.repeat) return;
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    dotnetRef.invokeMethodAsync('CloseFromEscape');
+                } catch { /* host disconnected */ }
+            };
+            window.addEventListener('keydown', window.__helpDrawerEscHandler, true);
+        };
+        window.__helpDrawerUnbindEscape = function () {
+            if (!window.__helpDrawerEscHandler) return;
+            window.removeEventListener('keydown', window.__helpDrawerEscHandler, true);
+            window.__helpDrawerEscHandler = null;
+        };
     </script>
 </body>
 

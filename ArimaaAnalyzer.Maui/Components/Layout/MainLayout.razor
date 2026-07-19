@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using ArimaaAnalyzer.Maui.Components
+@using ArimaaAnalyzer.Maui.Components.Help
 @using ArimaaAnalyzer.Maui.Components.MovePath
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Services.Arimaa
@@ -21,6 +22,15 @@
     <main class="page-wrapper">
         <div class="top-row px-4">
             <label for="nav-toggle" class="burger-button" title="Open menu" aria-label="Open navigation menu"></label>
+            <button type="button"
+                    class="help-button"
+                    title="Page help"
+                    aria-label="Open page help"
+                    aria-expanded="@_helpOpen"
+                    aria-controls="help-drawer"
+                    @onclick="ToggleHelp">
+                ?
+            </button>
             <div class="top-row-actions">
             @if (IsOnArimaaPage)
             {
@@ -246,6 +256,10 @@
         </article>
     </main>
 
+    <HelpDrawer IsOpen="_helpOpen"
+                PageKey="@CurrentHelpPageKey"
+                OnClose="CloseHelp" />
+
     <HotkeyHost IsOnArimaaPage="@IsOnArimaaPage"
                 IsAnalysisInProgress="@(() => _analysisInProgress)"
                 OnAnalyze="@AnalyzePosition" />
@@ -258,6 +272,27 @@
     private bool _movePathMenuOpen;
     private bool _paletteMenuOpen;
     private bool _showPastedGameDeleteButtons;
+    private bool _helpOpen;
+
+    private string CurrentHelpPageKey
+    {
+        get
+        {
+            if (Nav is null) return "home";
+            try
+            {
+                return PageHelpCatalog.ResolvePageKey(Nav.ToBaseRelativePath(Nav.Uri ?? string.Empty));
+            }
+            catch
+            {
+                return "home";
+            }
+        }
+    }
+
+    private void ToggleHelp() => _helpOpen = !_helpOpen;
+
+    private void CloseHelp() => _helpOpen = false;
 
     private void TogglePastedGameDeleteButtons() =>
         _showPastedGameDeleteButtons = !_showPastedGameDeleteButtons;
@@ -661,6 +696,8 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
+        // Close help on navigation so content doesn't lag behind the new page.
+        _helpOpen = false;
         // Re-render so the conditional button shows/hides when navigating
         InvokeAsync(StateHasChanged);
     }

@@ -430,6 +430,50 @@ main {
     background-color: rgba(0, 0, 0, 0.08);
 }
 
+/* Page help — sits immediately right of the burger; does not wrap with actions */
+.help-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 auto;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.25rem;
+    background: rgba(0, 0, 0, 0.03);
+    color: #374151;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.help-button:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(27, 110, 194, 0.35);
+    color: #1b6ec2;
+}
+
+.help-button:focus-visible {
+    outline: none;
+    border-color: #258cfb;
+    box-shadow: 0 0 0 0.15rem rgba(37, 140, 251, 0.25);
+}
+
+.help-button:active {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.help-button[aria-expanded="true"] {
+    border-color: rgba(27, 110, 194, 0.45);
+    background: #e8f1fb;
+    color: #1b6ec2;
+}
+
 .top-row ::deep a, .top-row ::deep .btn-link {
     white-space: nowrap;
     margin-left: 1.5rem;
