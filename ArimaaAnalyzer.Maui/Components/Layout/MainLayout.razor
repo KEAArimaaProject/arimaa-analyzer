@@ -231,6 +231,14 @@
                     <span class="tb-btn-label">Play</span>
                     <span class="tb-btn-state">@(_sharedSettings.Play ? "On" : "Off")</span>
                 </button>
+                <button type="button"
+                        class="tb-btn tb-btn-standalone toggle-delete @(_showGameTreeDeleteButtons ? "is-on" : "is-off")"
+                        @onclick="ToggleGameTreeDeleteButtons"
+                        title="Show or hide delete buttons on each game-tree child"
+                        aria-pressed="@_showGameTreeDeleteButtons">
+                    <span class="tb-btn-label">Delete</span>
+                    <span class="tb-btn-state">@(_showGameTreeDeleteButtons ? "On" : "Off")</span>
+                </button>
             }
             else if (IsOnLoadGameListPage)
             {
@@ -248,8 +256,10 @@
 
         <article class="content">
             <CascadingValue Value="_showPastedGameDeleteButtons" Name="ShowPastedGameDeleteButtons">
-                <CascadingValue Value="_sharedSettings">
-                    @Body
+                <CascadingValue Value="_showGameTreeDeleteButtons" Name="ShowGameTreeDeleteButtons">
+                    <CascadingValue Value="_sharedSettings">
+                        @Body
+                    </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
         </article>
@@ -273,6 +283,7 @@
     private bool _movePathMenuOpen;
     private bool _paletteMenuOpen;
     private bool _showPastedGameDeleteButtons;
+    private bool _showGameTreeDeleteButtons;
     private bool _helpOpen;
 
     private string CurrentHelpPageKey
@@ -297,6 +308,9 @@
 
     private void TogglePastedGameDeleteButtons() =>
         _showPastedGameDeleteButtons = !_showPastedGameDeleteButtons;
+
+    private void ToggleGameTreeDeleteButtons() =>
+        _showGameTreeDeleteButtons = !_showGameTreeDeleteButtons;
 
 
     private static ArimaaBoardSettings CreateSharedSettings()

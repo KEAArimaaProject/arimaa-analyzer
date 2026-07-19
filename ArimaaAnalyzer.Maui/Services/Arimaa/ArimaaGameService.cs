@@ -426,6 +426,21 @@ public sealed class ArimaaGameService
         }
     }
 
+    /// <summary>
+    /// Removes a direct child variation of <see cref="CurrentNode"/>, including that
+    /// child's full descendant subtree. Stays on the current node (parent of the deleted variation).
+    /// </summary>
+    public bool RemoveChild(GameTurn child)
+    {
+        if (CurrentNode is null || child is null) return false;
+        if (!CurrentNode.RemoveChild(child)) return false;
+
+        // Tree shape changed under the active node — refresh listeners
+        CurrentNodeChanged?.Invoke();
+        StateChanged?.Invoke();
+        return true;
+    }
+
     // Create a new non-mainline child node from the pending move(s) and move the current position to that child
     public bool CommitMove()
     {

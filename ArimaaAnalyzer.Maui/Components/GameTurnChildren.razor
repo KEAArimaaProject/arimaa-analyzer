@@ -20,11 +20,27 @@
         @foreach (var child in children)
         {
             var label = FormatChildLabel(Game.CurrentNode, child);
-            <button class="gtc-item"
-                    title="Go to this variation: @label"
-                    @onclick="() => Game.Load(child)">
-                @label
-            </button>
+            <div class="gtc-row @(ShowDeleteButtons ? "gtc-row-with-actions" : null)">
+                @if (ShowDeleteButtons)
+                {
+                    <div class="gtc-actions">
+                        <button type="button"
+                                class="gtc-delete-btn"
+                                title="Delete variation: @label"
+                                aria-label="Delete variation: @label"
+                                @onclick="() => HandleDelete(child)"
+                                @onclick:stopPropagation="true">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+                }
+                <button type="button"
+                        class="gtc-item"
+                        title="Go to this variation: @label"
+                        @onclick="() => Game.Load(child)">
+                    @label
+                </button>
+            </div>
         }
     }
     else
@@ -40,6 +56,10 @@
 </div>
 
 @code {
+    /// <summary>Cascaded from MainLayout top-bar Delete On/Off toggle (Arimaa page).</summary>
+    [CascadingParameter(Name = "ShowGameTreeDeleteButtons")]
+    private bool ShowDeleteButtons { get; set; }
+
     [Parameter]
     [EditorRequired]
     public ArimaaGameService Game { get; set; } = default!;
@@ -61,6 +81,12 @@
     private void OnStateChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleDelete(GameTurn child)
+    {
+        if (Game is null || child is null) return;
+        Game.RemoveChild(child);
     }
 
     /// <summary>

@@ -78,4 +78,30 @@ public class GameTurn
         child.Parent = this;
         Children.Add(child);
     }
+
+    /// <summary>
+    /// Removes a direct child and recursively detaches that child's entire subtree
+    /// (all descendants), clearing <see cref="Parent"/> links and emptying child lists.
+    /// </summary>
+    public bool RemoveChild(GameTurn child)
+    {
+        if (child is null) return false;
+        if (!Children.Remove(child)) return false;
+        DetachSubtree(child);
+        return true;
+    }
+
+    /// <summary>
+    /// Clears parent/children links for <paramref name="node"/> and every descendant.
+    /// </summary>
+    private static void DetachSubtree(GameTurn node)
+    {
+        // Copy first: recursive detach mutates Children
+        var descendants = node.Children.ToList();
+        node.Children.Clear();
+        node.Parent = null;
+
+        foreach (var d in descendants)
+            DetachSubtree(d);
+    }
 }
