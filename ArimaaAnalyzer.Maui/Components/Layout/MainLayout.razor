@@ -63,7 +63,7 @@
                             class="tb-btn tb-btn-standalone human-play"
                             @onclick="Humanmove"
                             disabled="@_analysisInProgress"
-                            title="Analyze for the opposite side to move">
+                            title="Switch side to move (shortcut: h)">
                         HumanMove
                     </button>
                 }
@@ -261,7 +261,9 @@
 
     <HotkeyHost IsOnArimaaPage="@IsOnArimaaPage"
                 IsAnalysisInProgress="@(() => _analysisInProgress)"
-                OnAnalyze="@AnalyzePosition" />
+                OnAnalyze="@AnalyzePosition"
+                OnHumanMove="@Humanmove"
+                CanHumanMove="@(() => _sharedSettings.Play)" />
 </div>
 
 @code {

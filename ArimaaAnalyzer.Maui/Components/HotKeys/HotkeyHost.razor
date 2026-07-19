@@ -21,6 +21,12 @@
     [Parameter]
     public Func<Sides, Task> OnAnalyze { get; set; } = _ => Task.CompletedTask;
 
+    [Parameter]
+    public Func<Task> OnHumanMove { get; set; } = () => Task.CompletedTask;
+
+    [Parameter]
+    public Func<bool> CanHumanMove { get; set; } = () => false;
+
     private DotNetObjectReference<HotkeyHost>? _dotNetRef;
 
     protected override void OnInitialized()
@@ -80,6 +86,7 @@
         Hotkeys.Register(HotkeyAction.GoToEnd, HandleGoToEndAsync, () => Game.CanGoToEnd);
         Hotkeys.Register(HotkeyAction.AnalyzeGold, () => OnAnalyze(Sides.Gold), () => IsArimaaContext && !IsAnalysisInProgress());
         Hotkeys.Register(HotkeyAction.AnalyzeSilver, () => OnAnalyze(Sides.Silver), () => IsArimaaContext && !IsAnalysisInProgress());
+        Hotkeys.Register(HotkeyAction.HumanMove, () => OnHumanMove(), () => IsArimaaContext && CanHumanMove() && !IsAnalysisInProgress());
     }
 
     /// <summary>

@@ -10,5 +10,6 @@ public static class HotkeyDefaults
         new() { Key = "k", Action = HotkeyAction.GoToEnd },
         new() { Key = "g", Action = HotkeyAction.AnalyzeGold },
         new() { Key = "s", Action = HotkeyAction.AnalyzeSilver },
+        new() { Key = "h", Action = HotkeyAction.HumanMove },
     ];
 }

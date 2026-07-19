@@ -110,7 +110,7 @@ public static class PageHelpCatalog
                     
                     new Section(
                         "Keyboard shortcuts",
-                        "These shortcuts enable you to use the keyboard to go to the next move or previus move, and to use the AI to analyze the game from Golds side or Silvers side: j / l — previous turn / next turn. i / k — go to start / end. g / s — analyze as Gold / Silver (same as MoveG / MoveS). Shortcuts are ignored while typing in a text field."),
+                        "These shortcuts enable you to use the keyboard to go to the next move or previus move, and to use the AI to analyze the game from Golds side or Silvers side: j / l — previous turn / next turn. i / k — go to start / end. g / s — analyze as Gold / Silver (same as MoveG / MoveS). h — HumanMove (Play mode only; same as the HumanMove button). Shortcuts are ignored while typing in a text field."),
                     new Section(
                         "Purpose",
                         "Main study board: view the current position, step through the game tree, set up pieces (in Play mode), and run engine analysis."),
@@ -131,7 +131,7 @@ public static class PageHelpCatalog
                         "In Play mode, drag pieces from the palette onto the board (or drag board pieces back to remove them). Auto setup places the classic 99of9 opening: first press clears the board and sets gold; second press adds silver."),
                     new Section(
                         "HumanMove",
-                        "Visible when Play is on. Switch sides to play (enable people to make alternating moves without involving the AI).")
+                        "Visible when Play is on (shortcut: h). Switch sides to play (enable people to make alternating moves without involving the AI).")
                 ]),
         };
 }
