@@ -131,6 +131,174 @@ public sealed class ArimaaGameService
         OnStateMutated();
     }
 
+    public const string GoldSetupLabel = "setup (Gold to move)";
+    public const string SilverSetupLabel = "setup (Silver to move)";
+
+    /// <summary>
+    /// Auto setup (gold): wipe board and place classic 99of9 gold on ranks 1–2.
+    /// Live board only — finalize with <see cref="TryCommitSetupPhase"/> (HumanMove).
+    /// </summary>
+    public void ApplyGoldAutoSetupLive()
+    {
+        ApplyNormalizedBoard(ArimaaStandardSetups.NinetyNineOfNineGoldOnly());
+    }
+
+    /// <summary>
+    /// Auto setup (silver): overlay classic 99of9 silver on ranks 7–8 of the live board.
+    /// Live board only — finalize with <see cref="TryCommitSetupPhase"/> (HumanMove).
+    /// </summary>
+    public void ApplySilverAutoSetupLive()
+    {
+        var current = State.GetNormalizedBoardString() ?? new string(' ', 64);
+        ApplyNormalizedBoard(ArimaaStandardSetups.WithNinetyNineOfNineSilver(current));
+    }
+
+    /// <summary>
+    /// HumanMove setup commits:
+    /// <list type="bullet">
+    /// <item>Gold-only on home ranks → one child under the tree root labeled gold setup.</item>
+    /// <item>Live board added silver on top of a gold-setup node → one child under current, silver setup.</item>
+    /// </list>
+    /// Returns true if a setup phase was handled (including no-op when already committed).
+    /// Returns false so the caller can run normal mid-game HumanMove (side flip).
+    /// </summary>
+    public bool TryCommitSetupPhase()
+    {
+        var liveBoard = State.GetNormalizedBoardString();
+        if (liveBoard is null || liveBoard.Length != 64)
+            return false;
+
+        // Silver setup finalize: current node is gold-only setup; live board has silver pieces.
+        if (CurrentNode is not null
+            && BoardFromAei(CurrentNode.AEIstring) is { } nodeBoard
+            && ArimaaStandardSetups.IsGoldOnlyOnHomeRanks(nodeBoard)
+            && BoardHasSilver(liveBoard)
+            && !ArimaaStandardSetups.IsGoldOnlyOnHomeRanks(liveBoard))
+        {
+            CommitSilverSetup(liveBoard);
+            return true;
+        }
+
+        // Gold setup finalize: live board is gold-only on home ranks
+        if (ArimaaStandardSetups.IsGoldOnlyOnHomeRanks(liveBoard))
+        {
+            // Already sitting on a matching gold-setup node — nothing to commit
+            if (CurrentNode is not null
+                && BoardFromAei(CurrentNode.AEIstring) is { } curBoard
+                && ArimaaStandardSetups.IsGoldOnlyOnHomeRanks(curBoard)
+                && SameBoardPayload(CurrentNode.AEIstring, State.localAeiSetPosition))
+            {
+                return true;
+            }
+
+            CommitGoldSetupUnderRoot(liveBoard);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void CommitGoldSetupUnderRoot(string goldBoard64)
+    {
+        // After gold places pieces, silver is next to set up (AEI side). The node still
+        // represents gold's setup phase for labeling (Side = Gold, Moves = gold setup label).
+        var goldAei = NormalizedBoardToAei(goldBoard64, Sides.Silver);
+
+        var root = CurrentNode is not null ? GetRoot(CurrentNode) : null;
+        if (root is null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+            State = new GameState(goldAei) { boardorientation = orientation };
+            _snapshots = new List<GameState>
+            {
+                new GameState(goldAei) { boardorientation = orientation }
+            };
+            StateChanged?.Invoke();
+            return;
+        }
+
+        var child = new GameTurn(
+            oldAEIstring: root.AEIstring,
+            updatedAEIstring: goldAei,
+            MoveNumber: root.MoveNumber,
+            Side: Sides.Gold,
+            Moves: new List<string> { GoldSetupLabel },
+            isMainLine: false);
+
+        root.AddChild(child);
+        Load(child);
+    }
+
+    private void CommitSilverSetup(string fullBoard64)
+    {
+        if (CurrentNode is null) return;
+
+        // After silver setup, gold plays first
+        var silverAei = NormalizedBoardToAei(fullBoard64, Sides.Gold);
+
+        if (string.Equals(CurrentNode.AEIstring, silverAei, StringComparison.Ordinal))
+            return;
+
+        var child = new GameTurn(
+            oldAEIstring: CurrentNode.AEIstring,
+            updatedAEIstring: silverAei,
+            MoveNumber: CurrentNode.MoveNumber,
+            Side: Sides.Silver,
+            Moves: new List<string> { SilverSetupLabel },
+            isMainLine: false);
+
+        CurrentNode.AddChild(child);
+        Load(child);
+    }
+
+    private static bool BoardHasSilver(string board64)
+    {
+        for (var i = 0; i < board64.Length; i++)
+        {
+            var ch = board64[i];
+            if (ch != ' ' && char.IsLower(ch))
+                return true;
+        }
+        return false;
+    }
+
+    private static string? BoardFromAei(string aei)
+    {
+        try
+        {
+            return new GameState(aei).GetNormalizedBoardString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool SameBoardPayload(string aeiA, string aeiB)
+    {
+        var a = ExtractBoardPayload(aeiA);
+        var b = ExtractBoardPayload(aeiB);
+        return a is not null && b is not null && string.Equals(a, b, StringComparison.Ordinal);
+    }
+
+    private static string? ExtractBoardPayload(string aei)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) return null;
+        var first = aei.IndexOf('"');
+        var last = aei.LastIndexOf('"');
+        if (first < 0 || last <= first) return null;
+        var payload = aei.Substring(first + 1, last - first - 1);
+        return payload.Length == 64 ? payload : null;
+    }
+
+    private static string NormalizedBoardToAei(string normalizedBoard64, Sides side)
+    {
+        var rows = new string[8];
+        for (var r = 0; r < 8; r++)
+            rows[r] = normalizedBoard64.Substring(r * 8, 8).Replace(' ', '.');
+        return NotationService.BoardToAei(rows, side);
+    }
+
     public void ClearSelection() => Selected = null;
 
     // Load a GameTurn node and update the underlying GameState accordingly

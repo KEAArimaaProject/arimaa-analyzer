@@ -65,15 +65,13 @@
     {
         if (ShouldPlaceSilver)
         {
-            // Board already has gold-only on home ranks → add silver 99of9 on ranks 7–8
-            var current = Game.State.GetNormalizedBoardString()
-                          ?? new string(' ', 64);
-            Game.ApplyNormalizedBoard(ArimaaStandardSetups.WithNinetyNineOfNineSilver(current));
+            // Gold-only on home ranks → place silver 99of9 (live board; commit with HumanMove)
+            Game.ApplySilverAutoSetupLive();
             return;
         }
 
-        // Empty, mixed, or full board → wipe and place gold 99of9
-        Game.ApplyNormalizedBoard(ArimaaStandardSetups.NinetyNineOfNineGoldOnly());
+        // Empty, mixed, or full board → wipe and place gold 99of9 (live board; commit with HumanMove)
+        Game.ApplyGoldAutoSetupLive();
     }
 
     private async Task OnPalettePointerDown(char pieceChar)

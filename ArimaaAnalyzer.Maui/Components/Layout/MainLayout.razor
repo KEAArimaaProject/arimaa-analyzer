@@ -63,7 +63,7 @@
                             class="tb-btn tb-btn-standalone human-play"
                             @onclick="Humanmove"
                             disabled="@_analysisInProgress"
-                            title="Switch side to move (shortcut: h)">
+                            title="Commit setup phase or switch side to move (shortcut: h)">
                         HumanMove
                     </button>
                 }
@@ -380,14 +380,20 @@
     
     private async Task Humanmove()
     {
-        // Commit any pending board edits and flip side-to-move in a single tree node.
-        // (Calling SyncAeiWithBoard + EnsureSideToMove separately used to insert two empty
-        // GameTurns — one for the board sync and one for the side flip — so j/l needed
-        // two presses. MoveG/MoveS keep one real engine node; HumanMove should also be one hop.)
+        // Setup branch: Auto setup is live-only; HumanMove commits
+        //   gold-only → root child "setup (Gold to move)"
+        //   silver on gold-setup node → child "setup (Silver to move)"
+        // Otherwise: commit pending board + flip side in one play node (no empty intermediates).
         if (Game is null || Game.State is null) return;
 
         try
         {
+            if (Game.TryCommitSetupPhase())
+            {
+                StateHasChanged();
+                return;
+            }
+
             var currentNode = Game.CurrentNode ?? Game.State.CurrentNode;
             var liveAei = Game.State.localAeiSetPosition;
             if (string.IsNullOrWhiteSpace(liveAei)) return;
