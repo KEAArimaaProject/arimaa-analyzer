@@ -1,4 +1,4 @@
-﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using ArimaaAnalyzer.Maui.Services.Arimaa
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
@@ -8,7 +8,7 @@
     <h3 class="mini-title">Edit Pieces</h3>
     <button type="button"
             class="editpieces-autosetup"
-            title="@(_awaitingSilverSetup
+            title="@(ShouldPlaceSilver
                 ? "Place silver pieces in the classic 99of9 setup"
                 : "Clear the board and place gold pieces in the classic 99of9 setup")"
             @onclick="OnAutoSetup"
@@ -31,11 +31,6 @@
     [EditorRequired]
     public ArimaaGameService Game { get; set; } = default!;
 
-    /// <summary>
-    /// After the first Auto setup (gold only), the next press adds silver.
-    /// </summary>
-    private bool _awaitingSilverSetup;
-
     private readonly (char Char, string File, string Alt)[] _palette = new (char, string, string)[]
     {
         // Gold (uppercase) then Silver (lowercase)
@@ -53,21 +48,32 @@
         ('r', "black-Rabbit.svg", "Silver Rabbit"),
     };
 
+    /// <summary>
+    /// Silver next only when the live board has gold pieces only on ranks 1–2.
+    /// Derived from the board (not component state) so navigation/reset cannot desync it.
+    /// </summary>
+    private bool ShouldPlaceSilver
+    {
+        get
+        {
+            var board = Game?.State?.GetNormalizedBoardString();
+            return ArimaaStandardSetups.IsGoldOnlyOnHomeRanks(board);
+        }
+    }
+
     private void OnAutoSetup()
     {
-        if (!_awaitingSilverSetup)
+        if (ShouldPlaceSilver)
         {
-            // First press: clear board, place gold 99of9
-            Game.ApplyNormalizedBoard(ArimaaStandardSetups.NinetyNineOfNineGoldOnly());
-            _awaitingSilverSetup = true;
+            // Board already has gold-only on home ranks → add silver 99of9 on ranks 7–8
+            var current = Game.State.GetNormalizedBoardString()
+                          ?? new string(' ', 64);
+            Game.ApplyNormalizedBoard(ArimaaStandardSetups.WithNinetyNineOfNineSilver(current));
             return;
         }
 
-        // Second press: place silver 99of9 on ranks 7–8 (keep existing gold)
-        var current = Game.State.GetNormalizedBoardString()
-                      ?? new string(' ', 64);
-        Game.ApplyNormalizedBoard(ArimaaStandardSetups.WithNinetyNineOfNineSilver(current));
-        _awaitingSilverSetup = false;
+        // Empty, mixed, or full board → wipe and place gold 99of9
+        Game.ApplyNormalizedBoard(ArimaaStandardSetups.NinetyNineOfNineGoldOnly());
     }
 
     private async Task OnPalettePointerDown(char pieceChar)

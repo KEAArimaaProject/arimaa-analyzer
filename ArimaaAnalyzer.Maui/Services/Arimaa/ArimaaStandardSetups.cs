@@ -19,7 +19,10 @@ public static class ArimaaStandardSetups
     /// Silver
     public const string NinetyNineOfNineFrontSilver = "rhcmechr";
     public const string NinetyNineOfNineBackSilver = "rrrddrrr";
-    
+
+    // Normalized board: rank 2 = indices 48–55, rank 1 = indices 56–63 (gold home ranks).
+    private const int GoldHomeStartIndex = 48;
+
     /// <summary>
     /// Empty board with gold pieces only in the classic 99of9 setup.
     /// </summary>
@@ -48,5 +51,40 @@ public static class ArimaaStandardSetups
         }
 
         return new string(chars);
+    }
+
+    /// <summary>
+    /// True when the board is ready for the silver half of Auto setup:
+    /// only gold pieces are present, and they are confined to gold's two home ranks
+    /// (ranks 1–2 / last 16 squares). Empty boards and mixed positions return false
+    /// so Auto setup wipes and places gold instead.
+    /// </summary>
+    public static bool IsGoldOnlyOnHomeRanks(string? board)
+    {
+        if (board is null || board.Length != 64)
+            return false;
+
+        var hasGoldOnHome = false;
+
+        for (var i = 0; i < 64; i++)
+        {
+            var ch = board[i];
+            if (ch == ' ') continue;
+
+            // Any silver piece → not gold-only setup
+            if (char.IsLower(ch))
+                return false;
+
+            if (!char.IsUpper(ch))
+                return false;
+
+            // Gold pieces must stay on ranks 1–2
+            if (i < GoldHomeStartIndex)
+                return false;
+
+            hasGoldOnHome = true;
+        }
+
+        return hasGoldOnHome;
     }
 }

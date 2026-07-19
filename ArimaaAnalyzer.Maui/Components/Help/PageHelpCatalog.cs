@@ -128,7 +128,7 @@ public static class PageHelpCatalog
                         "Outer UI shows or hides board chrome around the squares. Play toggles play-against-AI mode (piece palette instead of mini-boards). Use MoveG / MoveS for the engine reply. You can move pieces manually by either dragging them or clicking on the piece and then click on the square to move to. You can make pieces swap position by dragging a piece onto another piece."),
                     new Section(
                         "Edit Pieces / Auto setup",
-                        "In Play mode, drag pieces from the palette onto the board (or drag board pieces back to remove them). Auto setup places the classic 99of9 opening: first press clears the board and sets gold; second press adds silver."),
+                        "In Play mode, drag pieces from the palette onto the board (or drag board pieces back to remove them). Auto setup places the classic 99of9 opening: if the board has only gold pieces on ranks 1–2, it adds silver; otherwise it clears the board and places gold."),
                     new Section(
                         "HumanMove",
                         "Visible when Play is on (shortcut: h). Switch sides to play (enable people to make alternating moves without involving the AI).")

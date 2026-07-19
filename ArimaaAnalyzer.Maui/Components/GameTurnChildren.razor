@@ -90,49 +90,7 @@
         {
             /* fall through to descriptive fallbacks */
         }
-
-        var nextSide = DescribeSideToMove(child.AEIstring, child.Side);
-
-        // Side flip only (same board, different side letter)
-        if (SameBoardPayload(parent.AEIstring, child.AEIstring))
-            return $"pass ({nextSide} to move)";
-
-        // Freeform board edit that couldn't be notated as a legal turn
-        return $"setup ({nextSide} to move)";
-    }
-
-    private static string DescribeSideToMove(string aei, Sides fallback)
-    {
-        try
-        {
-            var side = new GameState(aei).SideToMove;
-            return side == Sides.Gold ? "Gold" : "Silver";
-        }
-        catch
-        {
-            return fallback == Sides.Gold ? "Gold" : "Silver";
-        }
-    }
-
-    /// <summary>
-    /// Compare the 64-char board payloads, ignoring the side-to-move letter.
-    /// </summary>
-    private static bool SameBoardPayload(string aeiA, string aeiB)
-    {
-        var boardA = ExtractBoardPayload(aeiA);
-        var boardB = ExtractBoardPayload(aeiB);
-        if (boardA is null || boardB is null) return false;
-        return string.Equals(boardA, boardB, StringComparison.Ordinal);
-    }
-
-    private static string? ExtractBoardPayload(string aei)
-    {
-        if (string.IsNullOrWhiteSpace(aei)) return null;
-        var first = aei.IndexOf('"');
-        var last = aei.LastIndexOf('"');
-        if (first < 0 || last <= first) return null;
-        var payload = aei.Substring(first + 1, last - first - 1);
-        return payload.Length == 64 ? payload : null;
+        return $"setup ({child.Side} to move)";
     }
 
     public void Dispose()
