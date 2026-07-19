@@ -1,0 +1,16 @@
+.name-count {
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.name-count .name-hint {
+  font-weight: 600;
+}
+
+#gameName.is-invalid {
+  border-color: #dc3545;
+}
+
+#gameName.is-valid {
+  border-color: #198754;
+}
