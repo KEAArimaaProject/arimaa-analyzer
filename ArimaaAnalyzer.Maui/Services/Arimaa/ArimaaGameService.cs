@@ -442,15 +442,8 @@ public sealed class ArimaaGameService
         // Determine side in Sides enum
         var sidesEnum = sideToMove == Sides.Gold ? Sides.Gold : Sides.Silver;
 
-        // Determine the move number string
-        var moveNumberStr = CurrentNode.MoveNumber;
-        if (int.TryParse(CurrentNode.MoveNumber, out var curNum))
-        {
-            // Increment when a new Gold move starts a new full number (assuming Silver completes the previous)
-            // Heuristic: if side to move is Gold, increment; else keep same number
-            var newNum = sideToMove == Sides.Gold ? curNum + 1 : curNum;
-            moveNumberStr = newNum.ToString();
-        }
+        // Gamesearch-style: Gold/Silver pair share a number; Gold starts the next number
+        var moveNumberStr = GameTurn.NextMoveNumber(CurrentNode.MoveNumber, sidesEnum);
 
         // Build child turn with IsMainLine = false
         var child = new GameTurn(CurrentNode.AEIstring, notation.Item2, moveNumberStr, sidesEnum, new List<string> { notation.Item1 }, isMainLine: false);

@@ -412,7 +412,9 @@
             // Prefer real step notation so GameTurnChildren can show the move (not a blank line).
             var moveList = ResolveHumanMoveNotation(currentNode, flippedAei);
 
-            var moveNumber = currentNode?.MoveNumber ?? "0";
+            // Gamesearch-style: Gold/Silver pair share a number; Gold starts the next number
+            var moveNumber = ArimaaAnalyzer.Maui.Models.GameTurn.NextMoveNumber(
+                currentNode?.MoveNumber, playedSide);
             var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
                 oldAEIstring: currentNode?.AEIstring ?? liveAei,
                 updatedAEIstring: flippedAei,

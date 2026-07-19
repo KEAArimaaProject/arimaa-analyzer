@@ -53,6 +53,18 @@ public class GameTurn
     }
 
     /// <summary>
+    /// Gamesearch-style move numbers: Gold and Silver of the same full turn share one number
+    /// (e.g. 4g and 4s). Gold starts the next number; Silver keeps the parent's number.
+    /// </summary>
+    public static string NextMoveNumber(string? parentMoveNumber, Sides sidePlaying)
+    {
+        if (!int.TryParse(parentMoveNumber, out var curNum))
+            return string.IsNullOrWhiteSpace(parentMoveNumber) ? "0" : parentMoveNumber;
+
+        return (sidePlaying == Sides.Gold ? curNum + 1 : curNum).ToString();
+    }
+
+    /// <summary>
     /// Adds a child turn and sets its Parent reference.
     /// </summary>
     public void AddChild(GameTurn child)

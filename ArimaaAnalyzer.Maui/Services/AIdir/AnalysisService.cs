@@ -377,11 +377,9 @@ public class AnalysisService : IAsyncDisposable
         GameTurn? root = null;
         GameTurn? tail = null;
         string currentAei = positionNode.AEIstring;
-        
-        // Derive a numeric move number if possible; default to 1
-        int moveNumber = 1;
-        if (int.TryParse(positionNode.MoveNumber, out var parsed))
-            moveNumber = parsed + 1;
+
+        // Gamesearch-style pairing: Gold/Silver of the same full turn share one number
+        var parentMoveNumber = positionNode.MoveNumber;
 
         var endcondition = false;
         var loopnumber = 0;
@@ -392,11 +390,12 @@ public class AnalysisService : IAsyncDisposable
             
             var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var side = ParseSideFromAei(currentAei);
+            var moveNumber = GameTurn.NextMoveNumber(parentMoveNumber, side);
 
             var node = new GameTurn(
                 oldAEIstring: currentAei,
                 updatedAEIstring: string.Empty,
-                MoveNumber: moveNumber.ToString(),
+                MoveNumber: moveNumber,
                 Side: side,
                 Moves: moves,
                 isMainLine: false);
@@ -410,11 +409,11 @@ public class AnalysisService : IAsyncDisposable
                 tail!.AddChild(node);
             }
             tail = node;
+            parentMoveNumber = moveNumber;
 
             // Advance AEI for the next iteration
             currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
             endcondition = CorrectMoveService.HasWinCondition(currentAei);
-            moveNumber++;
             loopnumber++;
         }
 
@@ -451,9 +450,8 @@ public class AnalysisService : IAsyncDisposable
         GameTurn? tail = null;
         string currentAei = positionNode.AEIstring;
 
-        int moveNumber = 1;
-        if (int.TryParse(positionNode.MoveNumber, out var parsed))
-            moveNumber = parsed + 1;
+        // Gamesearch-style pairing: Gold/Silver of the same full turn share one number
+        var parentMoveNumber = positionNode.MoveNumber;
 
         var loop = 0;
         var end = false;
@@ -464,11 +462,12 @@ public class AnalysisService : IAsyncDisposable
             var (bestMove, _, _) = await GetBestMoveAsync(currentAei, "tcmove", (timetothink/1000).ToString(), ct).ConfigureAwait(false);
             var moves = bestMove.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var side = ParseSideFromAei(currentAei);
+            var moveNumber = GameTurn.NextMoveNumber(parentMoveNumber, side);
 
             var node = new GameTurn(
                 oldAEIstring: currentAei,
                 updatedAEIstring: string.Empty,
-                MoveNumber: moveNumber.ToString(),
+                MoveNumber: moveNumber,
                 Side: side,
                 Moves: moves,
                 isMainLine: tail is null ? true : tail.IsMainLine);
@@ -477,6 +476,7 @@ public class AnalysisService : IAsyncDisposable
             if (tail is not null)
                 tail.AddChild(node);
             tail = node;
+            parentMoveNumber = moveNumber;
 
             // Yield immediately so UI can update
             yield return node;
@@ -484,7 +484,6 @@ public class AnalysisService : IAsyncDisposable
             // Prepare for next iteration
             currentAei = NotationService.GamePlusMovesToAei(currentAei, moves);
             end = CorrectMoveService.HasWinCondition(currentAei);
-            moveNumber++;
             loop++;
         }
     }
