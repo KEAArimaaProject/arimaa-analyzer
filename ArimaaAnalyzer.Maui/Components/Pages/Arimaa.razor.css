@@ -62,6 +62,50 @@
 /* Edit pieces palette */
 .editpieces {
   /* mirror aside behavior */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Match ArimaaBoard .outer-btn (outer-top / outer-left chrome) */
+.editpieces-autosetup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 8px 0;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: normal;
+  line-height: 1.1;
+  color: inherit;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #f7f7f7;
+  cursor: pointer;
+  user-select: none;
+  min-height: 1.9rem;
+}
+
+.editpieces-autosetup:hover:not(:disabled) {
+  background: #ececec;
+}
+
+.editpieces-autosetup:focus-visible {
+  outline: 2px solid #888;
+  outline-offset: 1px;
+}
+
+.editpieces-autosetup:active:not(:disabled) {
+  background: #e2e2e2;
+}
+
+.editpieces-autosetup:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .editpieces-grid {
@@ -69,6 +113,7 @@
   grid-template-columns: repeat(6, 1fr); /* 6 x 2 grid */
   grid-auto-rows: 1fr;
   gap: 8px;
+  min-width: 0;
 }
 
 .editpieces-item {
@@ -79,6 +124,7 @@
   border-radius: 6px;
   padding: 6px;
   user-select: none;
+  min-width: 0;
 }
 
 .editpieces-item img {

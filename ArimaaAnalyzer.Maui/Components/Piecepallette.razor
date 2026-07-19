@@ -6,6 +6,15 @@
 
 <aside id="editpieces" class="editpieces" aria-label="Edit pieces palette" @onpointerup="OnEditPiecesPointerUp">
     <h3 class="mini-title">Edit Pieces</h3>
+    <button type="button"
+            class="editpieces-autosetup"
+            title="@(_awaitingSilverSetup
+                ? "Place silver pieces in the classic 99of9 setup"
+                : "Clear the board and place gold pieces in the classic 99of9 setup")"
+            @onclick="OnAutoSetup"
+            @onclick:stopPropagation="true">
+        Auto setup
+    </button>
     <div class="editpieces-grid">
         @foreach (var item in _palette)
         {
@@ -21,6 +30,11 @@
     [Parameter]
     [EditorRequired]
     public ArimaaGameService Game { get; set; } = default!;
+
+    /// <summary>
+    /// After the first Auto setup (gold only), the next press adds silver.
+    /// </summary>
+    private bool _awaitingSilverSetup;
 
     private readonly (char Char, string File, string Alt)[] _palette = new (char, string, string)[]
     {
@@ -38,6 +52,23 @@
         ('c', "black-Cat.svg", "Silver Cat"),
         ('r', "black-Rabbit.svg", "Silver Rabbit"),
     };
+
+    private void OnAutoSetup()
+    {
+        if (!_awaitingSilverSetup)
+        {
+            // First press: clear board, place gold 99of9
+            Game.ApplyNormalizedBoard(ArimaaStandardSetups.NinetyNineOfNineGoldOnly());
+            _awaitingSilverSetup = true;
+            return;
+        }
+
+        // Second press: place silver 99of9 on ranks 7–8 (keep existing gold)
+        var current = Game.State.GetNormalizedBoardString()
+                      ?? new string(' ', 64);
+        Game.ApplyNormalizedBoard(ArimaaStandardSetups.WithNinetyNineOfNineSilver(current));
+        _awaitingSilverSetup = false;
+    }
 
     private async Task OnPalettePointerDown(char pieceChar)
     {

@@ -238,6 +238,24 @@ public sealed class GameState
     }
 
     /// <summary>
+    /// Get the 64-character normalized board string (spaces for empty squares).
+    /// Returns null if the AEI string is malformed.
+    /// </summary>
+    public string? GetNormalizedBoardString() => ExtractBoardString();
+
+    /// <summary>
+    /// Replace the entire board from a 64-character normalized string (spaces for empty).
+    /// Preserves the current side to move.
+    /// </summary>
+    public void SetNormalizedBoard(string normalizedBoard64)
+    {
+        if (normalizedBoard64 is null || normalizedBoard64.Length != 64)
+            throw new ArgumentException("Board string must be exactly 64 characters.", nameof(normalizedBoard64));
+
+        RebuildAei(normalizedBoard64);
+    }
+
+    /// <summary>
     /// Extract the 64-character board string from the AEI setposition format.
     /// Returns null if the AEI string is malformed.
     /// </summary>

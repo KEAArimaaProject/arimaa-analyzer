@@ -108,6 +108,29 @@ public sealed class ArimaaGameService
         OnStateMutated();
     }
 
+    /// <summary>
+    /// Replace the entire board from a 64-char normalized string (spaces for empty).
+    /// Used by edit-mode auto-setup and similar bulk placement.
+    /// </summary>
+    public void ApplyNormalizedBoard(string normalizedBoard64)
+    {
+        if (normalizedBoard64 is null || normalizedBoard64.Length != 64)
+            throw new ArgumentException("Board string must be exactly 64 characters.", nameof(normalizedBoard64));
+
+        if (_snapshots is null)
+        {
+            var orientation = State?.boardorientation ?? BoardOrientation.GoldSouthSilverNorth;
+            _snapshots = new List<GameState>
+            {
+                new GameState(State.localAeiSetPosition) { boardorientation = orientation }
+            };
+        }
+
+        State.SetNormalizedBoard(normalizedBoard64);
+        CorrectMoveService.ApplyTrapCaptures(State);
+        OnStateMutated();
+    }
+
     public void ClearSelection() => Selected = null;
 
     // Load a GameTurn node and update the underlying GameState accordingly
