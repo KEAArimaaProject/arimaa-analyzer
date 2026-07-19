@@ -392,7 +392,8 @@
             var liveAei = Game.State.localAeiSetPosition;
             if (string.IsNullOrWhiteSpace(liveAei)) return;
 
-            var flippedSide = Game.State.SideToMove == Sides.Gold ? Sides.Silver : Sides.Gold;
+            var playedSide = Game.State.SideToMove;
+            var flippedSide = playedSide == Sides.Gold ? Sides.Silver : Sides.Gold;
             var flippedAei = FlipSideInAei(liveAei);
 
             // Already on the desired AEI (board + flipped side) — nothing to do
@@ -402,13 +403,16 @@
                 return;
             }
 
+            // Prefer real step notation so GameTurnChildren can show the move (not a blank line).
+            var moveList = ResolveHumanMoveNotation(currentNode, flippedAei);
+
             var moveNumber = currentNode?.MoveNumber ?? "0";
             var child = new ArimaaAnalyzer.Maui.Models.GameTurn(
                 oldAEIstring: currentNode?.AEIstring ?? liveAei,
                 updatedAEIstring: flippedAei,
                 MoveNumber: moveNumber,
-                Side: flippedSide,
-                Moves: new List<string>(),
+                Side: playedSide,
+                Moves: moveList,
                 isMainLine: false);
 
             if (currentNode is not null)
@@ -420,6 +424,39 @@
             StateHasChanged();
         }
         catch { /* ignore flip errors for now */ }
+    }
+
+    /// <summary>
+    /// Build a Moves list for a HumanMove node: pending snapshot notation, else AEI delta, else empty
+    /// (GameTurnChildren will still show a pass/setup fallback).
+    /// </summary>
+    private List<string> ResolveHumanMoveNotation(ArimaaAnalyzer.Maui.Models.GameTurn? parent, string childAei)
+    {
+        // Snapshot-based pending moves (best: preserves multi-step order from the UI)
+        if (!string.IsNullOrWhiteSpace(Game.PendingMoveText))
+            return new List<string> { Game.PendingMoveText };
+
+        if (parent is null || string.IsNullOrWhiteSpace(parent.AEIstring))
+            return new List<string>();
+
+        try
+        {
+            var before = new GameState(parent.AEIstring);
+            var after = new GameState(childAei);
+            var (notation, aei) = CorrectMoveService.ComputeMoveSequence(before, after);
+            if (!string.IsNullOrWhiteSpace(notation)
+                && !string.Equals(notation, "error", StringComparison.Ordinal)
+                && !string.Equals(aei, "error", StringComparison.Ordinal))
+            {
+                return new List<string> { notation };
+            }
+        }
+        catch
+        {
+            /* leave empty */
+        }
+
+        return new List<string>();
     }
     
     /// <summary>

@@ -1,4 +1,6 @@
-﻿@using ArimaaAnalyzer.Maui.Services.Arimaa
+@using ArimaaAnalyzer.Maui.Models
+@using ArimaaAnalyzer.Maui.Services
+@using ArimaaAnalyzer.Maui.Services.Arimaa
 @using Microsoft.AspNetCore.Components
 @implements IDisposable
 
@@ -17,9 +19,11 @@
         }
         @foreach (var child in children)
         {
-            <button class="gtc-item" title="Go to this variation"
+            var label = FormatChildLabel(Game.CurrentNode, child);
+            <button class="gtc-item"
+                    title="Go to this variation: @label"
                     @onclick="() => Game.Load(child)">
-                @string.Join(" ", child.Moves.ToArray())
+                @label
             </button>
         }
     }
@@ -57,6 +61,78 @@
     private void OnStateChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Label for a child variation. Stored Moves is preferred; when empty (HumanMove /
+    /// side-sync nodes), derive notation or a clear fallback from parent→child AEI.
+    /// </summary>
+    private static string FormatChildLabel(GameTurn parent, GameTurn child)
+    {
+        var stored = string.Join(" ", child.Moves ?? Array.Empty<string>()).Trim();
+        if (!string.IsNullOrWhiteSpace(stored))
+            return stored;
+
+        // Try legal Arimaa step notation from AEI transition
+        try
+        {
+            var before = new GameState(parent.AEIstring);
+            var after = new GameState(child.AEIstring);
+            var (notation, aei) = CorrectMoveService.ComputeMoveSequence(before, after);
+            if (!string.IsNullOrWhiteSpace(notation)
+                && !string.Equals(notation, "error", StringComparison.Ordinal)
+                && !string.Equals(aei, "error", StringComparison.Ordinal))
+            {
+                return notation;
+            }
+        }
+        catch
+        {
+            /* fall through to descriptive fallbacks */
+        }
+
+        var nextSide = DescribeSideToMove(child.AEIstring, child.Side);
+
+        // Side flip only (same board, different side letter)
+        if (SameBoardPayload(parent.AEIstring, child.AEIstring))
+            return $"pass ({nextSide} to move)";
+
+        // Freeform board edit that couldn't be notated as a legal turn
+        return $"setup ({nextSide} to move)";
+    }
+
+    private static string DescribeSideToMove(string aei, Sides fallback)
+    {
+        try
+        {
+            var side = new GameState(aei).SideToMove;
+            return side == Sides.Gold ? "Gold" : "Silver";
+        }
+        catch
+        {
+            return fallback == Sides.Gold ? "Gold" : "Silver";
+        }
+    }
+
+    /// <summary>
+    /// Compare the 64-char board payloads, ignoring the side-to-move letter.
+    /// </summary>
+    private static bool SameBoardPayload(string aeiA, string aeiB)
+    {
+        var boardA = ExtractBoardPayload(aeiA);
+        var boardB = ExtractBoardPayload(aeiB);
+        if (boardA is null || boardB is null) return false;
+        return string.Equals(boardA, boardB, StringComparison.Ordinal);
+    }
+
+    private static string? ExtractBoardPayload(string aei)
+    {
+        if (string.IsNullOrWhiteSpace(aei)) return null;
+        var first = aei.IndexOf('"');
+        var last = aei.LastIndexOf('"');
+        if (first < 0 || last <= first) return null;
+        var payload = aei.Substring(first + 1, last - first - 1);
+        return payload.Length == 64 ? payload : null;
     }
 
     public void Dispose()
