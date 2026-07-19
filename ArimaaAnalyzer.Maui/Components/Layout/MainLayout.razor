@@ -222,11 +222,24 @@
                     <span class="tb-btn-state">@(_sharedSettings.Play ? "On" : "Off")</span>
                 </button>
             }
+            else if (IsOnLoadGameListPage)
+            {
+                <button type="button"
+                        class="tb-btn tb-btn-standalone toggle-delete @(_showPastedGameDeleteButtons ? "is-on" : "is-off")"
+                        @onclick="TogglePastedGameDeleteButtons"
+                        title="Show or hide delete buttons on each row"
+                        aria-pressed="@_showPastedGameDeleteButtons">
+                    <span class="tb-btn-label">Delete</span>
+                    <span class="tb-btn-state">@(_showPastedGameDeleteButtons ? "On" : "Off")</span>
+                </button>
+            }
         </div>
 
         <article class="content">
-            <CascadingValue Value="_sharedSettings">
-                @Body
+            <CascadingValue Value="_showPastedGameDeleteButtons" Name="ShowPastedGameDeleteButtons">
+                <CascadingValue Value="_sharedSettings">
+                    @Body
+                </CascadingValue>
             </CascadingValue>
         </article>
     </main>
@@ -242,6 +255,11 @@
     private bool _analysisInProgress;
     private bool _movePathMenuOpen;
     private bool _paletteMenuOpen;
+    private bool _showPastedGameDeleteButtons;
+
+    private void TogglePastedGameDeleteButtons() =>
+        _showPastedGameDeleteButtons = !_showPastedGameDeleteButtons;
+
 
     private static ArimaaBoardSettings CreateSharedSettings()
     {
@@ -596,31 +614,38 @@
         await JS.InvokeVoidAsync("eval", $"console.log('AnalyzePosition_PlayOneTurnAsync: Applied move '+{System.Text.Json.JsonSerializer.Serialize(string.Join(' ', child.Moves))}+' and updated main board.')");
     }
     
-    private bool IsOnArimaaPage
+    private bool IsOnArimaaPage => IsOnPage("arimaa");
+
+    private bool IsOnLoadGameListPage => IsOnPage("loadgamelist");
+
+    /// <summary>
+    /// Match only the Blazor route segment (not the full URI), so paths that contain
+    /// "arimaa" in the app name/folder do not force the Arimaa top-bar controls.
+    /// </summary>
+    private bool IsOnPage(string pageSegment)
     {
-        get
+        if (Nav is null || string.IsNullOrWhiteSpace(pageSegment)) return false;
+
+        string rel;
+        try
         {
-            if (Nav is null) return false;
-
-            var uriText = Nav.Uri ?? string.Empty;
-            if (uriText.Contains("arimaa", StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            try
-            {
-                var rel = Nav.ToBaseRelativePath(Nav.Uri).Trim().Trim('/');
-                if (rel.Equals("arimaa", StringComparison.OrdinalIgnoreCase)) return true;
-                if (rel.StartsWith("arimaa?", StringComparison.OrdinalIgnoreCase)) return true;
-                if (rel.StartsWith("arimaa/", StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            catch
-            {
-                /* fall through */
-            }
-
-            return Uri.TryCreate(uriText, UriKind.Absolute, out var uri) &&
-                   string.Equals(uri.AbsolutePath.Trim('/'), "arimaa", StringComparison.OrdinalIgnoreCase);
+            rel = Nav.ToBaseRelativePath(Nav.Uri ?? string.Empty);
         }
+        catch
+        {
+            rel = string.Empty;
+        }
+
+        // Strip query/hash and normalize slashes.
+        var q = rel.IndexOfAny(['?', '#']);
+        if (q >= 0) rel = rel[..q];
+        rel = rel.Trim().Trim('/');
+
+        if (string.IsNullOrEmpty(rel))
+            return false;
+
+        return rel.Equals(pageSegment, StringComparison.OrdinalIgnoreCase)
+               || rel.StartsWith(pageSegment + "/", StringComparison.OrdinalIgnoreCase);
     }
 
     protected override void OnInitialized()
