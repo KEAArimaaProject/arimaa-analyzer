@@ -139,7 +139,7 @@ main {
     background-color: #f3f4f6;
 }
 
-/* Standalone pill buttons (Outer UI, Play, HumanMove) — same outer chrome as groups */
+/* Standalone pill buttons (Outer UI, Play) — same outer chrome as groups */
 .tb-btn-standalone {
     display: inline-flex;
     align-items: center;

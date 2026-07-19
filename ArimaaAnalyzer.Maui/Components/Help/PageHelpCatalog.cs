@@ -125,10 +125,7 @@ public static class PageHelpCatalog
                         "Run analysis with Gold or Silver moving first. With Play off, results fill the mini-boards. With Play on, the engine plays one move on the main board."),
                     new Section(
                         "Outer UI & Play",
-                        "Outer UI shows or hides board chrome around the squares. Play toggles play-against-AI mode (piece palette instead of mini-boards) and enables the HumanMove button."),
-                    new Section(
-                        "HumanMove",
-                        "Visible when Play is on. Analyzes for the side opposite the current side to move—useful after you have made a move and want the engine to reply.")
+                        "Outer UI shows or hides board chrome around the squares. Play toggles play-against-AI mode (piece palette instead of mini-boards). Use MoveG / MoveS for the engine reply.")
                 ]),
         };
 }
