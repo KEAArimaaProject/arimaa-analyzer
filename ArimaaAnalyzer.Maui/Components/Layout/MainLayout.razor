@@ -230,14 +230,50 @@
                     <span class="tb-btn-label">Play</span>
                     <span class="tb-btn-state">@(_sharedSettings.Play ? "On" : "Off")</span>
                 </button>
-                <button type="button"
-                        class="tb-btn tb-btn-standalone toggle-delete @(_showGameTreeDeleteButtons ? "is-on" : "is-off")"
-                        @onclick="ToggleGameTreeDeleteButtons"
-                        title="Show or hide delete buttons on each game-tree child"
-                        aria-pressed="@_showGameTreeDeleteButtons">
-                    <span class="tb-btn-label">Delete</span>
-                    <span class="tb-btn-state">@(_showGameTreeDeleteButtons ? "On" : "Off")</span>
-                </button>
+                <div class="tb-group analysis-settings tree-action-settings" role="group" aria-label="Game tree edit mode">
+                    <div class="as-field" title="Game-tree child action mode (delete, copy)">
+                        <span id="gameTreeActionLabel" class="as-label">Edit</span>
+                        <div class="as-compact-select @(_gameTreeActionMenuOpen ? "open" : null)">
+                            @if (_gameTreeActionMenuOpen)
+                            {
+                                <div class="as-compact-select-backdrop" @onclick="CloseGameTreeActionMenu"></div>
+                            }
+                            <button type="button"
+                                    id="gameTreeActionSelect"
+                                    class="as-select as-select-compact"
+                                    title="@GameTreeActionModeDisplay.Full(_gameTreeActionMode)"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="@_gameTreeActionMenuOpen"
+                                    aria-labelledby="gameTreeActionLabel gameTreeActionSelect"
+                                    @onclick="ToggleGameTreeActionMenu"
+                                    @onclick:stopPropagation="true">
+                                @GameTreeActionModeDisplay.Short(_gameTreeActionMode)
+                            </button>
+                            @if (_gameTreeActionMenuOpen)
+                            {
+                                <ul class="as-compact-select-menu"
+                                    role="listbox"
+                                    aria-labelledby="gameTreeActionLabel"
+                                    @onclick:stopPropagation="true">
+                                    @foreach (var mode in Enum.GetValues<GameTreeActionMode>())
+                                    {
+                                        var isSelected = _gameTreeActionMode == mode;
+                                        <li role="presentation">
+                                            <button type="button"
+                                                    role="option"
+                                                    aria-selected="@isSelected"
+                                                    class="as-compact-select-option @(isSelected ? "selected" : null)"
+                                                    @onclick="() => SelectGameTreeActionMode(mode)"
+                                                    @onclick:stopPropagation="true">
+                                                @GameTreeActionModeDisplay.Full(mode)
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                </div>
             }
             else if (IsOnLoadGameListPage)
             {
@@ -255,9 +291,11 @@
 
         <article class="content">
             <CascadingValue Value="_showPastedGameDeleteButtons" Name="ShowPastedGameDeleteButtons">
-                <CascadingValue Value="_showGameTreeDeleteButtons" Name="ShowGameTreeDeleteButtons">
-                    <CascadingValue Value="_sharedSettings">
-                        @Body
+                <CascadingValue Value="ShowGameTreeDeleteButtons" Name="ShowGameTreeDeleteButtons">
+                    <CascadingValue Value="_gameTreeActionMode" Name="GameTreeActionMode">
+                        <CascadingValue Value="_sharedSettings">
+                            @Body
+                        </CascadingValue>
                     </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
@@ -281,9 +319,16 @@
     private bool _analysisInProgress;
     private bool _movePathMenuOpen;
     private bool _paletteMenuOpen;
+    private bool _gameTreeActionMenuOpen;
     private bool _showPastedGameDeleteButtons;
-    private bool _showGameTreeDeleteButtons;
+    private GameTreeActionMode _gameTreeActionMode = GameTreeActionMode.None;
     private bool _helpOpen;
+
+    /// <summary>
+    /// True when Edit mode is Delete — same effect as the old Delete On toggle.
+    /// </summary>
+    private bool ShowGameTreeDeleteButtons =>
+        _gameTreeActionMode == GameTreeActionMode.Delete;
 
     private string CurrentHelpPageKey
     {
@@ -308,9 +353,37 @@
     private void TogglePastedGameDeleteButtons() =>
         _showPastedGameDeleteButtons = !_showPastedGameDeleteButtons;
 
-    private void ToggleGameTreeDeleteButtons() =>
-        _showGameTreeDeleteButtons = !_showGameTreeDeleteButtons;
+    private void ToggleGameTreeActionMenu()
+    {
+        _gameTreeActionMenuOpen = !_gameTreeActionMenuOpen;
+        if (_gameTreeActionMenuOpen)
+        {
+            _movePathMenuOpen = false;
+            _paletteMenuOpen = false;
+        }
+    }
 
+    private void CloseGameTreeActionMenu()
+    {
+        if (!_gameTreeActionMenuOpen) return;
+        _gameTreeActionMenuOpen = false;
+        StateHasChanged();
+    }
+
+    private void SelectGameTreeActionMode(GameTreeActionMode mode)
+    {
+        _gameTreeActionMenuOpen = false;
+
+        if (_gameTreeActionMode != mode)
+        {
+            _gameTreeActionMode = mode;
+            // None / Copy: no extra side effects yet. Delete shows tree delete buttons via cascade.
+            StateHasChanged();
+            return;
+        }
+
+        StateHasChanged();
+    }
 
     private static ArimaaBoardSettings CreateSharedSettings()
     {
@@ -340,7 +413,11 @@
     private void ToggleMovePathMenu()
     {
         _movePathMenuOpen = !_movePathMenuOpen;
-        if (_movePathMenuOpen) _paletteMenuOpen = false;
+        if (_movePathMenuOpen)
+        {
+            _paletteMenuOpen = false;
+            _gameTreeActionMenuOpen = false;
+        }
     }
 
     private void CloseMovePathMenu()
@@ -367,7 +444,11 @@
     private void TogglePaletteMenu()
     {
         _paletteMenuOpen = !_paletteMenuOpen;
-        if (_paletteMenuOpen) _movePathMenuOpen = false;
+        if (_paletteMenuOpen)
+        {
+            _movePathMenuOpen = false;
+            _gameTreeActionMenuOpen = false;
+        }
     }
 
     private void ClosePaletteMenu()
