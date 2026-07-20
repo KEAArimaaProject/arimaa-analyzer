@@ -6,12 +6,103 @@ using ArimaaAnalyzer.Maui.Services.Arimaa;
 namespace ArimaaAnalyzer.Maui.Services;
 
 /// <summary>
-/// Exports a game-tree line for Copy mode: ancestors of a node, the node itself,
-/// and a single continuation through its descendants (main-line preference).
-/// Sibling branches (uncles / alternate variations) are excluded.
+/// Copy / export helpers for game-tree slices.
+/// Copy-to-library keeps ancestors of the selected node, the node, and <b>all</b> of its
+/// descendants; uncles (siblings of the path) are excluded.
 /// </summary>
 public static class GameTreeCopyService
 {
+    /// <summary>
+    /// Build a detached tree: path root→<paramref name="selected"/> (no uncles),
+    /// plus a full deep clone of every descendant under <paramref name="selected"/>.
+    /// </summary>
+    public static GameTurn ClonePathWithFullSubtree(GameTurn selected)
+    {
+        if (selected is null) throw new ArgumentNullException(nameof(selected));
+
+        var path = GetPathFromRoot(selected);
+        if (path.Count == 0)
+            throw new InvalidOperationException("Selected node has an empty path.");
+
+        GameTurn? newRoot = null;
+        GameTurn? pathCursor = null;
+
+        for (var i = 0; i < path.Count; i++)
+        {
+            var source = path[i];
+            var isSelected = ReferenceEquals(source, selected) || i == path.Count - 1;
+
+            // Path spine is the main line of the saved game.
+            var clone = CloneNodeShallow(source, forceMainLine: true);
+
+            if (newRoot is null)
+            {
+                newRoot = clone;
+                pathCursor = clone;
+            }
+            else
+            {
+                pathCursor!.AddChild(clone);
+                pathCursor = clone;
+            }
+
+            if (isSelected)
+            {
+                // Full branching under the selected node (not mainline-only).
+                var children = source.Children;
+                var anyMain = children.Any(c => c.IsMainLine);
+                for (var c = 0; c < children.Count; c++)
+                {
+                    var child = children[c];
+                    var childMain = child.IsMainLine || (!anyMain && c == 0);
+                    pathCursor.AddChild(CloneSubtree(child, forceMainLine: childMain));
+                }
+            }
+        }
+
+        return newRoot!;
+    }
+
+    /// <summary>
+    /// Deep-clone a subtree, preserving branch structure. Main-line flags are coerced
+    /// so a main-line child is never attached under a non-main-line parent.
+    /// </summary>
+    public static GameTurn CloneSubtree(GameTurn source, bool forceMainLine)
+    {
+        if (source is null) throw new ArgumentNullException(nameof(source));
+
+        var clone = CloneNodeShallow(source, forceMainLine);
+        var children = source.Children;
+        if (children.Count == 0) return clone;
+
+        var anyMain = children.Any(c => c.IsMainLine);
+        for (var i = 0; i < children.Count; i++)
+        {
+            var child = children[i];
+            var childMain = forceMainLine && (child.IsMainLine || (!anyMain && i == 0));
+            clone.AddChild(CloneSubtree(child, forceMainLine: childMain));
+        }
+
+        return clone;
+    }
+
+    private static GameTurn CloneNodeShallow(GameTurn source, bool forceMainLine)
+    {
+        // Prefer legal tokens; fall back to AEI-derived placements (setup labels, etc.).
+        var moves = ResolveMoves(source);
+        var moveList = moves.Count > 0 ? moves : Array.Empty<string>();
+        var aei = source.AEIstring ?? string.Empty;
+        var oldAei = source.Parent?.AEIstring ?? aei;
+
+        return new GameTurn(
+            oldAEIstring: oldAei,
+            updatedAEIstring: aei,
+            MoveNumber: string.IsNullOrWhiteSpace(source.MoveNumber) ? "0" : source.MoveNumber,
+            Side: source.Side,
+            Moves: moveList,
+            isMainLine: forceMainLine);
+    }
+
     /// <summary>
     /// Legal setup / step / capture tokens (same shape as <see cref="NotationService.ValidatePastedGame"/>).
     /// </summary>

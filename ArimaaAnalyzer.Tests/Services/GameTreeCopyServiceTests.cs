@@ -151,6 +151,70 @@ public class GameTreeCopyServiceTests
             because: string.Join(" | ", validation.Errors));
     }
 
+    [Fact(DisplayName = "ClonePathWithFullSubtree keeps all descendants under selected, drops uncles")]
+    public void Clone_Keeps_Descendants_Drops_Uncles()
+    {
+        var root = Root();
+        var t1w = Child(root, "1", Sides.Gold, "Ra1 Rb1 Rc1");
+        var t1b = Child(t1w, "1", Sides.Silver, "ra8 rb8 rc8");
+        var main2w = Child(t1b, "2", Sides.Gold, "Ra1n Rb1n");
+        var uncle2w = Child(t1b, "2", Sides.Gold, "Rc1n Rd1n", isMainLine: false);
+        var d1 = Child(uncle2w, "2", Sides.Silver, "ra8s", isMainLine: false);
+        var d2 = Child(uncle2w, "2", Sides.Silver, "rb8s", isMainLine: false);
+        Child(d1, "3", Sides.Gold, "Ra2n", isMainLine: false);
+
+        var cloned = GameTreeCopyService.ClonePathWithFullSubtree(uncle2w);
+
+        // Path to uncle2w, no main2w branch
+        var pathMoves = new List<string>();
+        for (var n = cloned; n is not null; n = n.Children.Count > 0 ? n.Children[0] : null!)
+        {
+            if (n.Moves.Count > 0)
+                pathMoves.Add(string.Join(" ", n.Moves));
+            if (ReferenceEquals(n, FindByMoves(cloned, "Rc1n", "Rd1n")))
+                break;
+            // stop walking only first child once we need branch check under selected
+            if (n.Children.Count > 1) break;
+        }
+
+        // Find selected clone and assert both silver children
+        var selectedClone = FindByMoves(cloned, "Rc1n", "Rd1n");
+        selectedClone.Should().NotBeNull();
+        selectedClone!.Children.Should().HaveCount(2);
+        selectedClone.Children.Select(c => string.Join(" ", c.Moves))
+            .Should().BeEquivalentTo(new[] { "ra8s", "rb8s" });
+
+        // Descendant under d1 preserved
+        selectedClone.Children.First(c => c.Moves.Contains("ra8s")).Children.Should().ContainSingle()
+            .Which.Moves.Should().Contain("Ra2n");
+
+        // Uncle's sibling mainline move not present anywhere
+        FlattenMoves(cloned).Should().NotContain(m => m.Contains("Ra1n"));
+
+        // Round-trip through DTO
+        var restored = GameTurnTreeMapper.FromDto(GameTurnTreeMapper.ToDto(cloned));
+        FindByMoves(restored, "Rc1n", "Rd1n")!.Children.Should().HaveCount(2);
+    }
+
+    private static GameTurn? FindByMoves(GameTurn root, params string[] tokens)
+    {
+        if (tokens.All(t => root.Moves.Contains(t))) return root;
+        foreach (var c in root.Children)
+        {
+            var found = FindByMoves(c, tokens);
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
+    private static IEnumerable<string> FlattenMoves(GameTurn root)
+    {
+        yield return string.Join(" ", root.Moves);
+        foreach (var c in root.Children)
+        foreach (var m in FlattenMoves(c))
+            yield return m;
+    }
+
     [Fact(DisplayName = "Silver setup label exports only newly placed silver pieces")]
     public void Export_SilverSetupLabel_PlacementNotation()
     {

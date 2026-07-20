@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using ArimaaAnalyzer.Maui.Models;
@@ -22,7 +23,7 @@ public enum PastedGameSortBy
 }
 
 /// <summary>
-/// Persists games pasted from arimaa.com so they can be re-opened from Loadgamelist.
+/// Persists games for Load game list as <see cref="GameTurn"/> trees (JSON DTOs).
 /// </summary>
 public sealed class PastedGameLibraryService
 {
@@ -30,6 +31,7 @@ public sealed class PastedGameLibraryService
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
     };
 
     private readonly object _lock = new();
@@ -78,12 +80,15 @@ public sealed class PastedGameLibraryService
     }
 
     /// <summary>
-    /// Append a successfully pasted game and persist.
+    /// Persist a game tree under a unique name. Optional <paramref name="sourceNotation"/> keeps the original paste text.
     /// </summary>
-    public async Task<PastedGameEntry> AddAsync(string notation, string name, CancellationToken cancellationToken = default)
+    public async Task<PastedGameEntry> AddFromTreeAsync(
+        GameTurn root,
+        string name,
+        string? sourceNotation = null,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(notation))
-            throw new ArgumentException("Notation cannot be empty.", nameof(notation));
+        if (root is null) throw new ArgumentNullException(nameof(root));
 
         var validationError = await ValidateNameAsync(name, cancellationToken).ConfigureAwait(false);
         if (validationError is not null)
@@ -94,7 +99,9 @@ public sealed class PastedGameLibraryService
             Id = Guid.NewGuid(),
             Name = name.Trim(),
             AddedAt = DateTimeOffset.UtcNow,
-            Notation = notation.Trim(),
+            FormatVersion = PastedGameEntry.CurrentFormatVersion,
+            Root = GameTurnTreeMapper.ToDto(root),
+            SourceNotation = string.IsNullOrWhiteSpace(sourceNotation) ? null : sourceNotation.Trim(),
         };
 
         List<PastedGameEntry> list;
@@ -109,6 +116,46 @@ public sealed class PastedGameLibraryService
 
         await SaveAsync(list, cancellationToken).ConfigureAwait(false);
         return entry;
+    }
+
+    /// <summary>
+    /// Parse linear notation into a tree and persist (Load game manual convenience).
+    /// </summary>
+    public async Task<PastedGameEntry> AddFromNotationAsync(
+        string notation,
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(notation))
+            throw new ArgumentException("Notation cannot be empty.", nameof(notation));
+
+        var root = NotationService.ExtractTurnsWithMoves(notation)
+                   ?? throw new InvalidOperationException("No valid turns could be parsed from the notation.");
+
+        return await AddFromTreeAsync(root, name, sourceNotation: notation, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Legacy name kept for call sites; routes to <see cref="AddFromNotationAsync"/>.
+    /// </summary>
+    public Task<PastedGameEntry> AddAsync(string notation, string name, CancellationToken cancellationToken = default)
+        => AddFromNotationAsync(notation, name, cancellationToken);
+
+    /// <summary>
+    /// Materialize a detached <see cref="GameTurn"/> tree for an entry (for board load).
+    /// </summary>
+    public static GameTurn? MaterializeRoot(PastedGameEntry entry)
+    {
+        if (entry?.Root is null) return null;
+        try
+        {
+            return GameTurnTreeMapper.FromDto(entry.Root);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -159,21 +206,41 @@ public sealed class PastedGameLibraryService
             }
         }
 
-        await using var stream = File.OpenRead(path);
-        var loaded = await JsonSerializer.DeserializeAsync<List<PastedGameEntry>>(stream, JsonOptions, cancellationToken)
+        List<PastedGameEntry> loaded;
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            loaded = await JsonSerializer.DeserializeAsync<List<PastedGameEntry>>(stream, JsonOptions, cancellationToken)
                          .ConfigureAwait(false)
                      ?? new List<PastedGameEntry>();
+        }
+        catch
+        {
+            // Corrupt or incompatible file — start empty (old linear-only saves are discarded).
+            loaded = new List<PastedGameEntry>();
+        }
 
-        // Backfill empty names for older entries so the list always has something to show/sort.
-        foreach (var e in loaded)
+        // Tree format only: drop legacy notation-only rows (user-approved wipe of old saves).
+        var treeOnly = loaded
+            .Where(e => e.Root is not null && e.FormatVersion >= PastedGameEntry.CurrentFormatVersion)
+            .ToList();
+
+        foreach (var e in treeOnly)
         {
             if (string.IsNullOrWhiteSpace(e.Name))
                 e.Name = $"Game {e.AddedAt.ToLocalTime():yyyyMMdd_HHmm}";
+            e.FormatVersion = PastedGameEntry.CurrentFormatVersion;
+        }
+
+        // Rewrite file if we dropped entries so disk matches the new format.
+        if (treeOnly.Count != loaded.Count)
+        {
+            await SaveAsync(treeOnly, cancellationToken).ConfigureAwait(false);
         }
 
         lock (_lock)
         {
-            _cache = loaded;
+            _cache = treeOnly;
             return new List<PastedGameEntry>(_cache);
         }
     }

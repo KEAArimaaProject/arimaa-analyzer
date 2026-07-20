@@ -123,27 +123,22 @@
             name = _copyGameName.Trim();
         }
 
-        var notation = GameTreeCopyService.ToGameNotation(child);
-        if (string.IsNullOrWhiteSpace(notation))
+        GameTurn treeRoot;
+        try
         {
-            SetCopyStatus(
-                "Could not build game notation for that variation (no exportable moves on the path).",
-                isError: true);
-            return;
+            // Ancestors + selected + all descendants; no uncles.
+            treeRoot = GameTreeCopyService.ClonePathWithFullSubtree(child);
         }
-
-        var validation = NotationService.ValidatePastedGame(notation);
-        if (!validation.IsValid)
+        catch (Exception ex)
         {
-            var detail = validation.Errors.Count > 0 ? validation.Errors[0] : "invalid notation";
-            SetCopyStatus($"Exported notation failed validation: {detail}", isError: true);
+            SetCopyStatus($"Could not build game tree for that variation: {ex.GetBaseException().Message}", isError: true);
             return;
         }
 
         try
         {
             _copySaving = true;
-            await PastedGames.AddAsync(notation, name);
+            await PastedGames.AddFromTreeAsync(treeRoot, name);
         }
         catch (Exception ex)
         {

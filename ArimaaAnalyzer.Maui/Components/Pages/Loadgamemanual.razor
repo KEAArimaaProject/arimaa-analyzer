@@ -98,8 +98,8 @@
         try
         {
             _saving = true;
-            // Persist for later re-open on Load game list (name + notation)
-            await PastedGames.AddAsync(input, GameName);
+            // Persist as GameTurn tree (linear chain from paste) for Load game list
+            await PastedGames.AddFromTreeAsync(root, GameName, sourceNotation: input);
         }
         catch (Exception ex)
         {
@@ -112,6 +112,7 @@
         }
 
         Game.SetSelectedRecord(null);
+        // Open at root (start of game)
         Game.Load(root);
         Game.ShowOuterUi = true;
         LoadedSuccessfully = true;

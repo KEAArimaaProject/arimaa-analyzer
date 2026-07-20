@@ -195,13 +195,14 @@
             _errorMessage = null;
             Game.SetSelectedRecord(null);
 
-            var root = NotationService.ExtractTurnsWithMoves(entry.Notation);
+            var root = PastedGameLibraryService.MaterializeRoot(entry);
             if (root is null)
             {
-                _errorMessage = "Unable to parse the selected game's move list.";
+                _errorMessage = "Unable to load the selected game's tree (missing or invalid data).";
                 return;
             }
 
+            // Open at root (start of the saved game)
             Game.Load(root);
             Game.ShowOuterUi = true;
             Nav.NavigateTo("/arimaa");
