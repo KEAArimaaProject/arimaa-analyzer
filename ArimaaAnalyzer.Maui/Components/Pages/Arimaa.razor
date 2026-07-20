@@ -11,6 +11,14 @@
     <!-- Main game area -->
     <section class="main-area" aria-label="Main game">
         <ArimaaBoard Game="Game" BoardSettings="PageBoardSettings" OnBoardRotated="OnMainBoardRotated" />
+        @if (GameTreeActionMode == GameTreeActionMode.Copy)
+        {
+            <div class="arimaa-copy-name" aria-label="Copy variation name">
+                <PastedGameNameField InputId="copyGameName"
+                                     @bind-Value="_copyGameName"
+                                     ExtraHint="Enter a unique name, then click a variation to save it (and its line) to Load game list." />
+            </div>
+        }
         <GameTurnChildren Game="Game" />
     </section>
     
@@ -47,6 +55,10 @@
     [CascadingParameter]
     private ArimaaBoardSettings PageBoardSettings { get; set; } = default!;
 
+    /// <summary>Cascaded from MainLayout top-bar Edit mode (None / Delete / Copy).</summary>
+    [CascadingParameter(Name = "GameTreeActionMode")]
+    private GameTreeActionMode GameTreeActionMode { get; set; }
+
     [Inject]
     private IJSRuntime JS { get; set; } = default!;
 
@@ -62,6 +74,8 @@
     // Stable settings instance so toggles (e.g. ShowMovePaths) persist across renders.
     private readonly ArimaaBoardSettings _miniBoardSettings = ArimaaBoardSettings.Tiny;
 
+    /// <summary>Draft name for Copy mode; kept when switching away from Copy so it is not lost accidentally.</summary>
+    private string _copyGameName = string.Empty;
 
     private void RebuildMiniGames()
     {

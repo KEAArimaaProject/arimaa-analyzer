@@ -64,10 +64,12 @@ public sealed class PastedGameLibraryService
     public async Task<string?> ValidateNameAsync(string name, CancellationToken cancellationToken = default)
     {
         var trimmed = (name ?? string.Empty).Trim();
-        if (trimmed.Length < PastedGameEntry.NameMinLength)
+        if (trimmed.Length == 0)
             return $"Name must be at least {PastedGameEntry.NameMinLength} characters.";
+        if (trimmed.Length < PastedGameEntry.NameMinLength)
+            return $"Name is too short ({trimmed.Length} of {PastedGameEntry.NameMinLength} minimum).";
         if (trimmed.Length > PastedGameEntry.NameMaxLength)
-            return $"Name must be at most {PastedGameEntry.NameMaxLength} characters.";
+            return $"Name is too long ({trimmed.Length} of {PastedGameEntry.NameMaxLength} maximum).";
 
         if (!await IsNameAvailableAsync(trimmed, cancellationToken).ConfigureAwait(false))
             return "That name is already in use. Choose a unique name.";

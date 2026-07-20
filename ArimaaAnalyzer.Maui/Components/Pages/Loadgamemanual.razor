@@ -12,46 +12,16 @@
 <div class="mb-3">
     <button class="btn btn-primary"
             @onclick="LoadGame"
-            disabled="@(_saving || !IsNameValidForSubmit)">
+            disabled="@(_saving || !_nameValid)">
         Load Game
     </button>
 </div>
 
 <div class="mb-3">
-    <label for="gameName" class="form-label">Name</label>
-    <input id="gameName"
-           type="text"
-           class="form-control @NameInputCssClass"
-           autocomplete="off"
-           spellcheck="false"
-           aria-required="true"
-           aria-invalid="@(_nameTouched && !string.IsNullOrEmpty(_nameError)).ToString().ToLowerInvariant()"
-           aria-describedby="gameNameHelp gameNameCount gameNameError"
-           value="@GameName"
-           @oninput="OnNameInput"
-           @onblur="OnNameBlur"
-           placeholder="e.g. My study game" />
-    <div id="gameNameHelp" class="form-text">
-        @PastedGameEntry.NameMinLength–@PastedGameEntry.NameMaxLength characters, must be unique.
-        Leading and trailing spaces are ignored.
-    </div>
-    <div id="gameNameCount" class="form-text name-count @NameCountCssClass" aria-live="polite">
-        @_nameLength / @PastedGameEntry.NameMaxLength
-        @if (_nameLength > 0 && _nameLength < PastedGameEntry.NameMinLength)
-        {
-            <span class="name-hint"> — too short</span>
-        }
-        else if (_nameLength > PastedGameEntry.NameMaxLength)
-        {
-            <span class="name-hint"> — too long</span>
-        }
-    </div>
-    @if (_nameTouched && !string.IsNullOrEmpty(_nameError))
-    {
-        <div id="gameNameError" class="invalid-feedback d-block" role="alert">
-            @_nameError
-        </div>
-    }
+    <PastedGameNameField @ref="_nameField"
+                         InputId="gameName"
+                         @bind-Value="GameName"
+                         IsValidChanged="OnNameValidChanged" />
 </div>
 
 <div class="mb-3">
@@ -82,93 +52,28 @@
 }
 
 @code {
+    private PastedGameNameField? _nameField;
     private string? GameNotation { get; set; }
     private string GameName { get; set; } = string.Empty;
     private bool LoadedSuccessfully { get; set; }
     private bool _saving;
-    private bool _nameTouched;
-    private string? _nameError;
+    private bool _nameValid;
     private List<string> ErrorMessages { get; set; } = new();
 
-    private int _nameLength => GameName.Trim().Length;
-
-    private bool IsNameValidForSubmit =>
-        _nameLength >= PastedGameEntry.NameMinLength
-        && _nameLength <= PastedGameEntry.NameMaxLength
-        && string.IsNullOrEmpty(_nameError);
-
-    private string NameInputCssClass =>
-        !_nameTouched ? string.Empty
-        : string.IsNullOrEmpty(_nameError) && _nameLength >= PastedGameEntry.NameMinLength ? "is-valid"
-        : "is-invalid";
-
-    private string NameCountCssClass =>
-        _nameLength > PastedGameEntry.NameMaxLength ? "text-danger"
-        : _nameLength > 0 && _nameLength < PastedGameEntry.NameMinLength ? "text-warning"
-        : _nameLength >= PastedGameEntry.NameMinLength ? "text-muted"
-        : "text-muted";
-
-    private async Task OnNameInput(ChangeEventArgs e)
-    {
-        GameName = e.Value?.ToString() ?? string.Empty;
-        _nameTouched = true;
-        await RefreshNameValidationAsync();
-    }
-
-    private async Task OnNameBlur()
-    {
-        _nameTouched = true;
-        await RefreshNameValidationAsync();
-    }
-
-    private async Task RefreshNameValidationAsync()
-    {
-        var trimmed = GameName.Trim();
-        if (trimmed.Length == 0)
-        {
-            _nameError = _nameTouched ? $"Name must be at least {PastedGameEntry.NameMinLength} characters." : null;
-            return;
-        }
-
-        if (trimmed.Length < PastedGameEntry.NameMinLength)
-        {
-            _nameError = $"Name is too short ({trimmed.Length} of {PastedGameEntry.NameMinLength} minimum).";
-            return;
-        }
-
-        if (trimmed.Length > PastedGameEntry.NameMaxLength)
-        {
-            _nameError = $"Name is too long ({trimmed.Length} of {PastedGameEntry.NameMaxLength} maximum).";
-            return;
-        }
-
-        try
-        {
-            if (!await PastedGames.IsNameAvailableAsync(trimmed))
-            {
-                _nameError = "That name is already in use. Choose a unique name.";
-                return;
-            }
-        }
-        catch
-        {
-            // Uniqueness check failed (storage); length checks still apply.
-        }
-
-        _nameError = null;
-    }
+    private void OnNameValidChanged(bool isValid) => _nameValid = isValid;
 
     private async Task LoadGame()
     {
         ErrorMessages.Clear();
         LoadedSuccessfully = false;
-        _nameTouched = true;
-        await RefreshNameValidationAsync();
 
-        if (!IsNameValidForSubmit)
+        if (_nameField is not null)
+            await _nameField.EnsureValidatedAsync();
+
+        if (!_nameValid)
         {
-            if (!string.IsNullOrEmpty(_nameError))
-                ErrorMessages.Add(_nameError);
+            if (!string.IsNullOrEmpty(_nameField?.Error))
+                ErrorMessages.Add(_nameField.Error);
             else
                 ErrorMessages.Add($"Enter a unique name ({PastedGameEntry.NameMinLength}–{PastedGameEntry.NameMaxLength} characters).");
             return;
@@ -214,7 +119,8 @@
         // Ready for another paste after a successful load.
         GameName = string.Empty;
         GameNotation = string.Empty;
-        _nameTouched = false;
-        _nameError = null;
+        if (_nameField is not null)
+            await _nameField.ResetValidationAsync();
+        _nameValid = false;
     }
 }

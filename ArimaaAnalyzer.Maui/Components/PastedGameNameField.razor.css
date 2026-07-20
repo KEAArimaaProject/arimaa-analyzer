@@ -1,0 +1,22 @@
+.pgnf-count {
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pgnf-count .pgnf-hint {
+  font-weight: 600;
+}
+
+.pgnf-input.is-invalid {
+  border-color: #dc3545;
+}
+
+.pgnf-input.is-valid {
+  border-color: #198754;
+}
+
+.pgnf-extra-hint {
+  margin-top: 0.25rem;
+  font-style: italic;
+  color: #5b6472;
+}

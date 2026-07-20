@@ -1,0 +1,192 @@
+@using ArimaaAnalyzer.Maui.Models
+@using ArimaaAnalyzer.Maui.Services
+@inject PastedGameLibraryService PastedGames
+
+<div class="pgnf @CssClass">
+    <label for="@InputId" class="form-label">@Label</label>
+    <input id="@InputId"
+           type="text"
+           class="form-control pgnf-input @NameInputCssClass"
+           autocomplete="off"
+           spellcheck="false"
+           aria-required="true"
+           aria-invalid="@(_nameTouched && !string.IsNullOrEmpty(_nameError)).ToString().ToLowerInvariant()"
+           aria-describedby="@HelpId @CountId @ErrorId"
+           value="@_current"
+           @oninput="OnNameInput"
+           @onblur="OnNameBlur"
+           placeholder="@Placeholder" />
+    <div id="@HelpId" class="form-text">
+        @PastedGameEntry.NameMinLength–@PastedGameEntry.NameMaxLength characters, must be unique.
+        Leading and trailing spaces are ignored.
+    </div>
+    <div id="@CountId" class="form-text pgnf-count @NameCountCssClass" aria-live="polite">
+        @_nameLength / @PastedGameEntry.NameMaxLength
+        @if (_nameLength > 0 && _nameLength < PastedGameEntry.NameMinLength)
+        {
+            <span class="pgnf-hint"> — too short</span>
+        }
+        else if (_nameLength > PastedGameEntry.NameMaxLength)
+        {
+            <span class="pgnf-hint"> — too long</span>
+        }
+    </div>
+    @if (_nameTouched && !string.IsNullOrEmpty(_nameError))
+    {
+        <div id="@ErrorId" class="invalid-feedback d-block" role="alert">
+            @_nameError
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(ExtraHint))
+    {
+        <div class="form-text pgnf-extra-hint">@ExtraHint</div>
+    }
+</div>
+
+@code {
+    /// <summary>HTML id for the input (must be unique on the page).</summary>
+    [Parameter]
+    public string InputId { get; set; } = "gameName";
+
+    [Parameter]
+    public string Label { get; set; } = "Name";
+
+    [Parameter]
+    public string Placeholder { get; set; } = "e.g. My study game";
+
+    /// <summary>Optional extra guidance shown under the standard help text.</summary>
+    [Parameter]
+    public string? ExtraHint { get; set; }
+
+    /// <summary>Optional CSS class on the outer wrapper.</summary>
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>Fired whenever <see cref="IsValid"/> may have changed.</summary>
+    [Parameter]
+    public EventCallback<bool> IsValidChanged { get; set; }
+
+    /// <summary>True when trimmed name passes length and uniqueness checks.</summary>
+    public bool IsValid { get; private set; }
+
+    /// <summary>Current validation error, if any (null when valid or not yet validated).</summary>
+    public string? Error => _nameError;
+
+    /// <summary>Trimmed current value (what will be saved).</summary>
+    public string TrimmedValue => _current.Trim();
+
+    private string _current = string.Empty;
+    private bool _nameTouched;
+    private string? _nameError;
+    private int _validationVersion;
+
+    private string HelpId => $"{InputId}Help";
+    private string CountId => $"{InputId}Count";
+    private string ErrorId => $"{InputId}Error";
+
+    private int _nameLength => TrimmedValue.Length;
+
+    private string NameInputCssClass =>
+        !_nameTouched ? string.Empty
+        : string.IsNullOrEmpty(_nameError) && _nameLength >= PastedGameEntry.NameMinLength ? "is-valid"
+        : "is-invalid";
+
+    private string NameCountCssClass =>
+        _nameLength > PastedGameEntry.NameMaxLength ? "text-danger"
+        : _nameLength > 0 && _nameLength < PastedGameEntry.NameMinLength ? "text-warning"
+        : "text-muted";
+
+    protected override void OnParametersSet()
+    {
+        // Keep local buffer in sync when the parent sets/clears Value (e.g. after save).
+        _current = Value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Mark as touched and re-validate. Call before submit/action.
+    /// </summary>
+    public async Task EnsureValidatedAsync()
+    {
+        _nameTouched = true;
+        await RefreshNameValidationAsync();
+    }
+
+    /// <summary>
+    /// Clear validation UI state after the parent has cleared or replaced <see cref="Value"/>.
+    /// </summary>
+    public async Task ResetValidationAsync()
+    {
+        _nameTouched = false;
+        _nameError = null;
+        _current = Value ?? string.Empty;
+        await SetIsValidAsync(false);
+    }
+
+    private async Task OnNameInput(ChangeEventArgs e)
+    {
+        // Update local buffer immediately so validation does not race parent re-render.
+        _current = e.Value?.ToString() ?? string.Empty;
+        await ValueChanged.InvokeAsync(_current);
+        _nameTouched = true;
+        await RefreshNameValidationAsync();
+    }
+
+    private async Task OnNameBlur()
+    {
+        _nameTouched = true;
+        await RefreshNameValidationAsync();
+    }
+
+    private async Task RefreshNameValidationAsync()
+    {
+        var version = ++_validationVersion;
+        var trimmed = _current.Trim();
+
+        if (trimmed.Length == 0 && !_nameTouched)
+        {
+            _nameError = null;
+            await SetIsValidAsync(false);
+            return;
+        }
+
+        string? error;
+        try
+        {
+            error = await PastedGames.ValidateNameAsync(trimmed);
+        }
+        catch
+        {
+            // Uniqueness check failed (storage); apply length-only fallback so typing still works.
+            error = LengthOnlyError(trimmed);
+        }
+
+        // Ignore stale async results if the user kept typing.
+        if (version != _validationVersion) return;
+
+        _nameError = error;
+        await SetIsValidAsync(error is null);
+    }
+
+    private static string? LengthOnlyError(string trimmed)
+    {
+        if (trimmed.Length < PastedGameEntry.NameMinLength)
+            return $"Name must be at least {PastedGameEntry.NameMinLength} characters.";
+        if (trimmed.Length > PastedGameEntry.NameMaxLength)
+            return $"Name must be at most {PastedGameEntry.NameMaxLength} characters.";
+        return null;
+    }
+
+    private async Task SetIsValidAsync(bool isValid)
+    {
+        if (IsValid == isValid) return;
+        IsValid = isValid;
+        if (IsValidChanged.HasDelegate)
+            await IsValidChanged.InvokeAsync(isValid);
+    }
+}
