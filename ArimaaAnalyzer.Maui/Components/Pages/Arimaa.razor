@@ -1,4 +1,5 @@
 ﻿@page "/arimaa"
+@using ArimaaAnalyzer.Maui.Models
 @using ArimaaAnalyzer.Maui.Services.Arimaa
 @using ArimaaAnalyzer.Maui.Services
 @using ArimaaAnalyzer.Maui.Components
@@ -14,12 +15,16 @@
         @if (GameTreeActionMode == GameTreeActionMode.Copy)
         {
             <div class="arimaa-copy-name" aria-label="Copy variation name">
-                <PastedGameNameField InputId="copyGameName"
+                <PastedGameNameField @ref="_copyNameField"
+                                     InputId="copyGameName"
                                      @bind-Value="_copyGameName"
                                      ExtraHint="Enter a unique name, then click a variation to save it (and its line) to Load game list." />
             </div>
         }
-        <GameTurnChildren Game="Game" />
+        <GameTurnChildren Game="Game"
+                          OnCopyChild="HandleCopyChildAsync"
+                          StatusMessage="@_copyStatusMessage"
+                          StatusMessageCssClass="@_copyStatusCssClass" />
     </section>
     
     <!-- Side section: either editpieces palette (when Play is true) or analysis mini-boards -->
@@ -65,6 +70,9 @@
     [Inject]
     private MiniBoardsCoordinator MiniBoards { get; set; } = default!;
 
+    [Inject]
+    private PastedGameLibraryService PastedGames { get; set; } = default!;
+
     private ElementReference _miniGridRef;
     private int _miniBoardCount = 0; // computed dynamically
     private DotNetObjectReference<Arimaa>? _dotNetRef;
@@ -76,6 +84,95 @@
 
     /// <summary>Draft name for Copy mode; kept when switching away from Copy so it is not lost accidentally.</summary>
     private string _copyGameName = string.Empty;
+    private PastedGameNameField? _copyNameField;
+    private string? _copyStatusMessage;
+    private string? _copyStatusCssClass;
+    private bool _copySaving;
+
+    private async Task HandleCopyChildAsync(GameTurn child)
+    {
+        if (_copySaving || child is null) return;
+
+        SetCopyStatus(null, null);
+
+        // Prefer the mounted name field; fall back to bound value if @ref is unavailable.
+        string name;
+        if (_copyNameField is not null)
+        {
+            await _copyNameField.EnsureValidatedAsync();
+            if (!_copyNameField.IsValid)
+            {
+                SetCopyStatus(
+                    _copyNameField.Error
+                    ?? $"Enter a unique name ({PastedGameEntry.NameMinLength}–{PastedGameEntry.NameMaxLength} characters) before copying.",
+                    isError: true);
+                return;
+            }
+
+            name = _copyNameField.TrimmedValue;
+        }
+        else
+        {
+            var nameError = await PastedGames.ValidateNameAsync(_copyGameName);
+            if (nameError is not null)
+            {
+                SetCopyStatus(nameError, isError: true);
+                return;
+            }
+
+            name = _copyGameName.Trim();
+        }
+
+        var notation = GameTreeCopyService.ToGameNotation(child);
+        if (string.IsNullOrWhiteSpace(notation))
+        {
+            SetCopyStatus(
+                "Could not build game notation for that variation (no exportable moves on the path).",
+                isError: true);
+            return;
+        }
+
+        var validation = NotationService.ValidatePastedGame(notation);
+        if (!validation.IsValid)
+        {
+            var detail = validation.Errors.Count > 0 ? validation.Errors[0] : "invalid notation";
+            SetCopyStatus($"Exported notation failed validation: {detail}", isError: true);
+            return;
+        }
+
+        try
+        {
+            _copySaving = true;
+            await PastedGames.AddAsync(notation, name);
+        }
+        catch (Exception ex)
+        {
+            SetCopyStatus($"Could not save to Load game list: {ex.GetBaseException().Message}", isError: true);
+            return;
+        }
+        finally
+        {
+            _copySaving = false;
+        }
+
+        if (_copyNameField is not null)
+            await _copyNameField.ClearAsync();
+        else
+            _copyGameName = string.Empty;
+
+        SetCopyStatus($"Saved “{name}” to Load game list.", isError: false);
+    }
+
+    private void SetCopyStatus(string? message, bool? isError = null)
+    {
+        _copyStatusMessage = message;
+        _copyStatusCssClass = isError switch
+        {
+            true => "gtc-status-error",
+            false => "gtc-status-ok",
+            null => null,
+        };
+    }
 
     private void RebuildMiniGames()
     {
@@ -179,6 +276,13 @@
         PageBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePathsOnMain;
         _miniBoardSettings.ShowMovePaths = PageBoardSettings.ShowMovePathsOnAnalysis;
         _miniBoardSettings.MovePathPaletteId = PageBoardSettings.MovePathPaletteId;
+
+        // Status is only meaningful while Copy mode is active.
+        if (GameTreeActionMode != GameTreeActionMode.Copy)
+        {
+            _copyStatusMessage = null;
+            _copyStatusCssClass = null;
+        }
 
         var desired = PageBoardSettings.BoardInt;
         if (desired < 0) desired = 0;

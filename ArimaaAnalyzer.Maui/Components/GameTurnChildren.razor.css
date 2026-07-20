@@ -78,3 +78,39 @@
     color: rgba(0,0,0,0.6);
     font-style: italic;
 }
+
+.gtc-copy-hint {
+    font-size: 0.78rem;
+    color: #5b6472;
+    font-style: italic;
+    margin: 0 0 2px 0;
+}
+
+.gtc-item-copy {
+    border-color: rgba(27, 110, 194, 0.35);
+    background: #f3f8fd;
+}
+
+.gtc-item-copy:hover {
+    background: #e8f1fb;
+    border-color: rgba(27, 110, 194, 0.55);
+}
+
+.gtc-status {
+    font-size: 0.8125rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.35rem;
+    margin-bottom: 2px;
+}
+
+.gtc-status-ok {
+    background: #e8f6ee;
+    border: 1px solid rgba(25, 135, 84, 0.35);
+    color: #0f5132;
+}
+
+.gtc-status-error {
+    background: #fde8ea;
+    border: 1px solid rgba(220, 53, 69, 0.35);
+    color: #842029;
+}

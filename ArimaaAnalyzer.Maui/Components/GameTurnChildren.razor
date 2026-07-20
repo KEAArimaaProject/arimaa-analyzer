@@ -5,6 +5,11 @@
 @implements IDisposable
 
 <div class="gtc-container">
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    {
+        <div class="gtc-status @StatusMessageCssClass" role="status">@StatusMessage</div>
+    }
+
     @if (Game?.CurrentNode is null)
     {
         <div class="gtc-empty">No active node</div>
@@ -17,9 +22,14 @@
                 Pending: @Game.PendingMoveText
             </div>
         }
+        @if (ActionMode == GameTreeActionMode.Copy)
+        {
+            <div class="gtc-copy-hint">Copy mode: click a variation to save its line.</div>
+        }
         @foreach (var child in children)
         {
             var label = FormatChildLabel(Game.CurrentNode, child);
+            var isCopy = ActionMode == GameTreeActionMode.Copy;
             <div class="gtc-row @(ShowDeleteButtons ? "gtc-row-with-actions" : null)">
                 @if (ShowDeleteButtons)
                 {
@@ -35,9 +45,9 @@
                     </div>
                 }
                 <button type="button"
-                        class="gtc-item"
-                        title="Go to this variation: @label"
-                        @onclick="() => Game.Load(child)">
+                        class="gtc-item @(isCopy ? "gtc-item-copy" : null)"
+                        title="@(isCopy ? $"Copy variation to Load game list: {label}" : $"Go to this variation: {label}")"
+                        @onclick="() => HandleChildClickAsync(child)">
                     @label
                 </button>
             </div>
@@ -60,9 +70,24 @@
     [CascadingParameter(Name = "ShowGameTreeDeleteButtons")]
     private bool ShowDeleteButtons { get; set; }
 
+    /// <summary>Cascaded from MainLayout top-bar Edit mode (None / Delete / Copy).</summary>
+    [CascadingParameter(Name = "GameTreeActionMode")]
+    private GameTreeActionMode ActionMode { get; set; }
+
     [Parameter]
     [EditorRequired]
     public ArimaaGameService Game { get; set; } = default!;
+
+    /// <summary>Copy mode: save the selected variation line under the given name.</summary>
+    [Parameter]
+    public EventCallback<GameTurn> OnCopyChild { get; set; }
+
+    /// <summary>Optional status line shown above the child list (success / error from parent).</summary>
+    [Parameter]
+    public string? StatusMessage { get; set; }
+
+    [Parameter]
+    public string? StatusMessageCssClass { get; set; }
 
     protected override void OnInitialized()
     {
@@ -87,6 +112,20 @@
     {
         if (Game is null || child is null) return;
         Game.RemoveChild(child);
+    }
+
+    private async Task HandleChildClickAsync(GameTurn child)
+    {
+        if (Game is null || child is null) return;
+
+        if (ActionMode == GameTreeActionMode.Copy)
+        {
+            if (OnCopyChild.HasDelegate)
+                await OnCopyChild.InvokeAsync(child);
+            return;
+        }
+
+        Game.Load(child);
     }
 
     /// <summary>

@@ -128,6 +128,18 @@
         await SetIsValidAsync(false);
     }
 
+    /// <summary>
+    /// Clear the name and validation (e.g. after a successful save).
+    /// </summary>
+    public async Task ClearAsync()
+    {
+        _current = string.Empty;
+        _nameTouched = false;
+        _nameError = null;
+        await ValueChanged.InvokeAsync(string.Empty);
+        await SetIsValidAsync(false);
+    }
+
     private async Task OnNameInput(ChangeEventArgs e)
     {
         // Update local buffer immediately so validation does not race parent re-render.
