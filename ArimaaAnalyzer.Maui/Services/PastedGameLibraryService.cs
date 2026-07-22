@@ -28,9 +28,18 @@ public enum PastedGameSortBy
 public sealed class PastedGameLibraryService
 {
     private const string FileName = "pasted-games.json";
+
+    /// <summary>
+    /// Game trees are stored as nested <see cref="GameTurnDto.Children"/>. A linear game of N half-moves
+    /// has depth ~N+1, so the default System.Text.Json MaxDepth of 64 rejects long games. Use a high
+    /// limit so length is not restricted in practice.
+    /// </summary>
+    private const int JsonMaxDepth = 1_000;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
+        MaxDepth = JsonMaxDepth,
         Converters = { new JsonStringEnumConverter() },
     };
 
