@@ -182,19 +182,77 @@
                         </select>
                     </label>
                     <span class="tb-divider" aria-hidden="true"></span>
-                    <label class="as-field" for="thinkInt" title="Engine think time per move">
-                        <span class="as-label">Think</span>
-                        <select id="thinkInt"
-                                class="as-select"
-                                @bind="_sharedSettings.ThinkInt"
-                                disabled="@_analysisInProgress">
-                            @for (var i = 1; i <= 40; i++)
+                    <div class="as-field" title="Engine think time per move (milliseconds). Presets or custom. Engine uses whole seconds.">
+                        <span id="thinkIntLabel" class="as-label">Think</span>
+                        <div class="as-compact-select @(_thinkMenuOpen ? "open" : null)">
+                            @if (_thinkMenuOpen)
                             {
-                                var val = i * 200;
-                                <option value="@val">@val ms</option>
+                                <div class="as-compact-select-backdrop" @onclick="CloseThinkMenu"></div>
                             }
-                        </select>
-                    </label>
+                            <button type="button"
+                                    id="thinkInt"
+                                    class="as-select as-select-think"
+                                    title="Engine think time per move (milliseconds). Pick a preset or enter a custom value."
+                                    aria-haspopup="listbox"
+                                    aria-expanded="@_thinkMenuOpen"
+                                    aria-labelledby="thinkIntLabel thinkInt"
+                                    disabled="@_analysisInProgress"
+                                    @onclick="ToggleThinkMenu"
+                                    @onclick:stopPropagation="true">
+                                @ThinkTimeOptions.Format(_sharedSettings.ThinkInt)
+                            </button>
+                            @if (_thinkMenuOpen)
+                            {
+                                <div class="as-compact-select-menu as-think-menu"
+                                     role="listbox"
+                                     aria-labelledby="thinkIntLabel"
+                                     @onclick:stopPropagation="true">
+                                    <ul class="as-think-menu-presets">
+                                        @foreach (var ms in ThinkTimeOptions.Presets)
+                                        {
+                                            var isSelected = _sharedSettings.ThinkInt == ms;
+                                            <li role="presentation">
+                                                <button type="button"
+                                                        role="option"
+                                                        aria-selected="@isSelected"
+                                                        class="as-compact-select-option @(isSelected ? "selected" : null)"
+                                                        @onclick="() => SelectThinkPreset(ms)"
+                                                        @onclick:stopPropagation="true">
+                                                    @ThinkTimeOptions.Format(ms)
+                                                </button>
+                                            </li>
+                                        }
+                                    </ul>
+                                    <div class="as-think-custom" role="none">
+                                        <label class="as-think-custom-label" for="thinkCustomInput">Custom</label>
+                                        <input id="thinkCustomInput"
+                                               class="as-think-custom-input"
+                                               type="number"
+                                               min="@ThinkTimeOptions.MinMs"
+                                               max="@ThinkTimeOptions.MaxMs"
+                                               step="1"
+                                               inputmode="numeric"
+                                               aria-label="Custom think time in milliseconds"
+                                               @bind="_customThinkText"
+                                               @bind:event="oninput"
+                                               @onkeydown="OnCustomThinkKeyDown" />
+                                        <span class="as-think-custom-unit" aria-hidden="true">ms</span>
+                                        <button type="button"
+                                                class="as-think-custom-set"
+                                                disabled="@(!CanApplyCustomThink)"
+                                                @onclick="ApplyCustomThink"
+                                                @onclick:stopPropagation="true">
+                                            Set
+                                        </button>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(_customThinkError))
+                                    {
+                                        <div class="as-think-custom-error" role="alert">@_customThinkError</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
 
                 <div class="tb-group move-actions" role="group" aria-label="AI move side">
@@ -320,9 +378,15 @@
     private bool _movePathMenuOpen;
     private bool _paletteMenuOpen;
     private bool _gameTreeActionMenuOpen;
+    private bool _thinkMenuOpen;
+    private string _customThinkText = ThinkTimeOptions.DefaultMs.ToString();
+    private string? _customThinkError;
     private bool _showPastedGameDeleteButtons;
     private GameTreeActionMode _gameTreeActionMode = GameTreeActionMode.None;
     private bool _helpOpen;
+
+    private bool CanApplyCustomThink =>
+        !_analysisInProgress && ThinkTimeOptions.TryParseCustom(_customThinkText, out _);
 
     /// <summary>
     /// True when Edit mode is Delete — same effect as the old Delete On toggle.
@@ -360,6 +424,69 @@
         {
             _movePathMenuOpen = false;
             _paletteMenuOpen = false;
+            _thinkMenuOpen = false;
+        }
+    }
+
+    private void ToggleThinkMenu()
+    {
+        if (_analysisInProgress) return;
+
+        _thinkMenuOpen = !_thinkMenuOpen;
+        if (_thinkMenuOpen)
+        {
+            _movePathMenuOpen = false;
+            _paletteMenuOpen = false;
+            _gameTreeActionMenuOpen = false;
+            _customThinkText = _sharedSettings.ThinkInt.ToString();
+            _customThinkError = null;
+        }
+    }
+
+    private void CloseThinkMenu()
+    {
+        if (!_thinkMenuOpen) return;
+        _thinkMenuOpen = false;
+        _customThinkError = null;
+        StateHasChanged();
+    }
+
+    private void SelectThinkPreset(int ms)
+    {
+        if (_analysisInProgress) return;
+
+        _sharedSettings.ThinkInt = ThinkTimeOptions.Clamp(ms);
+        _thinkMenuOpen = false;
+        _customThinkError = null;
+        StateHasChanged();
+    }
+
+    private void ApplyCustomThink()
+    {
+        if (_analysisInProgress) return;
+
+        if (!ThinkTimeOptions.TryParseCustom(_customThinkText, out var ms))
+        {
+            _customThinkError = $"Enter a number from {ThinkTimeOptions.MinMs} to {ThinkTimeOptions.MaxMs}.";
+            return;
+        }
+
+        _sharedSettings.ThinkInt = ms;
+        _customThinkText = ms.ToString();
+        _customThinkError = null;
+        _thinkMenuOpen = false;
+        StateHasChanged();
+    }
+
+    private void OnCustomThinkKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter")
+        {
+            ApplyCustomThink();
+        }
+        else if (e.Key is "Escape")
+        {
+            CloseThinkMenu();
         }
     }
 
@@ -417,6 +544,7 @@
         {
             _paletteMenuOpen = false;
             _gameTreeActionMenuOpen = false;
+            _thinkMenuOpen = false;
         }
     }
 
@@ -448,6 +576,7 @@
         {
             _movePathMenuOpen = false;
             _gameTreeActionMenuOpen = false;
+            _thinkMenuOpen = false;
         }
     }
 

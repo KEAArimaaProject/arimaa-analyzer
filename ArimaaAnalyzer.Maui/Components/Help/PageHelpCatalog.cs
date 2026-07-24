@@ -119,7 +119,7 @@ public static class PageHelpCatalog
                         "Paths controls which boards show move-path lines (main only, analysis only, both, or none). Colors picks the palette used for those lines."),
                     new Section(
                         "Top bar — Boards & Think",
-                        "Boards sets how many analysis mini-boards appear (when not in Play mode). Think sets engine think time per move in milliseconds."),
+                        "Boards sets how many analysis mini-boards appear (when not in Play mode). Think sets engine think time per move in milliseconds: pick a preset from the list, or enter a custom value. The engine uses whole seconds (values under 1000 ms may behave similarly)."),
                     new Section(
                         "MoveG / MoveS",
                         "Run analysis with Gold or Silver moving first. With Play off, results fill the mini-boards. With Play on, the engine plays one move on the main board."),

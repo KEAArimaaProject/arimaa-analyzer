@@ -1,4 +1,5 @@
 ﻿using ArimaaAnalyzer.Maui.Components.MovePath;
+using ArimaaAnalyzer.Maui.Services;
 
 namespace ArimaaAnalyzer.Maui.Components;
 
@@ -52,7 +53,13 @@ public class ArimaaBoardSettings
 
     // Custom shared settings for analysis/runtime tuning
     public int BoardInt { get; set; } = 4; // allowed 1..9
-    public int ThinkInt { get; set; } = 200; // allowed 200 - 8000 (steps of 200 ms)
+
+    /// <summary>
+    /// Engine think time per move in milliseconds.
+    /// Presets: 200–8000 step 200; custom values allowed in <see cref="ThinkTimeOptions.MinMs"/>…<see cref="ThinkTimeOptions.MaxMs"/>.
+    /// </summary>
+    public int ThinkInt { get; set; } = ThinkTimeOptions.DefaultMs;
+
     public Boolean Play { get; set; } = false; // Play against the AI.
 
     /// <summary>
