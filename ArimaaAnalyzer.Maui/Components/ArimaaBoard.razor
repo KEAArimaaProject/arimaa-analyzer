@@ -103,6 +103,12 @@
             <span class="outer-caption" title="@CurrentTurnCaption">@CurrentTurnCaption</span>
         </div>
     }
+    else
+    {
+        <div class="turn-indicator" title="@SideToMoveText">
+            <span class="turn-indicator-text">@SideToMoveText</span>
+        </div>
+    }
 </div>
 
 @code {
@@ -253,14 +259,17 @@
         _selectedPos = null;
     }
 
+    /// <summary>Short side-to-move label used under the board when Outer UI is off.</summary>
+    private string SideToMoveText =>
+        Game?.State.SideToMove == Sides.Gold ? "Gold to move" : "Silver to move";
+
     // Displays the move number and the moves that led to the current position
-    // Example: "12 Rc3n Hb4e". Falls back to "UI" when no node is loaded.
+    // Example: "12 Rc3n Hb4e". Falls back to side-to-move when no node is loaded.
     private string CurrentTurnCaption
     {
         get
         {
-            var side = Game?.State.SideToMove;
-            var sideText = side == Sides.Gold ? "Gold to move" : "Silver to move";
+            var sideText = SideToMoveText;
             if (Game?.CurrentNode is { } node)
             {
                 var moves = string.Join(" ", node.Moves ?? System.Array.Empty<string>());

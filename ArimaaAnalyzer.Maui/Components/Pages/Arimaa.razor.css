@@ -72,7 +72,8 @@
 .mini-boards ::deep .outer-top,
 .mini-boards ::deep .outer-bottom,
 .mini-boards ::deep .outer-left,
-.mini-boards ::deep .outer-right {
+.mini-boards ::deep .outer-right,
+.mini-boards ::deep .turn-indicator {
   display: none;
 }
 

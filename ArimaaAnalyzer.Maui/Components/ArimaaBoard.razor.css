@@ -87,6 +87,25 @@
 
 .outer-caption { font-size: 0.8rem; color: #555; }
 
+/* Compact side-to-move line when Outer UI is off (no bottom chrome) */
+.turn-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.2rem 0 0;
+  min-height: 1.1rem;
+}
+
+.turn-indicator-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #5b6472;
+  line-height: 1.2;
+  white-space: nowrap;
+  user-select: none;
+}
+
 /* Inner board should scale to whatever space is left inside the fixed outer container. */
 .board-inner {
   --piece-size: 44px;   /* piece image size */
